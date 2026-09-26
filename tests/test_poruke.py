@@ -156,10 +156,35 @@ def test_svaki_broj_u_recenici_potice_iz_dokaza(lang, sablon):
         pytest.param("en", "confus", id="en-vise-h1-zbunjuje-google"),
         pytest.param("en", "unlimited", id="en-soft404-neograniceno"),
         pytest.param("en", "older phones", id="en-konzola-stari-telefoni"),
+        pytest.param("sr", "vrati nazad", id="sr-tls-posetioci-odustaju"),
+        pytest.param("sr", "prvo traži", id="sr-robots-svaki-pretrazivac"),
+        pytest.param("en", "turn back", id="en-tls-posetioci-odustaju"),
+        pytest.param("en", "asks for first", id="en-robots-svaki-pretrazivac"),
     ],
 )
 def test_ispravljena_netacna_tvrdnja_se_ne_vraca(lang, tvrdnja):
     assert not [ime for ime, s in sabloni(lang) if tvrdnja.lower() in s.lower()]
+
+
+# Reči koje tvrde učestalost ili ponašanje ljudi (Z-27). Lista sme da raste.
+BEZ_IZVORA = {
+    "sr": ("većina", "većinu", "najčešće", "uvek", "nikad", "svaki", "svi", "niko"),
+    "en": ("most", "usually", "always", "never", "every", "all", "nobody"),
+}
+# Jedini način da takva reč ostane: {check_id: (reč, obrazloženje ili izvor)}.
+IZUZECI: dict[str, tuple[str, str]] = {}
+
+
+@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("check_id", sorted(registry.REGISTRY))
+def test_recenica_ne_tvrdi_ponasanje_ljudi_bez_izvora(lang, check_id):
+    entry = catalog(lang).FINDINGS[check_id]
+    tekstovi = [entry["client"], entry["tech"]]
+    tekstovi += [t for varijanta in entry.get("variants", {}).values() for t in varijanta.values()]
+    dozvoljena = IZUZECI.get(check_id, ("", ""))[0]
+    for rec in BEZ_IZVORA[lang]:
+        nadjeno = [t for t in tekstovi if rec != dozvoljena and re.search(rf"\b{rec}\b", t, re.IGNORECASE)]
+        assert not nadjeno, f"„{rec}” bez izvora: {nadjeno}"
 
 
 def test_usteda_od_kompresije_se_racuna_iz_velicine():

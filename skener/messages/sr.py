@@ -246,8 +246,8 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.robots.missing": {
         "client": (
-            "Sajt nema robots.txt. Ništa se time ne lomi, ali je to fajl koji svaki pretraživač "
-            "prvo traži, i njegov izostanak je znak da se sajt nije podešavao za pretragu."
+            "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe "
+            "sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu."
         ),
         "tech": "robots.txt status={status}",
     },
@@ -261,8 +261,8 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.tls.invalid": {
         "client": (
-            "Sertifikat sajta nije valjan, pa pretraživač posetiocima prikazuje crveno upozorenje "
-            "pre nego što uđu na sajt. Većina se na toj strani vrati nazad."
+            "Sertifikat sajta nije valjan, pa pretraživač posetiocima prikazuje upozorenje pre nego "
+            "što uđu na sajt."
         ),
         "tech": "TLS greška: {greska}",
     },

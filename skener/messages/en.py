@@ -48,14 +48,14 @@ FINDINGS: dict[str, dict] = {
     "perf.redirect.chain": {
         "client": (
             "Opening the home page goes through {skokova:n:redirect|redirects} before anything is "
-            "shown. Each of them adds waiting time, most of all on a mobile connection."
+            "shown. Each of them adds waiting time, especially on a mobile connection."
         ),
         "tech": "redirect_chain={skokova} hops: {lanac:join: → }",
     },
     "perf.html.size": {
         "client": (
             "The home page code alone weighs {kb} kB, before images and scripts. The browser has to "
-            "download and process all of it, which slows down rendering, most of all on a phone."
+            "download and process it in full, which slows down rendering, especially on a phone."
         ),
         "tech": "html_bytes={bajtova} > {prag_kb} kB",
     },
@@ -73,7 +73,7 @@ FINDINGS: dict[str, dict] = {
     "perf.request.count": {
         "client": (
             "Opening the home page starts {zahteva:n:separate download|separate downloads}. Each one "
-            "carries its own overhead, which is felt most on a mobile connection."
+            "carries its own overhead, which is felt especially on a mobile connection."
         ),
         "tech": "requests_at_load={zahteva}, {ukupno_zahteva} including those after load (reached={reached})",
     },
@@ -183,7 +183,7 @@ FINDINGS: dict[str, dict] = {
     "social.og.description.missing": {
         "client": (
             "When a link to the site is shared, platforms have no prepared description, so they pick "
-            "text from the page themselves or show none at all."
+            "text from the page themselves or show no description."
         ),
         "tech": "{stranica}: missing og:description (og tags in total: {og_oznaka_ukupno})",
     },
@@ -206,7 +206,7 @@ FINDINGS: dict[str, dict] = {
     "i18n.lang.invalid": {
         "client": (
             "The site is marked in its code with “{lang}”, which does not denote any language. "
-            "For screen readers that is the same as having no language tag at all."
+            "For screen readers that is the same as having no language tag."
         ),
         "tech": '{stranica}: lang="{lang}" is not a usable BCP-47 code (source: {izvor})',
     },
@@ -226,15 +226,15 @@ FINDINGS: dict[str, dict] = {
     "infra.sitemap.missing": {
         "client": (
             "The site has no page map (sitemap). Google therefore finds new and deeper pages only "
-            "through links, more slowly, and may not find pages that no link leads to at all."
+            "through links, more slowly, and may not find pages that no link leads to."
         ),
         "tech": "sitemap status={status}, urls={broj_urlova}",
     },
     "infra.robots.missing": {
         "client": (
-            "The site has no robots.txt. Nothing breaks because of it, but it is the file every "
-            "search engine asks for first, and its absence is a sign that the site was not set up "
-            "for search."
+            "The site has no robots.txt. Nothing breaks because of it, but Google reads that file "
+            "before it crawls the site, and its absence is a sign that the site was not set up for "
+            "search."
         ),
         "tech": "robots.txt status={status}",
     },
@@ -249,8 +249,8 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.tls.invalid": {
         "client": (
-            "The site's certificate is not valid, so the browser shows visitors a red warning before "
-            "they enter the site. Most of them turn back at that page."
+            "The site's certificate is not valid, so the browser shows visitors a warning before they "
+            "enter the site."
         ),
         "tech": "TLS error: {greska}",
     },
@@ -270,12 +270,12 @@ FINDINGS: dict[str, dict] = {
             "redirects to another. Google therefore sees them as different addresses with the same content "
             "and picks by itself which one to show in search."
         ),
-        "tech": "200 without a redirect at: {adrese:join:, }; same canonical on all: {isti_canonical}",
+        "tech": "200 without a redirect at: {adrese:join:, }; same canonical on each: {isti_canonical}",
         "variants": {
             "isti_canonical": {
                 "client": (
                     "The same site opens at {broj_adresa:n:address|addresses} ({adrese:join:, }), and none "
-                    "of them redirects to another. The canonical tag on all of them points to the same "
+                    "of them redirects to another. The canonical tag on each of them points to the same "
                     "address, so Google knows which one to show, but no redirect is set up."
                 )
             }

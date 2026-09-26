@@ -66,7 +66,7 @@
   "slucaj": "ispitni/spec/hotel-planina.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
-  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali je to fajl koji svaki pretraživač prvo traži, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
+  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
@@ -157,7 +157,7 @@
   "slucaj": "ispitni/spec/klinika.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
-  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali je to fajl koji svaki pretraživač prvo traži, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
+  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
@@ -241,7 +241,7 @@
   "slucaj": "ispitni/toml/hotel-planina.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
-  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali je to fajl koji svaki pretraživač prvo traži, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
+  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
@@ -318,7 +318,7 @@
   "slucaj": "ispitni/toml/klinika.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
-  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali je to fajl koji svaki pretraživač prvo traži, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
+  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
@@ -374,7 +374,7 @@
   "slucaj": "nivo1/infra.robots.missing",
   "check_id": "infra.robots.missing",
   "severity": "low",
-  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali je to fajl koji svaki pretraživač prvo traži, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
+  "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
@@ -395,7 +395,7 @@
   "slucaj": "nivo1/infra.tls.invalid",
   "check_id": "infra.tls.invalid",
   "severity": "high",
-  "client": "Sertifikat sajta nije valjan, pa pretraživač posetiocima prikazuje crveno upozorenje pre nego što uđu na sajt. Većina se na toj strani vrati nazad.",
+  "client": "Sertifikat sajta nije valjan, pa pretraživač posetiocima prikazuje upozorenje pre nego što uđu na sajt.",
   "tech": "TLS greška: certificate has expired"
  },
  {
