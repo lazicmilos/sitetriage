@@ -107,6 +107,19 @@ class Entry:
 
 
 @dataclass
+class HostVariant:
+    """Jedna od preostale tri adrese konačnog porekla (http/https × www/bez www), Z-26."""
+
+    url: str
+    status: int | None = None
+    final_url: str | None = None
+    redirect_chain: list[str] = field(default_factory=list)
+    canonical: str | None = None
+    error_kind: str | None = None
+    error_detail: str | None = None
+
+
+@dataclass
 class RobotsInfo:
     status: int | None = None
     body: str | None = None
@@ -215,6 +228,9 @@ class SiteSnapshot:
     entry_attempts: list[str] = field(default_factory=list)
     # Interne veze iz sirovog HTML-a početne (do 200); provera duplikata broji adrese sajta (Z-21).
     home_links: list[str] = field(default_factory=list)
+    # `None` = nisu dohvatane: snimak iz vremena pre Z-26, ulaz sa IP adresom ili portom, ili
+    # početna nije stigla.
+    host_variants: list[HostVariant] | None = None
 
     @property
     def home(self) -> PageSnapshot | None:

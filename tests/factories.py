@@ -17,6 +17,7 @@ from skener.models import (
     ConsoleStats,
     DomStats,
     Entry,
+    HostVariant,
     NetworkStats,
     OpenGraph,
     PageSnapshot,
@@ -113,6 +114,17 @@ def clean_site(*, domain: str = "cist.rs", industry: str = "ostalo", **overrides
             ]
         ),
         sample_source="sitemap",
+        # Sve tri preostale adrese preusmeravaju na konačnu (Z-26).
+        host_variants=[
+            HostVariant(
+                url=url,
+                status=200,
+                final_url=f"https://{domain}/",
+                redirect_chain=[url, f"https://{domain}/"],
+                canonical=f"https://{domain}/",
+            )
+            for url in (f"https://www.{domain}/", f"http://{domain}/", f"http://www.{domain}/")
+        ],
     )
     return replace(snapshot, **overrides) if overrides else snapshot
 

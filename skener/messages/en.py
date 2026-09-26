@@ -254,6 +254,33 @@ FINDINGS: dict[str, dict] = {
         ),
         "tech": "TLS error: {greska}",
     },
+    "infra.https.redirect.missing": {
+        "client": (
+            "The site also opens at the unprotected address {http_adresa}, without a redirect to "
+            "{https_adresa}. Chrome marks such a page as “Not secure”."
+        ),
+        "tech": (
+            "{http_adresa} → {status} without a redirect to https; {https_adresa} → 200 with a valid "
+            "certificate"
+        ),
+    },
+    "infra.host.duplicate": {
+        "client": (
+            "The same site opens at {broj_adresa:n:address|addresses} ({adrese:join:, }), and none of them "
+            "redirects to another. Google therefore sees them as different addresses with the same content "
+            "and picks by itself which one to show in search."
+        ),
+        "tech": "200 without a redirect at: {adrese:join:, }; same canonical on all: {isti_canonical}",
+        "variants": {
+            "isti_canonical": {
+                "client": (
+                    "The same site opens at {broj_adresa:n:address|addresses} ({adrese:join:, }), and none "
+                    "of them redirects to another. The canonical tag on all of them points to the same "
+                    "address, so Google knows which one to show, but no redirect is set up."
+                )
+            }
+        },
+    },
     "infra.unreachable": {
         "client": (
             "The site did not open in any of the {broj_pokusaja:n:attempt|attempts} ({prvi_pokusaj:utc} and "
@@ -406,6 +433,15 @@ REASONS: dict[str, str] = {
     "few_pages": (
         "the site has {adresa:n:internal address|internal addresses}, and a comparison needs at least {prag}"
     ),
+    # host variants: http/https × www/without www (Z-26)
+    "requires.host_variants": (
+        "the address variants (http/https, with and without www) were not fetched in this snapshot"
+    ),
+    "variant_unchecked": (
+        "{adresa} was not seen the way a browser sees it ({vrsta}), so it is unknown whether it serves "
+        "the site"
+    ),
+    "no_https": "https on {adresa} does not return a page, so there is nothing to redirect to",
     # why a domain was not scanned (the „Not scanned" list)
     "entry_missing": "the snapshot has no home page (fetching crashed, see the log)",
     "entry_status": "the home page returned status {status}",

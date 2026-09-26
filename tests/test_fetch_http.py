@@ -187,7 +187,7 @@ def test_budzet_zaustavlja_prolaz_a_ne_ruši_ga():
     # Ono što je prikupljeno ide dalje, ostalo je `unknown` — ne pad.
     assert snapshot.entry.status == 200
     rezultati = run_level(1, snapshot)
-    assert len(rezultati) == 20
+    assert len(rezultati) == 22
     assert all(r.reason for r in rezultati.values() if r.status == "unknown")
 
 
@@ -363,7 +363,7 @@ def test_pokvaren_domen_ne_ruši_prolaz():
     assert len(snapshots) == 2
     assert snapshots[0].entry.status == 200
     assert snapshots[1].entry.status is None
-    assert run_level(1, snapshots[1]) and len(run_level(1, snapshots[1])) == 20
+    assert run_level(1, snapshots[1]) and len(run_level(1, snapshots[1])) == 22
 
 
 def test_snapshot_se_pise_na_disk_cim_je_domen_gotov(tmp_path):

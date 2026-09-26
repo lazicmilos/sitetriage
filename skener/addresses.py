@@ -51,7 +51,7 @@ def may_connect(ip: str, host: str, port: int, allowed: Allowlist) -> bool:
     return is_public(ip) or (host.lower(), port) in allowed or (ip, port) in allowed
 
 
-def _is_ip(host: str) -> bool:
+def is_ip(host: str) -> bool:
     try:
         ipaddress.ip_address(host)
     except ValueError:
@@ -78,6 +78,6 @@ def input_problem(domain: str, allowed: Allowlist) -> str | None:
         return None
     if port is not None:
         return "domen sa portom se ne otvara, osim kad je izričito dozvoljen"
-    if _is_ip(host):
+    if is_ip(host):
         return "IP adresa umesto domena se ne otvara, osim kad je izričito dozvoljena"
     return None

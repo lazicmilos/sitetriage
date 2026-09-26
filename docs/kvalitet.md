@@ -25,7 +25,7 @@ i tržišta raspodela može biti drugačija, pa kalibraciju treba ponavljati nad
 |---|---|---|
 | vremensko ponašanje | domeni idu paralelno; budžet vremena teče tek kad domen dobije red | `test_domeni_idu_paralelno_a_ne_jedan_za_drugim`, `test_budzet_vremena_krece_tek_kad_domen_dobije_red` |
 | iskorišćenje resursa | nivo 2 na 3 konteksta (svaki su stotine MB), gornji limit od 60 domena | `skener.toml [browser]`, `score.select_for_level2` |
-| kapacitet | tvrd budžet: 16 zahteva i 40 s po domenu; tvrd limit od 60 s za nivo 2 | `test_budzet_se_postuje_na_svakom_domenu`, `test_tvrdi_limit_po_domenu_prekida_nivo_2` |
+| kapacitet | tvrd budžet: 19 zahteva i 40 s po domenu; tvrd limit od 60 s za nivo 2 | `test_budzet_se_postuje_na_svakom_domenu`, `test_tvrdi_limit_po_domenu_prekida_nivo_2` |
 | vremensko ponašanje | vreme učitavanja se meri bez tuđeg saobraćaja na vezi; na 10 pravih sajtova u prolazu je 0,72–1,24× vremena kad se sajt meri sam | `test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju`, [`izvestaj-testiranja-2.md`](izvestaj-testiranja-2.md) |
 
 **Rupe.** U1 („200 domena ≤ 15 min") je izmeren na 100 domena: 9,3 min, od toga 3,6 min nivo 1 i

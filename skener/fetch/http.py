@@ -34,6 +34,7 @@ from skener.models import (
     Budget,
     DomainInput,
     Entry,
+    HostVariant,
     RobotsInfo,
     SitemapInfo,
     SiteSnapshot,
@@ -79,7 +80,7 @@ class Outcome:
 
 
 class DomainBudget:
-    """Tvrd budžet po domenu (§4.2): 16 zahteva i 25 sekundi.
+    """Tvrd budžet po domenu (§4.2): broj zahteva i sekundi iz `[http]` u skener.toml.
 
     Kad se potroši, ono što je prikupljeno ide dalje, ostalo je `unknown`.
     """
@@ -396,6 +397,8 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
 
     rules = await _fetch_robots(fetcher, origin, budget, snapshot, verify=verify)
     crawl_delay = rules.crawl_delay
+    # Pre mape sajta: tri zahteva za dva nalaza, a velika mapa ume da pojede ceo budžet.
+    snapshot.host_variants = await _fetch_variants(fetcher, base_url, budget, crawl_delay)
     candidates = await _collect_sitemap(
         fetcher, origin, budget, snapshot, rules, verify=verify, crawl_delay=crawl_delay
     )
@@ -505,6 +508,49 @@ async def _fetch_robots(
     if outcome.error_kind:
         snapshot.errors.append(SnapshotError("robots", outcome.error_kind, outcome.error_detail or ""))
     return rules
+
+
+def variant_urls(final_url: str) -> list[str]:
+    """Preostale tri adrese konačnog porekla: http/https × www/bez www (Z-26).
+
+    Ulaz sa portom ili IP adresom ih nema: tamo ni `www` ni druga šema ne daju isti sajt.
+    """
+    url = httpx.URL(final_url)
+    if url.port is not None or not url.host or addresses.is_ip(url.host):
+        return []
+    bez = url.host.removeprefix("www.")
+    sve = [f"{sema}://{host}/" for sema in ("https", "http") for host in (bez, f"www.{bez}")]
+    return [adresa for adresa in sve if adresa != f"{url.scheme}://{url.host}/"]
+
+
+async def _fetch_variants(
+    fetcher: Fetcher, final_url: str, budget: DomainBudget, crawl_delay: float | None
+) -> list[HostVariant] | None:
+    """Sa proverom sertifikata i bez ponovnog pokušaja: TLS greška varijante je podatak o njoj."""
+    urls = variant_urls(final_url)
+    if not urls:
+        return None
+    variants = []
+    for url in urls:
+        outcome = await fetcher.request(url, budget, crawl_delay=crawl_delay, retries=0)
+        canonical = None
+        if outcome.status == 200 and outcome.body:
+            strana = page_builder.build(
+                url, final_url=outcome.final_url, status=200, headers=outcome.headers, body=outcome.body
+            )
+            canonical = strana.canonical_normalized
+        variants.append(
+            HostVariant(
+                url=url,
+                status=outcome.status,
+                final_url=outcome.final_url,
+                redirect_chain=outcome.redirect_chain,
+                canonical=canonical,
+                error_kind=outcome.error_kind,
+                error_detail=outcome.error_detail,
+            )
+        )
+    return variants
 
 
 async def _collect_sitemap(

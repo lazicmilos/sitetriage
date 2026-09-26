@@ -3,6 +3,19 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-26 — kanonizacija hosta i budžet od 19 zahteva (Z-26)
+
+- **Zapažanje:** u IT-SKENER-002 (O-12) `optional` u registru nije koristila nijedna provera. Čekao
+  je kanonizaciju hosta, a sajt koji se otvara na više adresa bez preusmerenja čest je i proverljiv
+  problem malih sajtova.
+- **Uzrok:** provera je bila planirana za v1, ali nije urađena.
+- **Odluka:** posle `robots.txt`, a pre mape sajta, idu tri zahteva za preostale adrese konačnog
+  porekla, pa je budžet 19 zahteva umesto 16. `infra.host.duplicate` gleda samo hostove (`www` i
+  bez `www`). Sajt koji radi i na `http://` i na `https://` istog hosta prijavljuje samo
+  `infra.https.redirect.missing`, da jedan problem ne da dva nalaza (odluka vlasnika, 26.09.).
+  Prihvatanje: na listi A broj domena sa potrošenim budžetom ne raste za više od 2 u odnosu na
+  prolaz C (6). Meri se u prvom sledećem prolazu nad listom A.
+
 ## 2026-09-26 — težina i broj zahteva do događaja `load` (Z-24)
 
 - **Zapažanje:** u IT-SKENER-002 (O-10) isti sajt je u dva prolaza imao 179, pa 281 zahtev (+57 %).

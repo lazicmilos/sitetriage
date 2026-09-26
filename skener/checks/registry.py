@@ -151,6 +151,7 @@ REQUIREMENTS: dict[str, Callable[[Any], bool]] = {
     "soft404": lambda s: len(s.soft404.probes) == 2 and all(p.status is not None for p in s.soft404.probes),
     "browser": lambda s: s.status != "failed",
     "network": lambda s: s.status != "failed" and s.network.request_count > 0,
+    "host_variants": lambda s: s.host_variants is not None,
 }
 
 

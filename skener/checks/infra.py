@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 
-from skener.checks.registry import Context, check, finding, ok, unknown
-from skener.models import SiteSnapshot
+from skener.checks.registry import Context, check, finding, not_applicable, ok, unknown
+from skener.fetch.urls import host_of
+from skener.models import HostVariant, SiteSnapshot
 
 SIMILARITY_CHARS = 2000
 # Samo ovi statusi tvrde da nečega nema. 401, 403, 429 i 5xx znače da je pristup
 # odbijen ili da server ne radi: tada ne znamo, pa je rezultat `unknown` (BUG-003).
 NE_POSTOJI = frozenset({404, 410})
+# Varijanta hosta koju nismo videli kao pretraživač: sertifikat nije prošao ili zahtev nije ni
+# poslat. Ne zna se da li služi sajt (Z-26). DNS greška i veza bez odgovora nisu takve: ništa ne služe.
+NEPROVERENA = frozenset({"tls", "tls_handshake", "budget"})
 
 
 @check(
@@ -122,6 +126,97 @@ def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
         ctx,
         evidence={"greska": tls.error or "nepoznata", "valid": 0},
         urls=[snapshot.entry.requested_url],
+    )
+
+
+def _pocetna(snapshot: SiteSnapshot) -> HostVariant:
+    """Konačna adresa početne u obliku varijante, da se poredi sa ostalim trima."""
+    home = snapshot.home
+    konacna = home.final_url or home.url
+    canonical = home.canonical_normalized
+    return HostVariant(url=konacna, status=home.status, final_url=konacna, canonical=canonical)
+
+
+def _poreklo(url: str | None) -> str:
+    return f"{url.split('://')[0]}://{host_of(url)}" if url and host_of(url) else ""
+
+
+@check(
+    "infra.https.redirect.missing",
+    level=1,
+    category="infra",
+    base_severity="medium",
+    requires=["home", "host_variants"],
+    description="Sajt radi na https-u, ali se otvara i preko http-a, bez preusmerenja na https.",
+    threshold=(
+        "https na konačnom hostu vraća 200 sa ispravnim sertifikatom, a http:// istog hosta vraća 200 bez "
+        "preusmerenja na https; TLS greška ili neposlat zahtev → unknown; https ne radi → ne primenjuje se"
+    ),
+)
+def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
+    spec = https_redirect_missing.spec
+    pocetna = _pocetna(snapshot)
+    host = host_of(pocetna.final_url)
+    adrese = {v.url: v for v in snapshot.host_variants}
+    if not snapshot.entry.tls.valid:
+        pocetna.error_kind = "tls"
+    sema = pocetna.final_url.split("://")[0]
+    adrese[f"{sema}://{host}/"] = pocetna
+    https, http = adrese.get(f"https://{host}/"), adrese.get(f"http://{host}/")
+    for url, varijanta in ((f"https://{host}/", https), (f"http://{host}/", http)):
+        if varijanta is None or varijanta.error_kind in NEPROVERENA:
+            vrsta = varijanta.error_kind if varijanta else "—"
+            return unknown(spec, "variant_unchecked", adresa=url, vrsta=vrsta)
+    if https.status != 200 or not (https.final_url or "").startswith("https://"):
+        return not_applicable(spec, "no_https", adresa=https.url)
+    if http.status == 200 and (http.final_url or "").startswith("http://"):
+        dokaz = {"http_adresa": http.url, "status": http.status, "https_adresa": https.url}
+        return finding(spec, ctx, evidence=dokaz, urls=[http.url])
+    return ok(spec)
+
+
+@check(
+    "infra.host.duplicate",
+    level=1,
+    category="infra",
+    base_severity="medium",
+    requires=["home", "host_variants"],
+    description="Isti sajt se otvara i sa www i bez www, a nijedna adresa ne preusmerava na drugu.",
+    threshold=(
+        "varijante vraćaju 200 na oba hosta (www i bez www); low ako canonical na svima upućuje na isto "
+        "poreklo; neproverena varijanta hosta koji nije viđen → unknown"
+    ),
+)
+def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
+    spec = host_duplicate.spec
+    pocetna = _pocetna(snapshot)
+    bez = (host_of(pocetna.final_url) or "").removeprefix("www.")
+    # Samo www i bez www: http i https istog hosta prijavljuje `infra.https.redirect.missing`, a
+    # adresa koja vodi na tuđ domen nije kopija sajta.
+    sluze = [
+        v
+        for v in [pocetna, *snapshot.host_variants]
+        if v.status == 200 and host_of(v.final_url) in (bez, f"www.{bez}")
+    ]
+    hostovi = {host_of(v.final_url) for v in sluze}
+    if len(hostovi) < 2:
+        for v in snapshot.host_variants:
+            if v.error_kind in NEPROVERENA and host_of(v.url) not in hostovi:
+                return unknown(spec, "variant_unchecked", adresa=v.url, vrsta=v.error_kind)
+        return ok(spec)
+    canonical = {_poreklo(v.canonical) for v in sluze}
+    isti = len(canonical) == 1 and "" not in canonical
+    return finding(
+        spec,
+        ctx,
+        evidence={
+            "adrese": sorted({_poreklo(v.final_url) for v in sluze}),
+            "broj_adresa": len(hostovi),
+            "isti_canonical": int(isti),
+        },
+        urls=sorted({v.url for v in sluze}),
+        severity="low" if isti else None,
+        variant="isti_canonical" if isti else None,
     )
 
 

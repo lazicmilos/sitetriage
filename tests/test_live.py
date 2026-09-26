@@ -91,7 +91,7 @@ def test_b2b_firma_stize_na_nivo_2_bez_nalaza_nivoa_1(prolaz):
 
 
 def test_prolaz_je_unutar_budzeta(prolaz):
-    """§4.2: najviše 16 zahteva po domenu."""
+    """§4.2: najviše 19 zahteva po domenu (Z-26)."""
     _config, sites = prolaz
     for domain, site in sites.items():
-        assert site.budget.requests_made <= 16, f"{domain}: {site.budget.requests_made} zahteva"
+        assert site.budget.requests_made <= 19, f"{domain}: {site.budget.requests_made} zahteva"

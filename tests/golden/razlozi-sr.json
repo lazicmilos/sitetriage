@@ -16,6 +16,16 @@
  },
  {
   "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.host.duplicate",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.https.redirect.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
   "provera": "infra.robots.missing",
   "razlog": "zahtev za robots.txt nije izvršen (mrežna greška ili budžet)"
  },

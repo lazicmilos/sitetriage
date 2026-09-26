@@ -75,7 +75,7 @@ def test_pokvareni_domeni_su_failed_a_ne_izuzetak(veliki_prolaz):
         # Svaka provera daje rezultat — nijedna ne nestaje i nijedna ne puca.
         ctx = registry.Context(domain=site.domain, industry=site.industry, config=config)
         results = registry.run(1, site, ctx)
-        assert len(results) == 20
+        assert len(results) == 22
         assert all(r.reason for r in results if r.status == "unknown")
 
         # Ono što nismo mogli da proverimo ne sme da se prijavi kao uredno.

@@ -41,6 +41,12 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Dodato
 
+- Kanonizacija hosta. Posle `robots.txt` alat dohvata preostale tri adrese konačnog porekla
+  (`http`/`https` × sa i bez `www`) i beleži ih u `SiteSnapshot.host_variants`. Dve nove provere:
+  `infra.https.redirect.missing` (sajt radi na https-u, a `http://` istog hosta vraća 200 bez
+  preusmerenja) i `infra.host.duplicate` (sajt se otvara i sa `www` i bez `www`, a nijedna adresa ne
+  preusmerava na drugu; `low` kad canonical na svima upućuje na isto poreklo). Budžet po domenu je
+  19 zahteva umesto 16. Ulaz sa IP adresom ili portom nema varijante.
 - Uzrok `partial`-a: izveštaj domena ima `partial_causes` (`budget`, `unknown`), zbir ih broji
   posebno, a JSON i HTML daju udeo budžeta među domenima koji rade i udeo `unknown`-a po proveri
   (`budget_share`, `unknown_share`).

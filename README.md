@@ -181,6 +181,8 @@ generiše ponovo; CI proverava samo da u njoj nije izostala nijedna provera iz r
 | `i18n.lang.invalid` | 1 | i18n | medium | lang ∈ {zxx, und, prazno} ili ne parsira kao BCP-47 |
 | `i18n.lang.mismatch` | 1 | i18n | medium | sadržaj prepoznat kao sr (ćirilica > 30 % ili dijakritici > 0,5 %) uz lang koji ne počinje sa sr |
 | `i18n.lang.missing` | 1 | i18n | medium | atribut lang ne postoji |
+| `infra.host.duplicate` | 1 | infra | medium | varijante vraćaju 200 na oba hosta (www i bez www); low ako canonical na svima upućuje na isto poreklo; neproverena varijanta hosta koji nije viđen → unknown |
+| `infra.https.redirect.missing` | 1 | infra | medium | https na konačnom hostu vraća 200 sa ispravnim sertifikatom, a http:// istog hosta vraća 200 bez preusmerenja na https; TLS greška ili neposlat zahtev → unknown; https ne radi → ne primenjuje se |
 | `infra.robots.missing` | 1 | infra | low | status 404 ili 410; ostali statusi osim 200 → unknown |
 | `infra.sitemap.missing` | 1 | infra | medium | status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi → unknown |
 | `infra.soft404` | 1 | infra | high | obe sonde vraćaju konačni status 200 (§5.2); status van {200, 404, 410} → unknown |
@@ -306,8 +308,10 @@ User-Agent predstavlja onoga ko pokreće alat, a ne autora alata.
   ograničava tebe, a semafor po sajtu (uvek 1) štiti njih. To je granica između alata i napada.
 - Između dva zahteva ka istom sajtu ide pauza od 0,5 do 1 s, a duža ako je traži `Crawl-delay`.
 - `Disallow` iz `robots.txt` se poštuje.
-- Tvrd budžet po domenu je 16 zahteva i 40 sekundi. Budžet od 25 s nije bio dovoljan za spor deljeni
-  hosting, gde jedna strana odgovara i po tri sekunde. Broj zahteva je ostao isti.
+- Tvrd budžet po domenu je 19 zahteva i 40 sekundi: početna, `robots.txt`, tri preostale adrese
+  sajta (`http`/`https` × sa i bez `www`), dve sonde za lažni 404, do četiri mape sajta i sedam
+  stranica uzorka. Budžet od 25 s nije bio dovoljan za spor deljeni hosting, gde jedna strana
+  odgovara i po tri sekunde.
 - Na `429` ili `503` alat odustaje od domena za taj prolaz, bez ponovnog pokušaja.
 - Administrator koji na kontakt iz User-Agent-a napiše „ne skenirajte nas" poštuje se od
   sledećeg prolaza. Njegov domen ide u fajl izuzetih (jedan po redu, `#` za komentar), a fajl se
@@ -336,7 +340,6 @@ proxy zaobišao proveru.
 
 ## Planirano, nije u v1
 
-- Kanonizacija hosta (sve četiri varijante `http/https` × `www/bez www`) kao podrazumevana provera.
 - Core Web Vitals (LCP, CLS): vredni brojevi, ali traže pažljivije merenje nego što v1 zaslužuje.
 - `skener diff` između dva prolaza. Rečenica „sajt je od marta postao 3 MB teži" je dobar uvod u mejl.
 - Provera strukturiranih podataka (`schema.org`), koja restoranima i klinikama ima stvarnu vrednost.

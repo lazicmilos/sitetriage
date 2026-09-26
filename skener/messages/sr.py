@@ -266,6 +266,33 @@ FINDINGS: dict[str, dict] = {
         ),
         "tech": "TLS greška: {greska}",
     },
+    "infra.https.redirect.missing": {
+        "client": (
+            "Sajt se otvara i na nezaštićenoj adresi {http_adresa}, bez preusmerenja na {https_adresa}. "
+            "Chrome takvu stranicu označava sa „Nije bezbedno”."
+        ),
+        "tech": (
+            "{http_adresa} → {status} bez preusmerenja na https; {https_adresa} → 200 sa ispravnim "
+            "sertifikatom"
+        ),
+    },
+    "infra.host.duplicate": {
+        "client": (
+            "Isti sajt se otvara na {broj_adresa:n:adresi|adrese|adresa} ({adrese:join:, }), a nijedna ne "
+            "preusmerava na drugu. Google ih zato vidi kao različite adrese sa istim sadržajem i sam bira "
+            "koju da prikaže u pretrazi."
+        ),
+        "tech": "200 bez preusmerenja na: {adrese:join:, }; isti canonical na svima: {isti_canonical}",
+        "variants": {
+            "isti_canonical": {
+                "client": (
+                    "Isti sajt se otvara na {broj_adresa:n:adresi|adrese|adresa} ({adrese:join:, }), a "
+                    "nijedna ne preusmerava na drugu. Oznaka canonical na svima upućuje na istu adresu, "
+                    "pa Google zna koju da prikaže, ali preusmerenje nije podešeno."
+                )
+            }
+        },
+    },
     "infra.unreachable": {
         "client": (
             "Sajt se nije otvorio ni u jednom od {broj_pokusaja} pokušaja ({prvi_pokusaj:utc} i "
@@ -416,6 +443,10 @@ REASONS: dict[str, str] = {
     "few_pages": (
         "sajt ima {adresa:n:internu adresu|interne adrese|internih adresa}, a za poređenje treba bar {prag}"
     ),
+    # varijante hosta: http/https × www/bez www (Z-26)
+    "requires.host_variants": "varijante adrese (http/https, sa i bez www) nisu dohvaćene u ovom snimku",
+    "variant_unchecked": "{adresa} nije viđena kao u pretraživaču ({vrsta}), pa se ne zna da li služi sajt",
+    "no_https": "https na {adresa} ne vraća stranicu, pa nema na šta da se preusmerava",
     # zašto domen nije skeniran (lista „Nije skenirano")
     "entry_missing": "snapshot nema početnu (dohvatanje je puklo, vidi log)",
     "entry_status": "početna je vratila status {status}",

@@ -21,7 +21,8 @@ delay_ms = [500, 1000]          # pauza sa jitter-om ka istom hostu (§8.3)
 timeout_connect_s = 5
 timeout_read_s = 10
 timeout_total_s = 20
-max_requests_per_domain = 16    # tvrd budžet (§4.2)
+max_requests_per_domain = 19    # tvrd budžet (§4.2): početna 1 + robots 1 + varijante hosta 3 +
+                                # sonde 2 + mape 4 + uzorak 7 = 18, a budžet je 19 (Z-26)
 max_seconds_per_domain = 40     # tvrd budžet (§4.2); 25 s nije bilo dovoljno za spor deljeni
                                 # hosting (1–3 s po strani) — docs/izvestaj-testiranja-100.md, O-4
 max_crawl_delay_s = 10          # Crawl-delay se poštuje do ove granice (§8.3)

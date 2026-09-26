@@ -13,7 +13,7 @@ from factories import clean_site, findings, run_level, statuses
 
 from skener.checks import registry
 from skener.messages import LANGS, reason, render
-from skener.models import Entry, Soft404, Soft404Probe, Tls
+from skener.models import Entry, HostVariant, Soft404, Soft404Probe, Tls
 
 LEVEL1_IDS = sorted(s.check_id for s in registry.REGISTRY.values() if s.level == 1)
 
@@ -80,6 +80,14 @@ POZITIVNI = {
     "infra.unreachable": lambda s: (
         setattr(s, "entry", Entry("https://cist.rs/", error_kind="dns_nxdomain", error_detail="NXDOMAIN")),
         setattr(s, "entry_attempts", ["2026-09-22T09:00:00Z", "2026-09-22T09:01:05Z"]),
+    ),
+    # http://cist.rs/ ostaje na http-u.
+    "infra.https.redirect.missing": lambda s: s.host_variants.__setitem__(
+        1, HostVariant(url="http://cist.rs/", status=200, final_url="http://cist.rs/")
+    ),
+    # https://www.cist.rs/ služi sajt, bez preusmerenja na cist.rs.
+    "infra.host.duplicate": lambda s: s.host_variants.__setitem__(
+        0, HostVariant(url="https://www.cist.rs/", status=200, final_url="https://www.cist.rs/")
     ),
 }
 
