@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skener"
+dynamic = ["version"]
+description = "Skener sajtova — rangira domene po tome koji zaslužuju pun ručni audit"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Milos Lazic", email = "miloslazic458@gmail.com" }]
+dependencies = [
+    "httpx>=0.27",
+    "selectolax>=0.3.21",
+]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.44"]
+# Playwright je zakucan: paket traži tačno svoju reviziju Chromium-a, pa nadogradnja
+# bez `playwright install` obori sve browser testove (vidi `chromium_se_pokrece`).
+dev = ["pytest>=8", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18"]
+
+[project.scripts]
+skener = "skener.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["skener*"]
+
+# Šema JSON izveštaja ide uz paket: kupac koda i web aplikacija validiraju po njoj.
+[tool.setuptools.package-data]
+skener = ["schema/*.json"]
+
+[tool.setuptools.dynamic]
+version = { attr = "skener.__version__" }
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not live' --strict-markers"
+markers = [
+    "live: pravi mrežni prolaz nad ispitnim skupom; iskljucen po defaultu (pytest -m live)",
+    "browser: trazi instaliran Playwright/Chromium; preskace se ako ga nema",
+]
+
+# Mutaciono testiranje (docs/plan-testiranja.md): moduli sa logikom, brzi testovi.
+# Nov modul pod skener/ je obuhvaćen sam, osim ako je u do_not_mutate. Zato čisti
+# moduli (poruke, diff, ishodi, klasifikacija adresa) ne idu u fetch/* ni report/*, a
+# njihovi testovi se dodaju u pytest_add_cli_args_test_selection.
+# Radi samo na Linux-u, pa kroz Docker:
+#   docker compose run --rm skener python scripts/mutacije.py
+[tool.mutmut]
+paths_to_mutate = ["skener/"]
+do_not_mutate = [
+    "skener/__init__.py", "skener/cli.py", "skener/pipeline.py", "skener/models.py", "skener/store.py",
+    "skener/fetch/*", "skener/report/*",
+]
+tests_dir = ["tests/"]
+also_copy = ["skener.toml"]
+pytest_add_cli_args_test_selection = [
+    "tests/test_checks_level1.py", "tests/test_checks_level2.py", "tests/test_granice.py",
+    "tests/test_score.py", "tests/test_config.py", "tests/test_ispitni_skup.py", "tests/test_poruke.py",
+    "tests/test_inputs.py", "tests/test_addresses.py",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

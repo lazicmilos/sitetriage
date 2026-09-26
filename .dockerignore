@@ -1,0 +1,14 @@
+.git
+.github
+**/__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.venv
+build/
+dist/
+out/
+snapshots/
+snimci/
+izvestaj/
+rad/

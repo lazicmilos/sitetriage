@@ -1,0 +1,56 @@
+name: testovi
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  offline:
+    # Samo offline sloj: `live` testovi bi padali kad nekom sajtu istekne
+    # sertifikat, a to nije greška u alatu (§12.1).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instaliraj
+        run: pip install -e '.[dev]'
+
+      - name: Lint
+        run: ruff check skener/ tests/ scripts/
+
+      - name: Instaliraj Chromium
+        run: playwright install --with-deps chromium
+
+      - name: Testovi
+        # Izlazni kriterijum iz plana testiranja: pokrivenost linija i grana ne pada ispod 95 %.
+        run: pytest -q --cov=skener --cov-branch --cov-report=term --cov-fail-under=95
+
+      - name: Tabela provera se ne razilazi sa README-om
+        run: |
+          skener explain --all --markdown > /tmp/registar.md
+          while IFS= read -r red; do
+            check_id=$(printf '%s' "$red" | cut -d'`' -f2)
+            grep -qF "\`$check_id\`" README.md || {
+              echo "::error::$check_id nije u tabeli u README-u (pokreni: skener explain --all --markdown)"
+              exit 1
+            }
+          done < <(tail -n +3 /tmp/registar.md)
+
+  docker:
+    # Isto okruženje u kome se pušta pravi prolaz. Bez ovog posla Dockerfile se tiho
+    # pokvari prvi put kad se promeni verzija Playwright-a u pyproject.toml.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: docker compose build
+
+      - name: Testovi u kontejneru
+        run: docker compose run --rm --user "$(id -u):$(id -g)" skener pytest -q

@@ -1,0 +1,178 @@
+# Svi pragovi, množioci i konstante žive ovde, ne u kodu (§11.2).
+# Ovaj fajl je i podrazumevana konfiguracija: `--config` se spaja preko njega,
+# pa parcijalna korisnička konfiguracija ne gubi ostale pragove.
+
+[identitet]
+# Ko skenira. Ovo vidi svaki administrator u logu svog servera, pa mora da bude
+# operater — onaj ko pokreće alat — a ne autor alata. Bez oba polja alat odbija da
+# skenira. Upiši ih u svoj --config fajl ili postavi SKENER_NAZIV i SKENER_KONTAKT.
+naziv = ""                      # npr. "Web studio Primer"
+kontakt = ""                    # mejl ili adresa sajta na kojoj te administrator nalazi
+# Administrator koji na taj kontakt napiše „ne skenirajte nas" poštuje se od sledećeg prolaza.
+# Fajl sa jednim domenom po redu; izuzima se i svaki poddomen. Isto može `--exclude FILE`.
+izuzeti = ""                    # npr. "/rad/izuzeti.txt"
+
+[http]
+concurrency = 8                 # globalni semafor (§8.1)
+per_host_concurrency = 1        # nikad dva paralelna zahteva ka istom sajtu (§8.1)
+domain_concurrency = 8          # domena u radu odjednom; budžet domena kreće tek kad
+                                # dobije red, ne dok čeka iza ostalih
+delay_ms = [500, 1000]          # pauza sa jitter-om ka istom hostu (§8.3)
+timeout_connect_s = 5
+timeout_read_s = 10
+timeout_total_s = 20
+max_requests_per_domain = 16    # tvrd budžet (§4.2)
+max_seconds_per_domain = 40     # tvrd budžet (§4.2); 25 s nije bilo dovoljno za spor deljeni
+                                # hosting (1–3 s po strani) — docs/izvestaj-testiranja-100.md, O-4
+max_crawl_delay_s = 10          # Crawl-delay se poštuje do ove granice (§8.3)
+second_attempt_after_s = 60     # sajt koji ne odgovara pokušava se ponovo tek posle ovoliko, pa
+                                # tek onda ide u „Ne rade" (Z-20); za to vreme radi ostatak liste
+user_agent = "MlazicSiteScanner/{verzija} (+{kontakt}; {naziv})"   # popunjava se iz [identitet]
+
+[net]
+# Privatne i posebne adrese (localhost, 10.x, 192.168.x, 169.254.x…) se ne otvaraju, ni
+# posle DNS-a ni posle preusmerenja (SSRF, docs/adr/ADR-006-ssrf.md). Ovde idu samo
+# `host:port` parovi koji se izričito dozvoljavaju, npr. ["localhost:8123"] za staging.
+# Opšti prekidač koji isključuje zaštitu ne postoji.
+allowed_private = []
+
+[sitemap]
+max_depth = 3
+max_files = 4                   # 16 = početna 1 + robots 1 + sonde 2 + mape 4 + uzorak 7 (+1 rezerva);
+                                # za uzorak od 7 stranica 4 mape su dovoljne
+max_urls = 5000
+sample_size = 8                 # početna + 7 (§4.4)
+
+[escalation]
+max_level2 = 60
+empty_html_text_threshold = 800 # razlikuje se od thresholds.i18n.min_text_length namerno:
+                                # 400 je granica pouzdanosti jezičke heuristike,
+                                # 800 je granica "ovo izgleda kao prazan HTML"
+slow_entry_ms = 1500
+raw_html_bytes = 300_000
+
+[browser]
+concurrency = 3                 # svaki kontekst je stotine MB RAM-a (§8.1)
+viewport_width = 1366
+viewport_height = 768
+timeout_s = 25
+idle_after_load_ms = 1500
+scroll_pause_ms = 1000          # bez skrola lazy slike imaju naturalWidth == 0 (§7.1)
+max_unmeasured_responses = 5    # iznad ovoga je merenje težine `unknown`, ne `ok` (§7.2)
+drain_timeout_s = 5             # telo odgovora koje ne stigne dotad je nemereno (strim, video)
+max_seconds_per_domain = 60     # tvrd limit za ceo nivo 2; najgori regularan slučaj je ~40 s
+                                # (25 učitavanje + mirovanje + skrol + 5 drain)
+executable_path = ""            # prazno = Playwright-ov Chromium; postavi za sistemski
+                                # Chrome ili kontejner sa gotovim browserom. Može i preko
+                                # promenljive okruženja SKENER_CHROMIUM.
+
+[thresholds.seo]
+duplicate_min_pages = 3         # ≥ 3 stranice iz različitih grupa putanja (§5)
+canonical_foreign_min = 2       # stranice sa tuđim canonical-om ka istoj adresi, iz toliko grupa putanja
+canonical_share = { high = 0.4, critical = 0.6 }   # udeo tih stranica u uzorku; ispod je medium.
+                                # Početne vrednosti (Z-23); konačne posle kalibracije na listi A (Z-50)
+h1_multiple = 3
+
+[thresholds.perf]
+page_weight_mb = { medium = 3.0, high = 5.0, critical = 8.0 }   # preneti bajtovi bez videa; ≈ medijana,
+                                # p75 i p90 za 60 pravih sajtova (docs/izvestaj-testiranja-2.md)
+request_count = { medium = 100, high = 150 }
+load_ms = { medium = 4000, high = 8000 }
+image_ratio = 2.5               # 2 bi svaki retina sajt proglasio pokvarenim (§7.5)
+oversized_min_count = 3
+oversized_waste_kb = 700
+html_size_kb = 500
+compression_min_kb = 50
+redirect_hops = 3
+mobile_speed_mbps = 4.8         # 0,6 MB/s — spora 4G veza (§10.3)
+
+[thresholds.i18n]
+min_text_length = 400
+cyrillic_ratio = 0.30
+diacritic_ratio = 0.005         # srpski latinicom ima 2–5 %, engleski 0 % (§5.1)
+
+[thresholds.a11y]
+min_images = 5
+missing_ratio = 0.5
+high_ratio = 0.8                # udeo iznad kog nalaz prelazi u `high` (§7.4)
+high_min_images = 15
+
+[thresholds.qa]
+console_errors = 3
+
+[thresholds.soft404]
+text_similarity = 0.9           # sličnost sonde i početne = tvrd dokaz (§5.2)
+
+[report]
+mobile_overhead_s = 1.0         # režijsko vreme uz 0,6 MB/s (§10.3)
+top_findings = 3                # toliko staje u mejl (§9.4)
+
+[severity_points]
+critical = 40
+high = 20
+medium = 8
+low = 3
+
+# weight = severity_points[severity] × industry_multipliers[industry][category]  (§9.2)
+[industry_multipliers.hotel]
+social = 1.5
+perf = 1.3
+i18n = 1.3
+a11y = 1.0
+seo = 1.2
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.restoran]
+social = 1.5
+perf = 1.5
+i18n = 1.1
+a11y = 1.0
+seo = 1.2
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.zdravstvo]
+social = 0.9
+perf = 1.0
+i18n = 1.3
+a11y = 1.5
+seo = 1.2
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.ecommerce]
+social = 1.2
+perf = 1.5
+i18n = 1.1
+a11y = 1.2
+seo = 1.3
+infra = 1.0
+qa = 0.8
+
+[industry_multipliers.b2b]
+social = 0.7
+perf = 0.9
+i18n = 1.0
+a11y = 1.4
+seo = 1.0
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.institucija]
+social = 0.7
+perf = 0.9
+i18n = 1.0
+a11y = 1.4
+seo = 1.0
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.ostalo]
+social = 1.0
+perf = 1.0
+i18n = 1.0
+a11y = 1.0
+seo = 1.0
+infra = 1.0
+qa = 0.7

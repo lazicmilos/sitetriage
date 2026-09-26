@@ -1,0 +1,262 @@
+[
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "i18n.lang.invalid",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "i18n.lang.mismatch",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "i18n.lang.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.robots.missing",
+  "razlog": "zahtev za robots.txt nije izvršen (mrežna greška ili budžet)"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.sitemap.missing",
+  "razlog": "zahtev za sitemap nije izvršen (mrežna greška ili budžet)"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.soft404",
+  "razlog": "obe sonde za lažni 404 nisu izvršene"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.tls.invalid",
+  "razlog": "početna strana nije ni pokušana (budžet potrošen pre nje)"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "infra.unreachable",
+  "razlog": "početna strana nije ni pokušana (budžet potrošen pre nje)"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "perf.compression.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "perf.html.size",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "perf.redirect.chain",
+  "razlog": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "seo.canonical.duplicate",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "seo.canonical.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "seo.description.duplicate",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "seo.description.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "seo.title.duplicate",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "seo.title.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "social.og.description.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "social.og.image.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/prazan-snapshot",
+  "provera": "social.og.title.missing",
+  "razlog": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "slucaj": "nivo1/bez-odgovora",
+  "provera": "infra.tls.invalid",
+  "razlog": "veza nije uspostavljena (connect_timeout), sertifikat nije proveren"
+ },
+ {
+  "slucaj": "nivo1/bez-odgovora",
+  "provera": "infra.unreachable",
+  "razlog": "početna nije vratila odgovor (connect_timeout, pokušaja: 0); iz toga se ne vidi da sajt ne radi"
+ },
+ {
+  "slucaj": "nivo1/bez-odgovora",
+  "provera": "perf.redirect.chain",
+  "razlog": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)"
+ },
+ {
+  "slucaj": "nivo1/tls-preko-http",
+  "provera": "infra.tls.invalid",
+  "razlog": "https nije uspeo (tls_handshake: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF); sajt je dohvaćen preko http-a, sertifikat nije proveren"
+ },
+ {
+  "slucaj": "nivo1/sitemap-403",
+  "provera": "infra.sitemap.missing",
+  "razlog": "server je na sitemap odgovorio statusom 403; iz toga se ne vidi da li postoji"
+ },
+ {
+  "slucaj": "nivo1/robots-403",
+  "provera": "infra.robots.missing",
+  "razlog": "server je na robots.txt odgovorio statusom 403; iz toga se ne vidi da li postoji"
+ },
+ {
+  "slucaj": "nivo1/sonde-403",
+  "provera": "infra.soft404",
+  "razlog": "sonde su dobile status 403, 403; iz toga se ne vidi kako sajt odgovara na nepostojeću adresu"
+ },
+ {
+  "slucaj": "nivo1/malo-teksta",
+  "provera": "i18n.lang.mismatch",
+  "razlog": "premalo teksta u sirovom HTML-u (100 < 400 znakova)"
+ },
+ {
+  "slucaj": "nivo1/pukla-provera",
+  "provera": "perf.compression.missing",
+  "razlog": "provera je pukla: AttributeError: 'NoneType' object has no attribute 'get'"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "a11y.img.alt.missing",
+  "razlog": "stranica nije otvorena u browseru"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "perf.img.oversized",
+  "razlog": "stranica nije otvorena u browseru"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "perf.load.time",
+  "razlog": "stranica nije otvorena u browseru"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "perf.page.weight",
+  "razlog": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "perf.request.count",
+  "razlog": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "qa.console.errors",
+  "razlog": "stranica nije otvorena u browseru"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "seo.h1.missing",
+  "razlog": "stranica nije otvorena u browseru"
+ },
+ {
+  "slucaj": "nivo2/browser-pao",
+  "provera": "seo.h1.multiple",
+  "razlog": "stranica nije otvorena u browseru"
+ },
+ {
+  "slucaj": "nivo2/bez-saobracaja",
+  "provera": "perf.page.weight",
+  "razlog": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "slucaj": "nivo2/bez-saobracaja",
+  "provera": "perf.request.count",
+  "razlog": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "slucaj": "nivo2/nemereni-odgovori",
+  "provera": "perf.page.weight",
+  "razlog": "9 odgovora nije izmereno (prag 5)"
+ },
+ {
+  "slucaj": "nivo2/prekid-ucitavanja",
+  "provera": "a11y.img.alt.missing",
+  "razlog": "stranica nije dovršila učitavanje, slike nisu prebrojane"
+ },
+ {
+  "slucaj": "nivo2/prekid-ucitavanja",
+  "provera": "perf.page.weight",
+  "razlog": "učitavanje prekinuto pre kraja, izmereno je nepotpuno"
+ },
+ {
+  "slucaj": "nivo2/prekid-ucitavanja",
+  "provera": "perf.request.count",
+  "razlog": "učitavanje prekinuto pre kraja, izmereno je nepotpuno"
+ },
+ {
+  "slucaj": "nivo2/prekid-ucitavanja",
+  "provera": "seo.h1.missing",
+  "razlog": "stranica nije dovršila učitavanje, h1 može da stigne kasnije"
+ },
+ {
+  "slucaj": "nivo2/vreme-nije-mereno",
+  "provera": "perf.load.time",
+  "razlog": "vreme učitavanja nije izmereno"
+ },
+ {
+  "slucaj": "nivo2/nemerene-slike",
+  "provera": "perf.img.oversized",
+  "razlog": "6 od 10 slika nije izmereno"
+ },
+ {
+  "slucaj": "eskalacija",
+  "provera": "eskalacija",
+  "razlog": "sirovi HTML ima 300 znakova teksta (< 800)"
+ },
+ {
+  "slucaj": "eskalacija",
+  "provera": "eskalacija",
+  "razlog": "sirovi HTML nema nijedan h1 — sadržaj se verovatno crta iz JS-a"
+ },
+ {
+  "slucaj": "eskalacija",
+  "provera": "eskalacija",
+  "razlog": "ima bar jedan nalaz nivoa 1 ozbiljnosti ≥ medium"
+ },
+ {
+  "slucaj": "eskalacija",
+  "provera": "eskalacija",
+  "razlog": "HTML početne je 400000 B (> 300000)"
+ },
+ {
+  "slucaj": "eskalacija",
+  "provera": "eskalacija",
+  "razlog": "HTML se ne šalje kompresovan"
+ },
+ {
+  "slucaj": "eskalacija",
+  "provera": "eskalacija",
+  "razlog": "početna odgovara za 2000 ms (> 1500)"
+ }
+]

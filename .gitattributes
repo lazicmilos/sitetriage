@@ -1,0 +1,5 @@
+# Kraj reda je LF i u repou i na disku, i na Windows-u (Z-01). Bez ovoga core.autocrlf
+# ostavlja CRLF na disku, pa git u Linux kontejneru vidi 40 izmenjenih fajlova.
+* text=auto eol=lf
+*.png binary
+*.gz binary
