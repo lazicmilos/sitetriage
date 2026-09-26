@@ -66,6 +66,9 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- Ključ pristojnosti bio je tačan host, pa bi `www.x.rs` i `x.rs` mogli da dobiju dva zahteva
+  istovremeno. Sada je ključ host bez vodećeg `www.`: oba dele red i pauzu.
+
 - Jezičke provere (`i18n.lang.missing`, `invalid`, `mismatch`) gledale su samo sirovi HTML, pa je
   sajt čiji tekst crta JavaScript imao `unknown`, a `lang` koji postavi JavaScript bio je prijavljen
   kao nepostojeći. Kad je nivo 2 radio, provere sada gledaju stranicu posle JavaScript-a, onakvu

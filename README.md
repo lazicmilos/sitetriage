@@ -302,8 +302,8 @@ Ime alata, ko skenira i kako da ga kontaktira moraju biti u svakom zahtevu. Bez 
 koji sa jedne adrese obilazi dvesta sajtova, i administrator koji te blokira postupa ispravno. Zato
 User-Agent predstavlja onoga ko pokreće alat, a ne autora alata.
 
-- Nikad dva zahteva istovremeno ka istom sajtu. Globalni semafor ograničava tebe, a semafor po hostu
-  (uvek 1) štiti njih. To je granica između alata i napada.
+- Nikad dva zahteva istovremeno ka istom sajtu, a `www.x.rs` i `x.rs` su isti sajt. Globalni semafor
+  ograničava tebe, a semafor po sajtu (uvek 1) štiti njih. To je granica između alata i napada.
 - Između dva zahteva ka istom sajtu ide pauza od 0,5 do 1 s, a duža ako je traži `Crawl-delay`.
 - `Disallow` iz `robots.txt` se poštuje.
 - Tvrd budžet po domenu je 16 zahteva i 40 sekundi. Budžet od 25 s nije bio dovoljan za spor deljeni

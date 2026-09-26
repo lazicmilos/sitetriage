@@ -283,7 +283,8 @@ class Fetcher:
         if not budget.take():
             return Outcome(url=url, error_kind="budget", error_detail=budget.aborted_reason)
 
-        host = host_of(url) or url
+        # Ključ je host bez vodećeg `www.`: `www.x.rs` i `x.rs` su isti server i dele red i pauzu (Z-26).
+        host = (host_of(url) or url).removeprefix("www.")
         lock = self._host_locks.setdefault(host, asyncio.Lock())
 
         # Pauza se čeka pod ključem hosta ali van globalnog semafora, da spavanje

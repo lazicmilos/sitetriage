@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import socket
+import time
 from dataclasses import replace
 
 import httpx
@@ -133,6 +134,33 @@ def test_pauza_izmedju_zahteva_ka_istom_hostu():
         scan(site, **{"http.delay_ms": [120, 120], "http.max_requests_per_domain": 5})
         elapsed = time.monotonic() - started
     assert elapsed >= 0.4, f"pauze nisu ispoštovane, prolaz je trajao {elapsed:.2f} s"
+
+
+def test_www_i_bez_www_dele_kljuc_pristojnosti():
+    """Dva zahteva ka `www.x.rs` i `x.rs` idu jedan za drugim, sa pauzom između."""
+    cfg = load_config()
+    cfg["http"]["delay_ms"] = [100, 100]
+    uporedo, najvise, pocetak = 0, 0, []
+
+    class Sporo(Fetcher):
+        async def _send(self, url: str, *, verify: bool) -> Outcome:
+            nonlocal uporedo, najvise
+            uporedo += 1
+            najvise = max(najvise, uporedo)
+            pocetak.append(time.monotonic())
+            await asyncio.sleep(0.05)
+            uporedo -= 1
+            return Outcome(url=url, status=200, final_url=url)
+
+    async def run():
+        async with Sporo(cfg) as fetcher:
+            budzet = DomainBudget(10, 30)
+            www, bez = "https://www.primer.rs/", "https://primer.rs/"
+            await asyncio.gather(fetcher.request(www, budzet), fetcher.request(bez, budzet))
+
+    asyncio.run(run())
+    assert najvise == 1
+    assert pocetak[1] - pocetak[0] >= 0.1, "drugi zahtev čeka i pauzu pristojnosti"
 
 
 def test_vise_domena_ide_paralelno():
