@@ -80,6 +80,11 @@ def render(finding: Any, lang: str = "sr") -> Message:
     )
 
 
+def number(value: float, lang: str = "sr") -> str:
+    """Broj za prikaz, po pravilima jezika: „99,4" ili „99.4" (Z-28)."""
+    return catalog(lang).DECIMAL(value)
+
+
 def reason(r: Any, lang: str = "sr") -> str:
     """Razlog za `unknown` ili za eskalaciju, iz koda i podataka."""
     cat = catalog(lang)

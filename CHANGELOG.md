@@ -108,6 +108,10 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   ga Google čita pre obilaska sajta. Test sada zabranjuje reči koje tvrde učestalost ili ponašanje
   ljudi (`većina`, `uvek`, `svaki`, `most`, `always`, `every`…) u rečenicama oba jezika.
 - U HTML izveštaju je pisalo „1 nalaza"; sada se broj i imenica slažu („1 nalaz", „3 nalaza").
+- HTML izveštaj na srpskom pisao je skor, bodove, trajanje i brzinu iz pretpostavke sa decimalnom
+  tačkom („99.4"), a rečenice za klijenta sa zarezom. Sada svaki takav broj ide kroz formatter
+  jezika („99,4" na srpskom, „99.4" na engleskom), sa jednom decimalom. Tehnička rečenica, dokaz,
+  CSV i JSON ostaju mašinski zapis, sa tačkom i punom preciznošću.
 - Bez instaliranog Playwright-a (`pip install skener` bez `[browser]`) prolaz sa nivoom 2 je
   pucao. Sada se nivo 2 preskače uz poruku, a nivo 1 radi.
 

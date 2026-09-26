@@ -16,9 +16,9 @@ from pathlib import Path
 
 from skener import __version__
 from skener.config import get
+from skener.messages import number, text
 from skener.messages import reason as razlog
 from skener.messages import render as poruka
-from skener.messages import text
 from skener.models import DomainReport
 from skener.score import RADE, partial_shares
 
@@ -154,14 +154,13 @@ def render(
     if excluded:
         cards.append((t("card_excluded"), excluded))
     if duration_s is not None:
-        trajanje = f"{duration_s:.1f} s" if duration_s < 10 else f"{duration_s:.0f} s"
-        cards.append((t("card_duration"), trajanje))
+        trajanje = number(duration_s, lang) if duration_s < 10 else f"{duration_s:.0f}"
+        cards.append((t("card_duration"), f"{trajanje} s"))
 
     speed = get(config, "thresholds.perf.mobile_speed_mbps")
     overhead = get(config, "report.mobile_overhead_s")
-    assumption = text(
-        "assumption_html", lang, speed=_e(speed), mb_per_s=_e(round(speed / 8, 2)), overhead=_e(overhead)
-    )
+    # Brojevi, ne tekst: formatter jezika ih piše sa zarezom ili tačkom (Z-28).
+    assumption = text("assumption_html", lang, speed=speed, mb_per_s=round(speed / 8, 2), overhead=overhead)
     labels = {"copy": text("copy_draft", lang), "copied": text("copied", lang)}
     js = JS.replace("__LABELS__", json.dumps(labels, ensure_ascii=False))
     headers = (
@@ -213,7 +212,7 @@ def _row(report: DomainReport, lang: str) -> str:
         f'<tr><td class="num">{report.rank}</td>'
         f"<td><b>{_e(report.domain)}</b></td>"
         f"<td>{_e(report.industry)}</td>"
-        f'<td class="num">{report.total_score:g}</td>'
+        f'<td class="num">{number(report.total_score, lang)}</td>'
         f"<td>{(_badge(top.severity, lang) + ' ' + _e(top.check_id)) if top else '—'}</td>"
         f'<td class="num">{len(report.findings)}</td>'
         f"<td>{_e(text('yes' if report.level2_ran else 'no', lang))}</td>"
@@ -307,8 +306,8 @@ def _details(report: DomainReport, lang: str) -> str:
         "summary_meta",
         lang,
         industry=report.industry,
-        score=f"{report.total_score:g}",
-        worst=f"{report.max_finding_weight:g}",
+        score=report.total_score,
+        worst=report.max_finding_weight,
         findings=len(report.findings),
     )
     return f"""<details>
@@ -326,7 +325,7 @@ def _finding(finding, lang: str) -> str:
         for u in finding.evidence_urls[:3]
     )
     message = poruka(finding, lang)
-    meta = text("finding_meta", lang, level=finding.level, weight=f"{finding.weight:g}")
+    meta = text("finding_meta", lang, level=finding.level, weight=finding.weight)
     return f"""<div class="finding">
 <p>{_badge(finding.severity, lang)} <code>{_e(finding.check_id)}</code>
 <span class="tech">{_e(meta)}</span></p>
