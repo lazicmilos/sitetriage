@@ -13,10 +13,12 @@ kontakt = ""                    # mejl ili adresa sajta na kojoj te administrato
 izuzeti = ""                    # npr. "/rad/izuzeti.txt"
 
 [http]
-concurrency = 8                 # globalni semafor (§8.1)
+concurrency = 16                # globalni semafor (§8.1)
 per_host_concurrency = 1        # nikad dva paralelna zahteva ka istom sajtu (§8.1)
-domain_concurrency = 8          # domena u radu odjednom; budžet domena kreće tek kad
-                                # dobije red, ne dok čeka iza ostalih
+domain_concurrency = 16         # domena u radu odjednom; budžet domena kreće tek kad
+                                # dobije red, ne dok čeka iza ostalih. Nivo 1 uglavnom čeka
+                                # pauze ka istom sajtu, pa 16 umesto 8 skraćuje prolaz, a
+                                # pristojnost prema svakom sajtu ostaje ista (Z-32)
 delay_ms = [500, 1000]          # pauza sa jitter-om ka istom hostu (§8.3)
 timeout_connect_s = 5
 timeout_read_s = 10

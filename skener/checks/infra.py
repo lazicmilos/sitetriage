@@ -14,7 +14,8 @@ SIMILARITY_CHARS = 2000
 NE_POSTOJI = frozenset({404, 410})
 # Varijanta hosta koju nismo videli kao pretraživač: sertifikat nije prošao ili zahtev nije ni
 # poslat. Ne zna se da li služi sajt (Z-26). DNS greška i veza bez odgovora nisu takve: ništa ne služe.
-NEPROVERENA = frozenset({"tls", "tls_handshake", "budget"})
+# Privremena greška DNS-a ne kaže da adresa ne postoji, pa se ne zna da li služi sajt.
+NEPROVERENA = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
 
 
 @check(

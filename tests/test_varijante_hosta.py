@@ -22,6 +22,7 @@ GRESKE = {
     "veza": ("no_connection", "odbijeno"),
     "dns": ("dns_nxdomain", "Name or service not known"),
     "sertifikat": ("tls", "certificate has expired"),
+    "dns_privremeno": ("dns_temporary", "[Errno -3] Temporary failure in name resolution"),
 }
 MANJKAVA = "infra.https.redirect.missing"
 DUPLIKAT = "infra.host.duplicate"
@@ -171,6 +172,12 @@ def test_varijanta_sa_tls_greskom_je_unknown(monkeypatch, ponasanje, manjkava, d
     if SA in ponasanje:
         [losa] = [v for v in snapshot.host_variants if v.url == f"{SA}/"]
         assert losa.error_kind == "tls" and "expired" in losa.error_detail
+
+
+def test_varijanta_sa_privremenom_dns_greskom_je_unknown(monkeypatch):
+    """Privremena greška DNS-a ne kaže da adresa ne postoji, pa se ne zna da li služi sajt."""
+    snapshot, _ = skeniraj(monkeypatch, {BEZ: "200", HTTP_BEZ: BEZ, SA: "dns_privremeno", HTTP_SA: SA})
+    assert run_level(1, snapshot)[DUPLIKAT].status == "unknown"
 
 
 @pytest.mark.parametrize("canonical, ozbiljnost", [(f"{BEZ}/", "low"), (None, "medium")])

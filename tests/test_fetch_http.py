@@ -397,6 +397,9 @@ def test_istekao_sertifikat_je_tls_a_ne_pad():
         (Outcome(url="u", status=200), False),
         (Outcome(url="u", error_kind="read_timeout"), True),
         (Outcome(url="u", error_kind="dns"), False),
+        (Outcome(url="u", error_kind="dns_nxdomain"), False),
+        # EAI_AGAIN je po definiciji privremen: hotspot ga je dao na svakom četvrtom domenu (prolaz F)
+        (Outcome(url="u", error_kind="dns_temporary"), True),
         (Outcome(url="u", error_kind="tls"), False),
     ],
 )

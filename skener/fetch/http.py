@@ -381,8 +381,10 @@ async def measure_link(config: dict) -> float | None:
 
 
 def _should_retry(outcome: Outcome) -> bool:
-    """4xx je odgovor, ne greška — bez ponovnog pokušaja (§4.6)."""
-    if outcome.error_kind in {"no_connection", "connect_timeout", "read_timeout", "timeout", "connection"}:
+    """4xx je odgovor, ne greška — bez ponovnog pokušaja (§4.6). Privremena greška DNS-a (EAI_AGAIN)
+    se ponavlja, a ime koje ne postoji ne."""
+    ponovi = {"no_connection", "connect_timeout", "read_timeout", "timeout", "connection", "dns_temporary"}
+    if outcome.error_kind in ponovi:
         return True
     return outcome.status is not None and 500 <= outcome.status < 600
 

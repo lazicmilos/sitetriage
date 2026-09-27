@@ -505,8 +505,16 @@ def _cuvar(allowed: addresses.Allowlist, error_type: type, domain: str) -> Any:
 async def _zasto_odbiti(host: str, port: int, allowed: addresses.Allowlist) -> str | None:
     """Razlog da zahtev ne ide, ili `None`. Chromium bira adresu sam, pa sme samo ako su dozvoljene
     sve, a neuspeo DNS je odbijanje: ne zna se kuda bi veza otišla."""
+    loop = asyncio.get_running_loop()
     try:
-        infos = await asyncio.get_running_loop().getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        try:
+            infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except socket.gaierror as exc:
+            if exc.errno != socket.EAI_AGAIN:
+                raise
+            # Privremena greška se ponavlja jednom, kao na nivou 1: presuda važi za ceo domen.
+            await asyncio.sleep(0.5)
+            infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except OSError as exc:
         return f"DNS nije razrešio ime ({exc})"
     ips = sorted({info[4][0] for info in infos})

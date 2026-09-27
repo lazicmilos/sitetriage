@@ -3,6 +3,29 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-27 — prolaz F: vreme pod profilom, DNS preko hotspota i Z-32
+
+Lista A, 100 domena, 14,6 min. Računar je bio na mobilnom hotspotu, preko Wi-Fi adaptera 802.11g
+(oko 17 Mb/s). Z-33 je pre nivoa 2 izmerio stvarnu vezu od 15,6 Mb/s, što je iznad potrebnih
+9,6 Mb/s, pa je vreme mereno pod profilom.
+
+- **Zapažanje:** 24 od 100 domena su `failed` zbog privremene greške DNS-a (EAI_AGAIN). Greške su
+  raspoređene kroz ceo nivo 1, a svi ti sajtovi su u prolazu E radili. Pod profilom je 55 sajtova
+  stiglo do `load`: medijana 6,5 s, p75 9,8 s, p90 13,9 s. Kod 4 sajta rok od 25 s je istekao.
+  `perf.load.time` ima nalaz kod 50 od 55 sajtova (27 medium, 23 high); u prolazu E, bez profila,
+  bilo je 40 nalaza.
+- **Uzrok:** DNS preko hotspota povremeno ne odgovori, a alat privremenu grešku DNS-a nije
+  ponavljao. Pragovi za vreme (4 i 8 s) određeni su na stvarnoj vezi, pa pod profilom pale skoro
+  svima.
+- **Z-32:** procena za 200 domena je 2 × 322 s (nivo 1, prolaz E, kad su svi domeni radili) plus
+  587 s (nivo 2, prolaz F, 59 domena), oko 20,5 min, a granica je 15 min. Nivo 1 sam troši oko
+  10,7 min, pa bi samo spuštanjem `max_level2` nivo 2 smeo da ima oko 25 domena umesto 60.
+- **Odluka (vlasnik, 27.09.):** privremena greška DNS-a se ponavlja jednom, na nivou 1 i u proveri
+  adresa na nivou 2. Nivo 1 obrađuje 16 domena odjednom umesto 8 (`http.domain_concurrency`,
+  `http.concurrency`), jer uglavnom čeka pauze ka istom sajtu. Ovo je odstupanje od Z-32, koji
+  predviđa spuštanje `max_level2`. Pristojnost prema svakom sajtu se ne menja. Z-32 se meri
+  sledećim prolazom nad listom A. Pragovi za vreme ostaju do Z-50.
+
 ## 2026-09-27 — Z-31: učitavanje uporedo pod profilom, i ponovljeno merenje Z-24
 
 Merenje je rađeno nad 10 sajtova sa liste A, raspoređenih po vremenu učitavanja iz prolaza E. Svi

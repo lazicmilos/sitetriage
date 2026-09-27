@@ -91,6 +91,14 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- Privremena greška DNS-a (EAI_AGAIN) se ponavlja jednom, na nivou 1 i u proveri adresa na nivou 2.
+  Preko mobilnog hotspota je bila na svakom četvrtom domenu, pa su sajtovi koji rade ispadali kao
+  `failed`, a na nivou 2 jedna greška je blokirala sve zahteve ka tom hostu. Varijanta hosta sa
+  privremenom greškom DNS-a je `unknown`, jer se ne zna da li ta adresa služi sajt.
+- Nivo 1 obrađuje 16 domena odjednom umesto 8. Uglavnom čeka pauze ka istom sajtu, pa je prolaz
+  nad 200 domena bio procenjen na oko 20 minuta. Pristojnost prema svakom sajtu je ista: jedan
+  zahtev odjednom i ista pauza (Z-32).
+
 - Ključ pristojnosti bio je tačan host, pa bi `www.x.rs` i `x.rs` mogli da dobiju dva zahteva
   istovremeno. Sada je ključ host bez vodećeg `www.`: oba dele red i pauzu.
 
