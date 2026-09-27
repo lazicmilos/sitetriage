@@ -315,6 +315,15 @@ class ConsoleStats:
 
 
 @dataclass
+class NetworkProfile:
+    """Simulirana veza pod kojom nivo 2 meri (Z-30): isti broj na svakoj mašini."""
+
+    download_mbps: float
+    upload_mbps: float
+    latency_ms: float
+
+
+@dataclass
 class BrowserSnapshot:
     domain: str
     url: str = ""
@@ -327,6 +336,8 @@ class BrowserSnapshot:
     dom: DomStats = field(default_factory=DomStats)
     console: ConsoleStats = field(default_factory=ConsoleStats)
     errors: list[SnapshotError] = field(default_factory=list)
+    # `None`: snimak pre Z-30, meren na stvarnoj vezi
+    network_profile: NetworkProfile | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -443,7 +454,7 @@ class ScanResult:
     duration_s: dict[str, float] = field(default_factory=dict)
     # sha256 konfiguracije koja utiče na rezultat; isti otisak = isti pragovi
     config_digest: str = ""
-    environment: dict[str, str | None] = field(default_factory=dict)
+    environment: dict[str, Any] = field(default_factory=dict)
     summary: dict[str, int] = field(default_factory=dict)
     # Izlazni kriterijumi (§7, Z-22): udeo domena koji rade sa potrošenim budžetom, i za svaku
     # proveru udeo `unknown`-a među domenima koji rade i na kojima je pokrenuta.

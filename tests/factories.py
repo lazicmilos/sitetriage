@@ -18,6 +18,7 @@ from skener.models import (
     DomStats,
     Entry,
     HostVariant,
+    NetworkProfile,
     NetworkStats,
     OpenGraph,
     PageSnapshot,
@@ -129,6 +130,9 @@ def clean_site(*, domain: str = "cist.rs", industry: str = "ostalo", **overrides
     return replace(snapshot, **overrides) if overrides else snapshot
 
 
+PROFIL = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
+
+
 def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapshot:
     """Nacrtana stranica bez ijednog problema nivoa 2."""
     snapshot = BrowserSnapshot(
@@ -157,6 +161,7 @@ def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapsh
             images_unmeasured=0,
         ),
         console=ConsoleStats(errors=0, warnings=2),
+        network_profile=PROFIL,
     )
     return replace(snapshot, **overrides) if overrides else snapshot
 

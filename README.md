@@ -248,7 +248,7 @@ ispisuje obe. Isto važi za razloge zašto nešto nije provereno i zašto je dom
 | gornji limit za nivo 2 | 60 domena | Bez limita, na listi od 200 domena skoro sve ide na nivo 2 i prolaz traje sat vremena. Prvi idu sajtovi bez jakog nalaza nivoa 1, jer je njima nivo 2 jedina šansa da se nešto nađe. Sajt koji već ima jak nalaz ima i razlog za mejl. |
 | nemereni odgovori | > 5 → `unknown` | Merenje kojem ne veruješ gore je od merenja koje nemaš. |
 | bodovi po ozbiljnosti | 40 / 20 / 8 / 3 | Razmak je namerno nelinearan: jedan `critical` mora da nadjača pet `low` nalaza. |
-| sporija mobilna veza | 4,8 Mb/s (0,6 MB/s) | Na osnovu nje se računaju sekunde u rečenicama za klijenta, i ta brzina piše u samoj rečenici. Broj koji šalješ klijentu moraš umeti da odbraniš. |
+| mrežni profil nivoa 2 | 4,8 Mb/s (0,6 MB/s) dolazno, 1,5 Mb/s odlazno, 150 ms kašnjenja | Nivo 2 meri pod ovom simuliranom vezom (`[network_profile]`), pa isti sajt daje isto vreme na kućnoj vezi, na serveru i kod kupca. Iz iste brzine se računaju sekunde u rečenicama za klijenta, i ta brzina piše u samoj rečenici. Broj koji šalješ klijentu moraš umeti da odbraniš. Procesor se ne simulira, pa vreme i dalje malo zavisi od mašine; mrežni deo je fiksan ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)). |
 
 Rangiranje ne ide po zbiru nego po paru (najteži pojedinačni nalaz, zbir). Sajt sa jednom katastrofom
 je bolji lead od sajta sa deset sitnica: prvi ima jedan jasan razlog da ti odgovori, a na listu od

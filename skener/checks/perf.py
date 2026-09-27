@@ -23,7 +23,7 @@ def _tier(value: float, tiers: dict[str, float]) -> str | None:
 
 def _mb_per_s(ctx: Context) -> float:
     """Sporija mobilna veza: 4,8 Mb/s = 0,6 MB/s (§10.3)."""
-    return ctx.th("thresholds.perf.mobile_speed_mbps") / 8
+    return ctx.th("network_profile.download_mbps") / 8
 
 
 def _seconds_on_mobile(mb: float, ctx: Context) -> float:
@@ -59,7 +59,7 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
             "kb": round(home.html_bytes / 1024),
             # gzip i br svode HTML na otprilike četvrtinu; ušteda je ostatak, na sporijoj vezi
             "usteda_s": round(home.html_bytes * 0.75 / BYTES_PER_MB / _mb_per_s(ctx), 1),
-            "brzina": ctx.th("thresholds.perf.mobile_speed_mbps"),
+            "brzina": ctx.th("network_profile.download_mbps"),
         },
         urls=[home.final_url or home.url],
     )
@@ -149,7 +149,7 @@ def page_weight(snapshot, ctx: Context):
             "mb": round(mb, 1),
             "video_mb": video_mb,
             "sekundi": _seconds_on_mobile(mb, ctx),
-            "brzina": ctx.th("thresholds.perf.mobile_speed_mbps"),
+            "brzina": ctx.th("network_profile.download_mbps"),
             "zahteva": network.requests_at_load,
             "nemereno": network.unmeasured_at_load,
             "reached": snapshot.timing.reached,
@@ -197,8 +197,9 @@ def request_count(snapshot, ctx: Context):
     level=2,
     category="perf",
     base_severity="high",
-    requires=["browser"],
-    description="Vreme do potpunog učitavanja početne.",
+    # Sekunde važe za vezu pod kojom su izmerene; snimak bez profila meren je na stvarnoj (Z-30).
+    requires=["browser", "network_profile"],
+    description="Vreme do potpunog učitavanja početne, na simuliranoj vezi iz `[network_profile]`.",
     threshold="> 4 s medium · > 8 s high · prekid posle tvrdog limita = high",
 )
 def load_time(snapshot, ctx: Context):
@@ -210,7 +211,12 @@ def load_time(snapshot, ctx: Context):
             load_time.spec,
             ctx,
             severity="high",
-            evidence={"load_ms": None, "sekundi": limit_s, "reached": "timeout"},
+            evidence={
+                "load_ms": None,
+                "sekundi": limit_s,
+                "brzina": snapshot.network_profile.download_mbps,
+                "reached": "timeout",
+            },
             urls=[snapshot.url],
             # Ne „treba joj 25 s": ne zna se koliko joj treba, samo da je više od toga.
             variant="timeout",
@@ -227,6 +233,7 @@ def load_time(snapshot, ctx: Context):
         evidence={
             "load_ms": timing.load_ms,
             "sekundi": round(timing.load_ms / 1000, 1),
+            "brzina": snapshot.network_profile.download_mbps,
             "reached": timing.reached,
         },
         urls=[snapshot.url],

@@ -30,11 +30,22 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["os", "python", "chromium"],
+      "required": ["os", "python", "chromium", "network_profile"],
       "properties": {
         "os": {"type": "string"},
         "python": {"type": "string"},
-        "chromium": {"type": ["string", "null"], "description": "null kad nivo 2 nije radio"}
+        "chromium": {"type": ["string", "null"], "description": "null kad nivo 2 nije radio"},
+        "network_profile": {
+          "description": "Simulirana veza pod kojom nivo 2 meri (Z-30); null kad nivo 2 nije radio ili je snimak stariji od profila",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["download_mbps", "upload_mbps", "latency_ms"],
+          "properties": {
+            "download_mbps": {"type": "number", "exclusiveMinimum": 0},
+            "upload_mbps": {"type": "number", "exclusiveMinimum": 0},
+            "latency_ms": {"type": "number", "minimum": 0}
+          }
+        }
       }
     },
     "summary": {

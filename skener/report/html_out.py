@@ -157,7 +157,7 @@ def render(
         trajanje = number(duration_s, lang) if duration_s < 10 else f"{duration_s:.0f}"
         cards.append((t("card_duration"), f"{trajanje} s"))
 
-    speed = get(config, "thresholds.perf.mobile_speed_mbps")
+    speed = get(config, "network_profile.download_mbps")
     overhead = get(config, "report.mobile_overhead_s")
     # Brojevi, ne tekst: formatter jezika ih piše sa zarezom ili tačkom (Z-28).
     assumption = text("assumption_html", lang, speed=speed, mb_per_s=round(speed / 8, 2), overhead=overhead)

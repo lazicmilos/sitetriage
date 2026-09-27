@@ -30,6 +30,7 @@ from skener.models import (
     BrowserSnapshot,
     ConsoleStats,
     DomStats,
+    NetworkProfile,
     NetworkStats,
     OversizedImage,
     SiteSnapshot,
@@ -220,6 +221,21 @@ def est_waste_kb(transfer_bytes: int, natural: Sequence[int], client: Sequence[i
     return round(max(transfer_bytes / 1024 * (1 - used), 0.0), 1)
 
 
+def network_profile(config: dict) -> NetworkProfile:
+    return NetworkProfile(**get(config, "network_profile"))
+
+
+def network_conditions(profile: NetworkProfile) -> dict[str, Any]:
+    """Parametri za CDP `Network.emulateNetworkConditions`, koji protok prima u bajtovima u sekundi:
+    4,8 Mb/s = 600 000 B/s."""
+    return {
+        "offline": False,
+        "latency": profile.latency_ms,
+        "downloadThroughput": profile.download_mbps * 1_000_000 / 8,
+        "uploadThroughput": profile.upload_mbps * 1_000_000 / 8,
+    }
+
+
 class _LoadSlot:
     """Isključivo pravo na učitavanje do `load` (BUG-006).
 
@@ -281,6 +297,11 @@ async def capture(
     try:
         await context.route("**/*", _cuvar(addresses.allowlist(config), PlaywrightError, site.domain))
         page = await context.new_page()
+        # Pre navigacije, da i prvi zahtev ide simuliranom vezom (Z-30).
+        profile = network_profile(config)
+        cdp = await context.new_cdp_session(page)
+        await cdp.send("Network.emulateNetworkConditions", network_conditions(profile))
+        snapshot.network_profile = profile
         page.on("request", recorder.on_request)
         page.on("load", recorder.on_load)
         page.on("response", recorder.on_response)
@@ -494,9 +515,14 @@ async def _zasto_odbiti(host: str, port: int, allowed: addresses.Allowlist) -> s
 
 
 def _launch_options(config: dict) -> dict[str, Any]:
-    """Gotov Chromium umesto Playwright-ovog, kad ga okruženje već ima."""
+    """Gotov Chromium umesto Playwright-ovog, kad ga okruženje već ima.
+
+    Bez izolacije sajtova: pun Chromium iframe sa drugog sajta (YouTube, mape) učitava u poseban
+    proces, a mrežni profil postavljen na stranicu taj proces ne usporava (ADR-010).
+    """
     path = get(config, "browser.executable_path") or os.environ.get("SKENER_CHROMIUM", "")
-    return {"executable_path": path} if path else {}
+    options: dict[str, Any] = {"args": ["--disable-site-isolation-trials"]}
+    return options | ({"executable_path": path} if path else {})
 
 
 async def capture_all(

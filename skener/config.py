@@ -172,9 +172,15 @@ def _validate(cfg: dict[str, Any]) -> None:
         value = get(cfg, dotted)
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             raise ConfigError(f"{dotted} mora biti ceo broj ≥ 1, a jeste {value!r}")
-    seconds = get(cfg, "http.max_seconds_per_domain")
-    if isinstance(seconds, bool) or not isinstance(seconds, int | float) or seconds <= 0:
-        raise ConfigError(f"http.max_seconds_per_domain mora biti > 0, a jeste {seconds!r}")
+    # Brzina 0 deli sa nulom u rečenicama, a Chromium je čita kao „bez ograničenja".
+    for dotted in (
+        "http.max_seconds_per_domain",
+        "network_profile.download_mbps",
+        "network_profile.upload_mbps",
+    ):
+        value = get(cfg, dotted)
+        if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
+            raise ConfigError(f"{dotted} mora biti > 0, a jeste {value!r}")
     allowed = get(cfg, "net.allowed_private")
     if not isinstance(allowed, list):
         raise ConfigError(f"net.allowed_private mora biti lista \"host:port\" parova, a jeste {allowed!r}")

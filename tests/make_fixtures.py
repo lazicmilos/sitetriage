@@ -28,6 +28,7 @@ from skener.models import (
     ConsoleStats,
     DomStats,
     Entry,
+    NetworkProfile,
     NetworkStats,
     OpenGraph,
     OversizedImage,
@@ -180,6 +181,7 @@ def browser(
             ],
         ),
         console=ConsoleStats(errors=console_errors, warnings=2),
+        network_profile=NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150),
     )
 
 

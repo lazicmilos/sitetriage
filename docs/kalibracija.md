@@ -3,6 +3,21 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-27 — mrežni profil nivoa 2 (Z-30)
+
+- **Zapažanje:** vreme učitavanja zavisilo je od veze sa koje se meri, a rečenice su računale sa
+  4,8 Mb/s. Na lokalnom serveru stranica sa 600 kB skripte bez profila se učita za oko 60 ms, a
+  pod profilom za oko 1,4 s. Pun Chromium iframe sa drugog sajta učitava u poseban proces, i taj
+  iframe profil nije usporavao (274 ms prema 1397 ms).
+- **Uzrok:** mreža se nije simulirala, a profil postavljen na stranicu ne važi za poseban proces
+  iframe-a.
+- **Odluka:** nivo 2 meri pod `[network_profile]` (4,8 / 1,5 Mb/s, 150 ms), a Chromium radi bez
+  izolacije sajtova ([ADR-010](adr/ADR-010-mrezni-profil.md)). Pragovi `load_ms` (4 / 8 s),
+  `browser.timeout_s` (25 s) i `browser.max_seconds_per_domain` (60 s) ostaju do Z-50, kad se
+  određuju iz raspodele izmerene pod profilom. Do tada očekuj više nalaza za vreme. Na 0,6 MB/s
+  medijana prenete težine sa liste A (oko 3 MB) traje oko 5 s, a p90 (oko 8 MB) oko 13 s, pa
+  prag od 4 s prelazi većina sajtova.
+
 ## 2026-09-27 — prolaz E: Z-26 posle popravke varijanti
 
 Lista A, 100 domena, 15,3 min, bez upozorenja i grešaka u logu. Udeo domena sa potrošenim

@@ -97,15 +97,15 @@ FINDINGS: dict[str, dict] = {
     },
     "perf.load.time": {
         "client": (
-            "Početnoj strani treba {sekundi} s da se do kraja učita. Mnogi posetioci ne čekaju "
-            "toliko, naročito na telefonu."
+            "Na simuliranoj vezi od {brzina} Mb/s početnoj strani treba {sekundi} s da se do kraja "
+            "učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu."
         ),
         "tech": "load_ms={load_ms}, reached={reached}",
         "variants": {
             "timeout": {
                 "client": (
-                    "Početna strana se ni za {sekundi} s nije do kraja učitala. Mnogi posetioci ne "
-                    "čekaju toliko, naročito na telefonu."
+                    "Na simuliranoj vezi od {brzina} Mb/s početna strana se ni za {sekundi} s nije "
+                    "do kraja učitala. Mnogi posetioci ne čekaju toliko, naročito na telefonu."
                 )
             }
         },
@@ -447,6 +447,10 @@ REASONS: dict[str, str] = {
     "requires.host_variants": "varijante adrese (http/https, sa i bez www) nisu dohvaćene u ovom snimku",
     "variant_unchecked": "{adresa} nije viđena kao u pretraživaču ({vrsta}), pa se ne zna da li služi sajt",
     "no_https": "https na {adresa} ne vraća stranicu, pa nema na šta da se preusmerava",
+    # mrežni profil nivoa 2 (Z-30)
+    "requires.network_profile": (
+        "snimak je napravljen pre mrežnog profila, pa je vreme izmereno bez mrežnog profila, na stvarnoj vezi"
+    ),
     # zašto domen nije skeniran (lista „Nije skenirano")
     "entry_missing": "snapshot nema početnu (dohvatanje je puklo, vidi log)",
     "entry_status": "početna je vratila status {status}",

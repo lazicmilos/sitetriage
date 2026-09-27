@@ -79,15 +79,15 @@ FINDINGS: dict[str, dict] = {
     },
     "perf.load.time": {
         "client": (
-            "The home page needs {sekundi} s to load completely. Many visitors do not wait that long, "
-            "especially on a phone."
+            "On a simulated {brzina} Mb/s connection, the home page needs {sekundi} s to load completely. "
+            "Many visitors do not wait that long, especially on a phone."
         ),
         "tech": "load_ms={load_ms}, reached={reached}",
         "variants": {
             "timeout": {
                 "client": (
-                    "The home page did not finish loading even in {sekundi} s. Many visitors do not "
-                    "wait that long, especially on a phone."
+                    "On a simulated {brzina} Mb/s connection, the home page did not finish loading even "
+                    "in {sekundi} s. Many visitors do not wait that long, especially on a phone."
                 )
             }
         },
@@ -436,6 +436,10 @@ REASONS: dict[str, str] = {
     # host variants: http/https × www/without www (Z-26)
     "requires.host_variants": (
         "the address variants (http/https, with and without www) were not fetched in this snapshot"
+    ),
+    # network profile of level 2 (Z-30)
+    "requires.network_profile": (
+        "the snapshot predates the network profile, so the load time was measured on the real connection"
     ),
     "variant_unchecked": (
         "{adresa} was not seen the way a browser sees it ({vrsta}), so it is unknown whether it serves "

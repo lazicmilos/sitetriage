@@ -6,6 +6,8 @@ import pytest
 from factories import clean_browser, findings, run_level, statuses
 
 from skener.checks import registry
+from skener.config import load_config
+from skener.fetch.browser import network_conditions, network_profile
 from skener.messages import LANGS, reason, render
 from skener.models import DomStats, NetworkStats, OversizedImage, TimingStats
 
@@ -115,6 +117,30 @@ def test_vreme_ucitavanja_stepenasto(load_ms, expected):
     browser.timing.load_ms = load_ms
     result = run_level(2, browser)["perf.load.time"]
     assert (result.findings[0].severity if expected else result.status) == (expected or "ok")
+
+
+def test_jedan_izvor_brzine_za_recenicu_i_merenje():
+    """Z-30: brzina iz `[network_profile]` ide i u Chromium i u rečenice; drugog ključa nema."""
+    cfg = load_config()
+    assert "mobile_speed_mbps" not in cfg["thresholds"]["perf"]
+    cfg["network_profile"]["download_mbps"] = 9.6
+    profil = network_profile(cfg)
+    assert network_conditions(profil)["downloadThroughput"] == 1_200_000, "CDP prima bajtove u sekundi"
+    browser = clean_browser(network_profile=profil)
+    browser.network.bytes_at_load = 20_000_000
+    browser.timing.load_ms = 9_000
+    ctx = registry.Context(domain=browser.domain, industry="ostalo", config=cfg)
+    nalazi = {r.check_id: r.findings[0] for r in registry.run(2, browser, ctx) if r.status == "finding"}
+    assert nalazi["perf.page.weight"].evidence["brzina"] == nalazi["perf.load.time"].evidence["brzina"] == 9.6
+
+
+@pytest.mark.parametrize("reached, load_ms", [("load", 9_000), ("timeout", None)])
+def test_vreme_bez_mreznog_profila_je_unknown(reached, load_ms):
+    """Snimak bez profila meren je na stvarnoj vezi: rečenica o simuliranoj vezi ne bi bila tačna."""
+    browser = clean_browser(network_profile=None)
+    browser.timing = TimingStats(load_ms=load_ms, reached=reached)
+    result = run_level(2, browser)["perf.load.time"]
+    assert result.status == "unknown" and "bez mrežnog profila" in reason(result.reason)
 
 
 # --------------------------------------------------------------------------- #

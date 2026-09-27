@@ -73,7 +73,7 @@
   "slucaj": "ispitni/spec/b2b-firma.example",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Početnoj strani treba 6,1 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=6100, reached=load"
  },
  {
@@ -108,7 +108,7 @@
   "slucaj": "ispitni/spec/prodavnica.example",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Početnoj strani treba 5,2 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 5,2 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=5200, reached=load"
  },
  {
@@ -248,7 +248,7 @@
   "slucaj": "ispitni/toml/b2b-firma.example",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Početnoj strani treba 6,1 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=6100, reached=load"
  },
  {
@@ -276,7 +276,7 @@
   "slucaj": "ispitni/toml/prodavnica.example",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Početnoj strani treba 5,2 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 5,2 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=5200, reached=load"
  },
  {
@@ -507,7 +507,7 @@
   "slucaj": "nivo2/perf.load.time",
   "check_id": "perf.load.time",
   "severity": "high",
-  "client": "Početnoj strani treba 9 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 9 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=9000, reached=load"
  },
  {
@@ -556,7 +556,7 @@
   "slucaj": "posebno/prekid-ucitavanja",
   "check_id": "perf.load.time",
   "severity": "high",
-  "client": "Početna strana se ni za 25 s nije do kraja učitala. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početna strana se ni za 25 s nije do kraja učitala. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=None, reached=timeout"
  },
  {

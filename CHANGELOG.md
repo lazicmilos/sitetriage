@@ -38,9 +38,19 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   nema adresu), `dns_temporary` i `dns` (ostale DNS greške). TCP veza koja nije uspostavljena je `no_connection`.
 - `CheckSpec` više nema `optional`, `check()` ga ne prima, a `Context` nema `host_canonicalization`.
   Nijedna provera ih nije koristila; kanonizacija hosta je sada obična provera.
+- `thresholds.perf.mobile_speed_mbps` je obrisan. Brzina je sada `network_profile.download_mbps`, i
+  ista vrednost ide u merenje i u rečenice. Stari ključ u sopstvenom TOML-u se tiho ignoriše.
+- `perf.load.time` traži snimak sa mrežnim profilom. Snimak nivoa 2 napravljen pre njega meren je na
+  stvarnoj vezi, pa je vreme `unknown` (`requires.network_profile`). JSON `environment` ima obavezno
+  polje `network_profile` (`null` kad nivo 2 nije radio).
 
 ### Dodato
 
+- Mrežni profil nivoa 2. Svaka stranica se meri na simuliranoj vezi iz `[network_profile]`
+  (4,8 Mb/s dolazno, 1,5 Mb/s odlazno, 150 ms kašnjenja), pa isti sajt daje isto vreme na svakoj
+  mašini. Profil je u snimku nivoa 2 (`network_profile`) i u `environment` JSON izveštaja, a
+  rečenica za `perf.load.time` ga navodi. Chromium se pokreće bez izolacije sajtova, da profil važi
+  i za iframe sa drugog sajta ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)).
 - Kanonizacija hosta. Posle `robots.txt` alat dohvata preostale tri adrese konačnog porekla
   (`http`/`https` × sa i bez `www`) i beleži ih u `SiteSnapshot.host_variants`. Dve nove provere:
   `infra.https.redirect.missing` (sajt radi na https-u, a `http://` istog hosta vraća 200 bez

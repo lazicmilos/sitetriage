@@ -414,3 +414,16 @@ def test_prekid_ucitavanja_ne_tvrdi_koliko_traje(lang, ocekivano, netacno):
     nalaz = run_level(2, browser)["perf.load.time"].findings[0]
     poruka = render(nalaz, lang).client
     assert ocekivano in poruka and netacno not in poruka, poruka
+
+
+@pytest.mark.parametrize(
+    "lang, ocekivano",
+    [("sr", "Na simuliranoj vezi od 4,8 Mb/s"), ("en", "On a simulated 4.8 Mb/s connection")],
+)
+@pytest.mark.parametrize("reached, load_ms", [("load", 9_000), ("timeout", None)])
+def test_vreme_ucitavanja_navodi_simuliranu_vezu(lang, ocekivano, reached, load_ms):
+    """Z-30: sekunde važe za vezu pod kojom su izmerene, pa rečenica tu vezu i navodi."""
+    browser = clean_browser()
+    browser.timing.reached, browser.timing.load_ms = reached, load_ms
+    nalaz = run_level(2, browser)["perf.load.time"].findings[0]
+    assert ocekivano in render(nalaz, lang).client

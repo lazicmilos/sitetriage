@@ -223,10 +223,18 @@ def _result(
     )
 
 
-def _environment(browsers: Iterable[BrowserSnapshot]) -> dict[str, str | None]:
-    """Gde je prolaz rađen. Chromium je iz snapshota, pa `recheck` navodi onaj iz prolaza."""
+def _environment(browsers: Iterable[BrowserSnapshot]) -> dict[str, typing.Any]:
+    """Gde je prolaz rađen. Chromium i mrežni profil su iz snapshota, pa `recheck` navodi one iz
+    prolaza; `null` kad nivo 2 nije radio ili je snimak stariji od profila (Z-30)."""
+    browsers = list(browsers)
     chromium = next((b.browser_version for b in browsers if b.browser_version), None)
-    return {"os": platform.platform(), "python": platform.python_version(), "chromium": chromium}
+    profil = next((b.network_profile for b in browsers if b.network_profile), None)
+    return {
+        "os": platform.platform(),
+        "python": platform.python_version(),
+        "chromium": chromium,
+        "network_profile": profil,
+    }
 
 
 # --------------------------------------------------------------------------- #

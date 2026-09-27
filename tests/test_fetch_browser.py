@@ -14,9 +14,18 @@ import pytest
 from factories import run_level
 from localserver import FakeSite, Response
 
+from skener import addresses, pipeline
 from skener.config import load_config
 from skener.fetch.browser import est_waste_kb
-from skener.models import Entry, PageSnapshot, SiteSnapshot
+from skener.models import (
+    BrowserSnapshot,
+    Entry,
+    NetworkProfile,
+    PageSnapshot,
+    SiteSnapshot,
+    from_dict,
+    to_jsonable,
+)
 
 playwright_api = pytest.importorskip("playwright.async_api", reason="Playwright nije instaliran")
 pytestmark = pytest.mark.browser
@@ -140,6 +149,47 @@ def test_zahtev_posle_load_ne_ulazi_u_tezinu(oko_load):
 def test_telo_koje_stigne_posle_load_za_zahtev_pre_load_se_broji(oko_load):
     assert oko_load.timing.load_ms < 3000, "telo sporo.bin mora da stigne posle `load`"
     assert oko_load.network.bytes_at_load >= 150_000
+
+
+# Z-30: 600 kB na simuliranoj vezi od 4,8 Mb/s (600 000 B/s) traje oko 1 s.
+TEZAK_JS = b"//" + b"x" * 600_000
+
+
+def sa_teskim_skriptom() -> dict[str, Response]:
+    return {
+        "/": Response(b"<!doctype html><h1>Strana</h1><script src='/tezak.js'></script>"),
+        "/tezak.js": Response(TEZAK_JS),
+    }
+
+
+def test_profil_usporava_ucitavanje():
+    """Proverava se samo donja granica, da test ne bi bio nestabilan."""
+    with FakeSite(extra=sa_teskim_skriptom()) as site:
+        assert snimi(site).timing.load_ms >= 1000
+
+
+def test_profil_vazi_i_za_iframe_sa_drugog_porekla(monkeypatch):
+    """Pun Chromium, kao sistemski, učitava iframe sa drugog sajta u poseban proces (OOPIF), a
+    profil postavljen na stranicu taj proces ne usporava. `localhost` i `127.0.0.1` su dva sajta."""
+    from skener.fetch import browser
+
+    pokretanje = browser._launch_options
+    monkeypatch.setattr(browser, "_launch_options", lambda cfg: {**pokretanje(cfg), "channel": "chromium"})
+    with FakeSite(extra=sa_teskim_skriptom()) as okvir:
+        port = okvir.address[1]
+        # conftest dozvoljava `127.0.0.1:port`, a `localhost` se razrešava i na `::1`
+        dozvoljene = addresses.allowlist
+        monkeypatch.setattr(addresses, "allowlist", lambda cfg: dozvoljene(cfg) | {("localhost", port)})
+        strana = f"<!doctype html><h1>Strana</h1><iframe src='http://localhost:{port}/'></iframe>"
+        with FakeSite(extra={"/": Response(strana.encode())}) as site:
+            assert snimi(site).timing.load_ms >= 1000
+
+
+def test_profil_je_u_snapshotu_i_jsonu(snimak):
+    profil = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
+    assert snimak.network_profile == profil
+    assert from_dict(BrowserSnapshot, to_jsonable(snimak)).network_profile == profil
+    assert pipeline._environment([snimak])["network_profile"] == profil
 
 
 def test_browser_belezi_tekst_i_lang_posle_javascript_a():
@@ -474,8 +524,8 @@ def test_sistemski_chromium_iz_konfiguracije_i_okruzenja(monkeypatch):
 
     cfg = load_config()
     monkeypatch.delenv("SKENER_CHROMIUM", raising=False)
-    assert _launch_options(cfg) == {}
+    assert "executable_path" not in _launch_options(cfg)
     monkeypatch.setenv("SKENER_CHROMIUM", "/usr/bin/chromium")
-    assert _launch_options(cfg) == {"executable_path": "/usr/bin/chromium"}
+    assert _launch_options(cfg)["executable_path"] == "/usr/bin/chromium"
     cfg["browser"]["executable_path"] = "/opt/chrome"
-    assert _launch_options(cfg) == {"executable_path": "/opt/chrome"}, "fajl ima prednost"
+    assert _launch_options(cfg)["executable_path"] == "/opt/chrome", "fajl ima prednost"

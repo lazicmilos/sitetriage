@@ -67,6 +67,12 @@ executable_path = ""            # prazno = Playwright-ov Chromium; postavi za si
                                 # Chrome ili kontejner sa gotovim browserom. Može i preko
                                 # promenljive okruženja SKENER_CHROMIUM.
 
+[network_profile]               # simulirana veza za nivo 2 (Z-30): isti broj na svakoj mašini
+download_mbps = 4.8             # 0,6 MB/s, spora 4G veza (§10.3); jedini izvor brzine, i za
+                                # merenje i za sekunde u rečenicama za klijenta
+upload_mbps = 1.5               # početna vrednost
+latency_ms = 150                # početna vrednost; obrazloženje ide u kalibracija.md (Z-50)
+
 [thresholds.seo]
 duplicate_min_pages = 3         # ≥ 3 stranice iz različitih grupa putanja (§5)
 canonical_foreign_min = 2       # stranice sa tuđim canonical-om ka istoj adresi, iz toliko grupa putanja
@@ -85,7 +91,6 @@ oversized_waste_kb = 700
 html_size_kb = 500
 compression_min_kb = 50
 redirect_hops = 3
-mobile_speed_mbps = 4.8         # 0,6 MB/s — spora 4G veza (§10.3)
 
 [thresholds.i18n]
 min_text_length = 400
