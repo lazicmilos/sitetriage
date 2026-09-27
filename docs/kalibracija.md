@@ -3,6 +3,50 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-27 — prolaz D: prihvatanje F2 (Z-20, Z-21, Z-25, Z-26)
+
+Lista A, 100 domena, 16,8 min, bez upozorenja i grešaka u logu. Najveći udeo `unknown` po proveri
+je 15 % (kriterijum < 20 %). Udeo domena sa potrošenim budžetom je 22 % (kriterijum < 10 %).
+
+### Z-20: ispunjeno
+
+- **Zapažanje:** 7 domena je u „Ne rade”, 6 zbog DNS-a i 1 bez odgovora. Svih 7 je potvrđeno van
+  alata, DNS upitom i `curl`-om na https i http. U „Nije skenirano” su 3 sajta sa odgovorom 403 ili
+  429, a ne u „Ne rade”. Kod dva od njih `curl` dobija 200, a alat 403: to je zaštita od botova.
+  Svaki rangiran domen je dobio HTTP odgovor.
+- **Odluka:** uslov je ispunjen.
+
+### Z-26: nije ispunjeno, popravljen uzrok
+
+- **Zapažanje:** 21 domen je potrošio budžet, a u prolazu C 6 (dozvoljeno je 8). Kod 19 od njih
+  isteklo je 40 s, a potrošeno je 7–17 od 19 zahteva. Varijante idu pre uzorka, pa je uzorku
+  ostalo malo vremena: neki domeni su imali 1 stranicu umesto 8.
+- **Uzrok:** varijanta je pratila preusmerenje do kraja. Na tim domenima 57 od 63 varijante
+  završava na početnoj koja je već preuzeta, pa se početna preuzimala još tri puta. Na sporom
+  hostingu to je 3–10 s po preuzimanju. Sporedni uzrok: sajtovi su tog dana odgovarali sporije.
+  Medijana početne je bila 1,8 s, a u prolazu C 0,8 s.
+- **Odluka (vlasnik, 27.09.):** popravlja se uzrok, a ne budžet. Varijanta prati preusmerenje
+  korak po korak i staje pred početnom, a status i canonical uzima od nje. U prolazu D 207
+  varijanti završava na početnoj, i kod svih su status i canonical isti kao kod početne, pa se
+  nalazi ne menjaju. Budžet ostaje 19 zahteva i 40 s. Uslov se meri ponovo u sledećem prolazu nad
+  listom A. Testovi: `test_preusmerenje_na_vec_preuzetu_adresu_se_ne_prati`,
+  `test_varijanta_koja_vodi_na_pocetnu_je_ne_trazi_ponovo`.
+
+### Z-25 i Z-21: ispunjeno po tumačenju vlasnika
+
+- **Zapažanje:** sva 3 sajta iz O-7 prošla su nivo 2, ali i posle JS-a imaju 12, 242 i 56
+  znakova teksta, a prag je 400. To su strana sa jednim dugmetom, strana „u pripremi” i strana
+  koja ima samo podnožje. `i18n.lang.mismatch` je zato `unknown` (`text_too_short_rendered`), a
+  `missing` i `invalid` rade nad renderovanim stanjem. Od 5 sajtova koji su u prolazu C imali manje
+  od 3 stranice, 1 je dopunom vezama došao do 7 stranica i prešao u `scanned`. Tri zaista imaju
+  1–2 stranice, pa su im provere duplikata `not_applicable`, ali ostaju `partial` zbog kratkog
+  teksta ili neproverene varijante hosta. Peti je ostao bez budžeta i ostaje `partial`, kako Z-21
+  traži.
+- **Uzrok:** pretpostavka iz O-7 da tekst crta JS nije tačna. Teksta nema ni u pregledaču.
+- **Odluka (vlasnik, 27.09.):** `unknown` sa razlogom je ovde tačan odgovor, a `ok` ili nalaz
+  bili bi nagađanje. Uslovi Z-25 i Z-21 se smatraju ispunjenim. `partial` koji dolazi od drugih
+  provera nije predmet Z-21.
+
 ## 2026-09-26 — kanonizacija hosta i budžet od 19 zahteva (Z-26)
 
 - **Zapažanje:** u IT-SKENER-002 (O-12) `optional` u registru nije koristila nijedna provera. Čekao
