@@ -1,7 +1,7 @@
 # ADR-010: Nivo 2 meri pod fiksnim mrežnim profilom, bez izolacije sajtova
 
 ```
-Status:  Predlog
+Status:  Prihvaćeno
 Datum:   27.09.2026.
 Autor:   Milos Lazic
 ```
