@@ -396,11 +396,8 @@ def test_neizmerena_slika_ne_daje_negativan_visak():
 # --------------------------------------------------------------------------- #
 # BUG-006: vreme učitavanja se meri dok niko drugi ne učitava
 # --------------------------------------------------------------------------- #
-def test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju():
-    """Tri sajta koja se učitavaju istovremeno dele vezu i produžavaju jedan drugom
-    `load` do 4,6× (izmereno u prolazu nad 100 domena). Učitavanje do `load` zato
-    ide jedno po jedno; skrol i čitanje DOM-a i dalje idu paralelno.
-    """
+def dva_ucitavanja(serial_load: bool) -> tuple[dict[str, float], dict[str, float]]:
+    """Trenuci kad su dva sajta tražila HTML i sliku; slika kasni 1 s i drži `load`."""
     import time
 
     from skener.fetch.browser import capture_all
@@ -434,13 +431,29 @@ def test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju():
         ]
         cfg = load_config()
         cfg["browser"]["concurrency"] = 2
+        cfg["browser"]["serial_load"] = serial_load
         asyncio.run(capture_all(sajtovi, cfg))
 
     prvi, drugi = sorted(trenuci.values(), key=lambda t: t["html"])
+    return prvi, drugi
+
+
+def test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju():
+    """Tri sajta koja se učitavaju istovremeno dele vezu i produžavaju jedan drugom
+    `load` do 4,6× (izmereno u prolazu nad 100 domena). Učitavanje do `load` zato
+    ide jedno po jedno; skrol i čitanje DOM-a i dalje idu paralelno.
+    """
+    prvi, drugi = dva_ucitavanja(serial_load=True)
     # Slika prvog sajta kasni 1 s i drži njegov `load`; drugi sme da krene tek posle.
     assert drugi["html"] >= prvi["slika"] + 0.9, (
         f"drugi sajt je počeo {drugi['html'] - prvi['html']:.2f} s posle prvog, dok se prvi još učitavao"
     )
+
+
+def test_bez_serijskog_ucitavanja_sajtovi_se_ucitavaju_uporedo():
+    """Z-31: pod mrežnim profilom svaki kontekst ima svoju vezu, pa se to meri eksperimentom."""
+    prvi, drugi = dva_ucitavanja(serial_load=False)
+    assert drugi["html"] < prvi["slika"] + 0.5, "drugi sajt je čekao da se prvi učita"
 
 
 def test_prekid_posle_tvrdog_limita_ne_ostavlja_gresku_u_logu(caplog):

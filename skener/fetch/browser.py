@@ -564,8 +564,8 @@ async def _capture_all(
     results: dict[str, BrowserSnapshot] = {}
     # Nivo 2 ide na 3 istovremena konteksta, ne 8: svaki je stotine MB RAM-a (§8.1).
     limit = asyncio.Semaphore(get(config, "browser.concurrency"))
-    # Učitava se jedan po jedan; ostatak merenja ide paralelno (BUG-006).
-    load_lock = asyncio.Lock()
+    # Učitava se jedan po jedan; ostatak merenja ide paralelno (BUG-006, Z-31).
+    load_lock = asyncio.Lock() if get(config, "browser.serial_load") else None
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(**_launch_options(config))

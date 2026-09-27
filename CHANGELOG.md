@@ -51,6 +51,9 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   mašini. Profil je u snimku nivoa 2 (`network_profile`) i u `environment` JSON izveštaja, a
   rečenica za `perf.load.time` ga navodi. Chromium se pokreće bez izolacije sajtova, da profil važi
   i za iframe sa drugog sajta ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)).
+- Prekidač `browser.serial_load` (podrazumevano `true`). Sa `false` se sajtovi na nivou 2 učitavaju
+  uporedo, a ne jedan po jedan. Pod mrežnim profilom svaki kontekst ima svoju simuliranu vezu, pa se
+  eksperimentom proverava da li je serijsko učitavanje iz BUG-006 i dalje potrebno (Z-31).
 - Kanonizacija hosta. Posle `robots.txt` alat dohvata preostale tri adrese konačnog porekla
   (`http`/`https` × sa i bez `www`) i beleži ih u `SiteSnapshot.host_variants`. Dve nove provere:
   `infra.https.redirect.missing` (sajt radi na https-u, a `http://` istog hosta vraća 200 bez
