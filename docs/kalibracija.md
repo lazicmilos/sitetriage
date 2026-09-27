@@ -3,6 +3,22 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-27 — prolaz E: Z-26 posle popravke varijanti
+
+Lista A, 100 domena, 15,3 min, bez upozorenja i grešaka u logu. Udeo domena sa potrošenim
+budžetom je 8,9 % (kriterijum < 10 %). Medijana vremena po domenu je 22,6 s (prolaz C 15,7 s,
+prolaz D 28,1 s), a u uzorku je ukupno 635 stranica (C 640, D 592).
+
+- **Zapažanje:** 9 domena je potrošilo budžet, a dozvoljeno je 8 (prolaz C 6).
+- **Uzrok:** 4 domena su potrošila budžet i u prolazu C. Jedan sajt je tog dana vraćao 500 na mapu
+  sajta, sonde i 4 od 7 stranica. Svaki 500 se ponavlja jednom, pa je taj domen potrošio svih 19
+  zahteva za 19 s, a ne vreme. Preostala 4 su spori sajtovi, sa oko 3 s po stranici, koji su i u
+  prolazu C trošili 35–43 s od 40. Tri zahteva za varijante, svaki sa pauzom pristojnosti, guraju
+  ih preko granice. To je cena koju predviđa rizik R-2. Ti sajtovi su ipak dobili 3–7 stranica.
+- **Odluka (vlasnik, 27.09.):** Z-26 je ispunjen. Jedini domen preko granice je onaj sa greškama
+  500 na strani sajta, udeo budžeta je ispod izlaznog kriterijuma, a uzrok iz prolaza D je
+  popravljen. Budžet ostaje 19 zahteva i 40 s.
+
 ## 2026-09-27 — prolaz D: prihvatanje F2 (Z-20, Z-21, Z-25, Z-26)
 
 Lista A, 100 domena, 16,8 min, bez upozorenja i grešaka u logu. Najveći udeo `unknown` po proveri
