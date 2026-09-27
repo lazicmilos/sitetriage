@@ -3,6 +3,36 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-27 — Z-31: učitavanje uporedo pod profilom, i ponovljeno merenje Z-24
+
+Merenje je rađeno nad 10 sajtova sa liste A, raspoređenih po vremenu učitavanja iz prolaza E. Svi
+su teški do 3,6 MB i nemaju video. Prolazi su bili četiri, svi sa `--level 2`, pod profilom:
+uporedo (`serial_load = false`, 3 konteksta), sam (`browser.concurrency = 1`), sam, pa ponovo
+uporedo. Pre svakog prolaza izmerena je stvarna veza, preuzimanjem 25 MB: 3,2, 3,3, 4,5 i 1,9 Mb/s.
+
+- **Zapažanje (Z-31):** odnos „u prolazu / sam” bio je od 0,44 do 3,68. U opsegu 0,8–1,25 bio je 1
+  od 8 uporedivih sajtova u prvom ponavljanju i 3 od 9 u drugom. Ni vreme istog sajta merenog samog
+  se nije ponovilo: jedan sajt od 1,7 MB učitao se jednom za 4,7 s, a drugi put za 20,4 s. Dva
+  sajta u pojedinim prolazima nisu stigla do `load` za 25 s.
+- **Uzrok:** stvarna veza je u svakom merenju bila sporija od profila (4,8 Mb/s), a profil može samo
+  da uspori. Vreme je zato mereno brzinom stvarne veze, koja se menjala iz minuta u minut, a sajtovi
+  koji se učitavaju uporedo dele tu vezu. Pod profilom bi taj sajt od 1,7 MB trebalo da se učita za
+  oko 3–5 s, koliko je dao prvi put.
+- **Odluka:** `browser.serial_load` ostaje `true`, jer uslov iz Z-31 nije ispunjen. Eksperiment ne
+  odgovara na pitanje iz Z-31, da li je stvarna veza znatno brža od 3 × 4,8 Mb/s, jer veza nije bila
+  brža ni od jedne. Ako paralelno učitavanje zatreba za Z-32, eksperiment se ponavlja sa veze od
+  najmanje 15 Mb/s.
+- **Z-24, ponovljeno posle Z-30:** kad se sajtovi mere sami, težina i broj zahteva do `load` su u
+  granici od 10 % kod 8 od 8 uporedivih sajtova. Najveća razlika je 8,7 % težine. Dva sajta nisu
+  uporediva, jer u jednom od prolaza nisu stigla do `load`. U prolazima uporedo 7 od 9 je u
+  granici, a dva su preko (37 % i 13 %), ali taj način se ne koristi u radu. Uslov „bar 9 od 10”
+  formalno nije ispunjen, zbog dva sajta kojima je rok istekao na sporoj vezi.
+- **Odluke vlasnika (27.09.):** Z-24 je priznat na osnovu rezultata 8 od 8, a na listi B (Z-51) se
+  ponovo vidi sa brze veze. Dodat je Z-33: pre nivoa 2 alat meri stvarnu vezu, a kad je sporija od
+  `min_link_ratio` × profil (početno 2 × 4,8 = 9,6 Mb/s), vreme učitavanja je `unknown`.
+- **Otvoreno:** gde se rade pravi prolazi. Kalibracija vremena (Z-50) i lista B (Z-51) traže vezu
+  od najmanje 15 Mb/s.
+
 ## 2026-09-27 — mrežni profil nivoa 2 (Z-30)
 
 - **Zapažanje:** vreme učitavanja zavisilo je od veze sa koje se meri, a rečenice su računale sa
