@@ -30,7 +30,7 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["os", "python", "chromium", "network_profile"],
+      "required": ["os", "python", "chromium", "network_profile", "link_mbps"],
       "properties": {
         "os": {"type": "string"},
         "python": {"type": "string"},
@@ -45,6 +45,11 @@
             "upload_mbps": {"type": "number", "exclusiveMinimum": 0},
             "latency_ms": {"type": "number", "minimum": 0}
           }
+        },
+        "link_mbps": {
+          "description": "Stvarna veza izmerena pre nivoa 2, u Mb/s (Z-33); null kad merenje nije uspelo ili nivo 2 nije radio",
+          "type": ["number", "null"],
+          "minimum": 0
         }
       }
     },

@@ -24,6 +24,7 @@ from urllib.parse import urlsplit
 
 from skener import __version__, addresses, store
 from skener.config import get, user_agent
+from skener.fetch.http import measure_link
 from skener.fetch.page import LINKS_KEPT, TEXT_SAMPLE_CHARS, internal
 from skener.fetch.urls import collapse_ws
 from skener.models import (
@@ -222,7 +223,8 @@ def est_waste_kb(transfer_bytes: int, natural: Sequence[int], client: Sequence[i
 
 
 def network_profile(config: dict) -> NetworkProfile:
-    return NetworkProfile(**get(config, "network_profile"))
+    profil = get(config, "network_profile")
+    return NetworkProfile(profil["download_mbps"], profil["upload_mbps"], profil["latency_ms"])
 
 
 def network_conditions(profile: NetworkProfile) -> dict[str, Any]:
@@ -539,11 +541,22 @@ async def capture_all(
     if not sites:
         return {}
 
+    # Jednom po prolazu, pre prvog sajta: profil samo usporava (Z-33).
+    link_mbps = await measure_link(config)
+    potrebno = get(config, "network_profile.min_link_ratio") * get(config, "network_profile.download_mbps")
+    if link_mbps is not None and link_mbps < potrebno:
+        log.warning(
+            "stvarna veza je %s Mb/s, a merenje pod profilom traži bar %g Mb/s; "
+            "vreme učitavanja biće unknown",
+            link_mbps,
+            potrebno,
+        )
+
     loop = asyncio.get_running_loop()
     prethodni = loop.get_exception_handler()
     loop.set_exception_handler(_tiho_za_zatvoren_kontekst(prethodni))
     try:
-        return await _capture_all(sites, config, snapshot_dir, on_done)
+        return await _capture_all(sites, config, snapshot_dir, on_done, link_mbps)
     finally:
         # Zaostale greške zatvorenih konteksta stižu kad sakupljač smeća pokupi napuštene
         # future-e. Zato se to radi ovde, dok je rukovalac još postavljen (BUG-007), a
@@ -558,6 +571,7 @@ async def _capture_all(
     config: dict,
     snapshot_dir: Path | None,
     on_done: Callable[[BrowserSnapshot], None] | None,
+    link_mbps: float | None,
 ) -> dict[str, BrowserSnapshot]:
     from playwright.async_api import async_playwright
 
@@ -575,6 +589,7 @@ async def _capture_all(
                 async with limit:
                     log.info("nivo 2 počinje", extra={"domain": site.domain})
                     snapshot = await _capture_within_limit(browser, site, config, load_lock)
+                    snapshot.link_mbps = link_mbps
                     if snapshot_dir is not None:
                         store.write_browser(snapshot_dir, snapshot)
                     log.info(

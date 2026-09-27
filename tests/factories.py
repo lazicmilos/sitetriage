@@ -162,6 +162,7 @@ def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapsh
         ),
         console=ConsoleStats(errors=0, warnings=2),
         network_profile=PROFIL,
+        link_mbps=100.0,
     )
     return replace(snapshot, **overrides) if overrides else snapshot
 

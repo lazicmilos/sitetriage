@@ -354,6 +354,32 @@ class Fetcher:
         )
 
 
+async def measure_link(config: dict) -> float | None:
+    """Stvarna brzina veze u Mb/s, izmerena pre nivoa 2 (Z-33), ili `None` kad merenje ne uspe.
+
+    Preuzima se najviše `probe_max_s` sekundi, pa se spora veza meri, a ne čeka. U vreme ulazi i
+    uspostavljanje veze, pa je broj malo manji od stvarnog: greška ide na stranu opreza.
+    """
+    url, max_s = get(config, "network_profile.probe_url"), get(config, "network_profile.probe_max_s")
+    primljeno, started = 0, time.monotonic()
+    try:
+        async with asyncio.timeout(max_s), httpx.AsyncClient(
+            trust_env=False, headers={"User-Agent": user_agent(config)}, timeout=None
+        ) as client, client.stream("GET", url) as response:
+            response.raise_for_status()
+            async for deo in response.aiter_raw():
+                primljeno += len(deo)
+    except TimeoutError:
+        pass  # rok je istekao usred preuzimanja: meri se ono što je stiglo
+    except Exception as exc:  # noqa: BLE001 — bez merenja je vreme `unknown`, a prolaz ide dalje
+        log.warning("stvarna veza nije izmerena (%s): %s", url, exc)
+        return None
+    if not primljeno:
+        log.warning("stvarna veza nije izmerena (%s): za %g s nije stigao nijedan bajt", url, max_s)
+        return None
+    return round(primljeno * 8 / (time.monotonic() - started) / 1_000_000, 1)
+
+
 def _should_retry(outcome: Outcome) -> bool:
     """4xx je odgovor, ne greška — bez ponovnog pokušaja (§4.6)."""
     if outcome.error_kind in {"no_connection", "connect_timeout", "read_timeout", "timeout", "connection"}:

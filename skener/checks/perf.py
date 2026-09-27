@@ -197,12 +197,16 @@ def request_count(snapshot, ctx: Context):
     level=2,
     category="perf",
     base_severity="high",
-    # Sekunde važe za vezu pod kojom su izmerene; snimak bez profila meren je na stvarnoj (Z-30).
-    requires=["browser", "network_profile"],
+    # Sekunde važe za vezu pod kojom su izmerene; snimak bez profila meren je na stvarnoj (Z-30),
+    # a profil ne može da ubrza vezu sporiju od sebe (Z-33).
+    requires=["browser", "network_profile", "link"],
     description="Vreme do potpunog učitavanja početne, na simuliranoj vezi iz `[network_profile]`.",
     threshold="> 4 s medium · > 8 s high · prekid posle tvrdog limita = high",
 )
 def load_time(snapshot, ctx: Context):
+    potrebno = ctx.th("network_profile.min_link_ratio") * snapshot.network_profile.download_mbps
+    if snapshot.link_mbps < potrebno:
+        return unknown(load_time.spec, "link_slow", izmereno=snapshot.link_mbps, potrebno=potrebno)
     timing = snapshot.timing
     if timing.reached == "timeout":
         # Stranica koja ne stigne do `load` unutar tvrdog limita je merenje samo po sebi.

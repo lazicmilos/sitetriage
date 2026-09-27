@@ -177,6 +177,8 @@ def _validate(cfg: dict[str, Any]) -> None:
         "http.max_seconds_per_domain",
         "network_profile.download_mbps",
         "network_profile.upload_mbps",
+        "network_profile.probe_max_s",
+        "network_profile.min_link_ratio",
     ):
         value = get(cfg, dotted)
         if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:

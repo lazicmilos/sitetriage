@@ -29,3 +29,16 @@ def dozvoli_lokalne_servere():
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(addresses, "allowlist", lambda config: pravi(config) | dozvoljene_adrese())
         yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def veza_bez_interneta():
+    """Pre nivoa 2 alat meri stvarnu vezu preuzimanjem sa interneta (Z-33), a testovi rade bez
+    mreže. Veza je zato uvek „brza"; merenje samo testira se nad lokalnim serverom."""
+
+    async def brza(config: dict) -> float:
+        return 100.0
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("skener.fetch.browser.measure_link", brza)
+        yield

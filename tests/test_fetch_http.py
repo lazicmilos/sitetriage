@@ -290,6 +290,37 @@ def test_preusmerenje_na_vec_preuzetu_adresu_se_ne_prati(stop_at, trazeno, statu
     assert outcome.redirect_chain == [f"{b}/stara", f"{b}/nova", f"{b}/"]
 
 
+def merenje_veze(site: FakeSite, putanja: str, max_s: float = 5):
+    from skener.fetch.http import measure_link
+
+    cfg = load_config()
+    cfg["network_profile"] |= {"probe_url": f"{site.base_url}{putanja}", "probe_max_s": max_s}
+    return asyncio.run(measure_link(cfg))
+
+
+def test_merenje_veze_daje_brzinu():
+    """Z-33: lokalni server je brži od svake stvarne veze."""
+    with FakeSite(extra={"/proba.bin": Response(b"x" * 2_000_000)}) as site:
+        assert merenje_veze(site, "/proba.bin") > 50
+
+
+def test_merenje_veze_ima_tvrdi_rok():
+    """Na sporoj vezi se meri koliko stigne za `probe_max_s`, a ne čeka se ceo fajl."""
+    with FakeSite(extra={"/proba.bin": Response(b"x" * 2_000_000, stall=10)}) as site:
+        started = time.monotonic()
+        brzina = merenje_veze(site, "/proba.bin", max_s=1)
+        assert time.monotonic() - started < 4
+    assert brzina is not None and brzina < 1
+
+
+@pytest.mark.parametrize(
+    "odgovor", [None, Response(b"x", delay=3)], ids=["nema-fajla", "nijedan-bajt-za-rok"]
+)
+def test_neuspelo_merenje_veze_je_none(odgovor):
+    with FakeSite(extra={"/proba.bin": odgovor} if odgovor else {}) as site:
+        assert merenje_veze(site, "/proba.bin", max_s=1) is None
+
+
 def test_kompresovan_odgovor_ne_pali_nalaz():
     with FakeSite(
         extra={"/": Response(html("Početna", body="x" * 80_000), headers={"content-encoding": "gzip"})}

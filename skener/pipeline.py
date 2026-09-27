@@ -229,11 +229,13 @@ def _environment(browsers: Iterable[BrowserSnapshot]) -> dict[str, typing.Any]:
     browsers = list(browsers)
     chromium = next((b.browser_version for b in browsers if b.browser_version), None)
     profil = next((b.network_profile for b in browsers if b.network_profile), None)
+    veza = next((b.link_mbps for b in browsers if b.link_mbps is not None), None)
     return {
         "os": platform.platform(),
         "python": platform.python_version(),
         "chromium": chromium,
         "network_profile": profil,
+        "link_mbps": veza,
     }
 
 

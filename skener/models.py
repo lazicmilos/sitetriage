@@ -338,6 +338,8 @@ class BrowserSnapshot:
     errors: list[SnapshotError] = field(default_factory=list)
     # `None`: snimak pre Z-30, meren na stvarnoj vezi
     network_profile: NetworkProfile | None = None
+    # Stvarna veza izmerena pre nivoa 2, u Mb/s (Z-33); `None`: merenje nije uspelo ili nije rađeno
+    link_mbps: float | None = None
 
 
 # --------------------------------------------------------------------------- #

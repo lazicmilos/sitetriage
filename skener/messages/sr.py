@@ -451,6 +451,14 @@ REASONS: dict[str, str] = {
     "requires.network_profile": (
         "snimak je napravljen pre mrežnog profila, pa je vreme izmereno bez mrežnog profila, na stvarnoj vezi"
     ),
+    # stvarna veza pre nivoa 2 (Z-33)
+    "requires.link": (
+        "stvarna veza nije izmerena pre nivoa 2, pa se ne zna da li je vreme mereno pod profilom"
+    ),
+    "link_slow": (
+        "stvarna veza je bila {izmereno} Mb/s, a za merenje pod profilom treba bar {potrebno} Mb/s, "
+        "pa bi vreme bilo precenjeno"
+    ),
     # zašto domen nije skeniran (lista „Nije skenirano")
     "entry_missing": "snapshot nema početnu (dohvatanje je puklo, vidi log)",
     "entry_status": "početna je vratila status {status}",

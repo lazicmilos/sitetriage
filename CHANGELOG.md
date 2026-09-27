@@ -41,8 +41,9 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 - `thresholds.perf.mobile_speed_mbps` je obrisan. Brzina je sada `network_profile.download_mbps`, i
   ista vrednost ide u merenje i u rečenice. Stari ključ u sopstvenom TOML-u se tiho ignoriše.
 - `perf.load.time` traži snimak sa mrežnim profilom. Snimak nivoa 2 napravljen pre njega meren je na
-  stvarnoj vezi, pa je vreme `unknown` (`requires.network_profile`). JSON `environment` ima obavezno
-  polje `network_profile` (`null` kad nivo 2 nije radio).
+  stvarnoj vezi, pa je vreme `unknown` (`requires.network_profile`). Isto važi i za snimak bez
+  izmerene stvarne veze (`requires.link`, Z-33). JSON `environment` ima obavezna polja
+  `network_profile` i `link_mbps` (`null` kad nivo 2 nije radio).
 
 ### Dodato
 
@@ -51,6 +52,11 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   mašini. Profil je u snimku nivoa 2 (`network_profile`) i u `environment` JSON izveštaja, a
   rečenica za `perf.load.time` ga navodi. Chromium se pokreće bez izolacije sajtova, da profil važi
   i za iframe sa drugog sajta ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)).
+- Merenje stvarne veze pre nivoa 2. Alat jednom po prolazu preuzima probni fajl
+  (`network_profile.probe_url`, najviše `probe_max_s` sekundi), a izmerena brzina ide u snimak
+  (`link_mbps`) i u `environment` JSON izveštaja. Kad je veza sporija od `min_link_ratio` × profil,
+  `perf.load.time` je `unknown` (`link_slow`), jer profil može samo da uspori, a vreme bi bilo
+  precenjeno. Snimak bez izmerene veze daje `unknown` (`requires.link`), uz jedno upozorenje u logu (Z-33).
 - Prekidač `browser.serial_load` (podrazumevano `true`). Sa `false` se sajtovi na nivou 2 učitavaju
   uporedo, a ne jedan po jedan. Pod mrežnim profilom svaki kontekst ima svoju simuliranu vezu, pa se
   eksperimentom proverava da li je serijsko učitavanje iz BUG-006 i dalje potrebno (Z-31).

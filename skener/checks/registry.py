@@ -153,6 +153,7 @@ REQUIREMENTS: dict[str, Callable[[Any], bool]] = {
     "network": lambda s: s.status != "failed" and s.network.request_count > 0,
     "host_variants": lambda s: s.host_variants is not None,
     "network_profile": lambda s: s.network_profile is not None,
+    "link": lambda s: s.link_mbps is not None,
 }
 
 

@@ -441,6 +441,15 @@ REASONS: dict[str, str] = {
     "requires.network_profile": (
         "the snapshot predates the network profile, so the load time was measured on the real connection"
     ),
+    # real connection before level 2 (Z-33)
+    "requires.link": (
+        "the real connection was not measured before level 2, so it is unknown whether the time was measured "
+        "under the profile"
+    ),
+    "link_slow": (
+        "the real connection was {izmereno} Mb/s, and measuring under the profile needs at least "
+        "{potrebno} Mb/s, so the time would be overstated"
+    ),
     "variant_unchecked": (
         "{adresa} was not seen the way a browser sees it ({vrsta}), so it is unknown whether it serves "
         "the site"

@@ -143,6 +143,22 @@ def test_vreme_bez_mreznog_profila_je_unknown(reached, load_ms):
     assert result.status == "unknown" and "bez mrežnog profila" in reason(result.reason)
 
 
+@pytest.mark.parametrize("reached, load_ms", [("load", 9_000), ("timeout", None)])
+def test_vreme_na_vezi_sporijoj_od_profila_je_unknown(reached, load_ms):
+    """Z-33: profil samo usporava; na sporijoj vezi vreme je mereno njenom brzinom, pa je precenjeno."""
+    browser = clean_browser(link_mbps=5.0)
+    browser.timing = TimingStats(load_ms=load_ms, reached=reached)
+    result = run_level(2, browser)["perf.load.time"]
+    assert result.status == "unknown"
+    assert "5" in reason(result.reason) and "9,6 Mb/s" in reason(result.reason)
+    assert run_level(2, clean_browser(link_mbps=9.6))["perf.load.time"].status == "ok", "granica je uključena"
+
+
+def test_vreme_bez_izmerene_veze_je_unknown():
+    result = run_level(2, clean_browser(link_mbps=None))["perf.load.time"]
+    assert result.status == "unknown" and "nije izmerena" in reason(result.reason)
+
+
 # --------------------------------------------------------------------------- #
 # §7.4 — tri stanja alt atributa, ne dva
 # --------------------------------------------------------------------------- #

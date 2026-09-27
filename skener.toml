@@ -74,6 +74,12 @@ download_mbps = 4.8             # 0,6 MB/s, spora 4G veza (§10.3); jedini izvor
                                 # merenje i za sekunde u rečenicama za klijenta
 upload_mbps = 1.5               # početna vrednost
 latency_ms = 150                # početna vrednost; obrazloženje ide u kalibracija.md (Z-50)
+# Profil samo usporava: na sporijoj stvarnoj vezi vreme bi bilo precenjeno (Z-33). Zato se pre
+# nivoa 2 preuzima probni fajl, najviše `probe_max_s` sekundi.
+probe_url = "https://speed.cloudflare.com/__down?bytes=25000000"
+probe_max_s = 5
+min_link_ratio = 2.0            # stvarna veza ≥ 2 × profil, jer se uz učitavanje jednog sajta skroluju
+                                # još dva; inače je vreme učitavanja `unknown`
 
 [thresholds.seo]
 duplicate_min_pages = 3         # ≥ 3 stranice iz različitih grupa putanja (§5)

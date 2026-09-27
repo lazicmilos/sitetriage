@@ -190,6 +190,22 @@ def test_profil_je_u_snapshotu_i_jsonu(snimak):
     assert snimak.network_profile == profil
     assert from_dict(BrowserSnapshot, to_jsonable(snimak)).network_profile == profil
     assert pipeline._environment([snimak])["network_profile"] == profil
+    assert snimak.link_mbps == pipeline._environment([snimak])["link_mbps"] == 100.0
+
+
+def test_spora_veza_je_u_snapshotu_i_upozorava_jednom(monkeypatch, caplog):
+    """Z-33: veza se meri jednom po prolazu, pre nivoa 2."""
+    from skener.fetch import browser
+
+    async def spora(config: dict) -> float:
+        return 3.2
+
+    monkeypatch.setattr(browser, "measure_link", spora)
+    with FakeSite() as site:
+        snimak = snimi(site)
+    assert snimak.link_mbps == 3.2
+    upozorenja = [r for r in caplog.records if r.levelname == "WARNING" and "3.2 Mb/s" in r.getMessage()]
+    assert len(upozorenja) == 1
 
 
 def test_browser_belezi_tekst_i_lang_posle_javascript_a():
