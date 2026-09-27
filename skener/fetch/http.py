@@ -35,6 +35,7 @@ from skener.models import (
     DomainInput,
     Entry,
     HostVariant,
+    PageSnapshot,
     RobotsInfo,
     SitemapInfo,
     SiteSnapshot,
@@ -280,6 +281,7 @@ class Fetcher:
         verify: bool = True,
         crawl_delay: float | None = None,
         retries: int = 1,
+        stop_at: str | None = None,
     ) -> Outcome:
         if not budget.take():
             return Outcome(url=url, error_kind="budget", error_detail=budget.aborted_reason)
@@ -296,7 +298,7 @@ class Fetcher:
                 # Meri se samo rad servera. Čekanje u redu i pauza pristojnosti su naše
                 # vreme — sa njima „početna odgovara > 1500 ms" pali svakome (§6).
                 started = time.monotonic()
-                outcome = await self._send(url, verify=verify)
+                outcome = await self._send(url, verify=verify, stop_at=stop_at)
                 outcome.elapsed_ms = int((time.monotonic() - started) * 1000)
             self._host_next_allowed[host] = time.monotonic() + random.uniform(*self._delay_range)
 
@@ -306,7 +308,7 @@ class Fetcher:
         if retries > 0 and _should_retry(outcome):
             await asyncio.sleep(random.uniform(0.5, 1.5))
             return await self.request(
-                url, budget, verify=verify, crawl_delay=crawl_delay, retries=retries - 1
+                url, budget, verify=verify, crawl_delay=crawl_delay, retries=retries - 1, stop_at=stop_at
             )
         return outcome
 
@@ -319,15 +321,29 @@ class Fetcher:
         if wait > 0:
             await asyncio.sleep(wait)
 
-    async def _send(self, url: str, *, verify: bool) -> Outcome:
+    async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
+        """`stop_at`: adresa koja je već preuzeta. Preusmerenje na nju se ne prati, a ishod je
+        odgovor koji na nju upućuje, bez tela (Z-26)."""
         client = self._pick_client(verify=verify)
         try:
-            response = await client.get(url)
+            response = await client.get(url, follow_redirects=stop_at is None)
+            koraci = [response]
+            while response.next_request is not None:
+                sledeca = str(response.next_request.url)
+                if normalize(sledeca) == normalize(stop_at):
+                    lanac = [str(r.url) for r in koraci] + [sledeca]
+                    status = response.status_code
+                    return Outcome(url=url, status=status, final_url=sledeca, redirect_chain=lanac)
+                if len(koraci) > client.max_redirects:
+                    raise httpx.TooManyRedirects("Exceeded maximum allowed redirects.")
+                response = await client.send(response.next_request, follow_redirects=False)
+                koraci.append(response)
         except Exception as exc:  # noqa: BLE001 — izuzetak nikad ne napušta domen (§8.2)
             kind, detail = _classify(exc)
             return Outcome(url=url, error_kind=kind, error_detail=detail)
 
-        chain = [str(r.request.url) for r in response.history] + [str(response.url)]
+        # Sa `stop_at` httpx ne vodi istoriju, pa lanac čine koraci; bez njega je jedan korak.
+        chain = [str(r.request.url) for r in response.history] + [str(r.url) for r in koraci]
         return Outcome(
             url=url,
             status=response.status_code,
@@ -398,7 +414,7 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
     rules = await _fetch_robots(fetcher, origin, budget, snapshot, verify=verify)
     crawl_delay = rules.crawl_delay
     # Pre mape sajta: tri zahteva za dva nalaza, a velika mapa ume da pojede ceo budžet.
-    snapshot.host_variants = await _fetch_variants(fetcher, base_url, budget, crawl_delay)
+    snapshot.host_variants = await _fetch_variants(fetcher, home, budget, crawl_delay)
     candidates = await _collect_sitemap(
         fetcher, origin, budget, snapshot, rules, verify=verify, crawl_delay=crawl_delay
     )
@@ -524,17 +540,24 @@ def variant_urls(final_url: str) -> list[str]:
 
 
 async def _fetch_variants(
-    fetcher: Fetcher, final_url: str, budget: DomainBudget, crawl_delay: float | None
+    fetcher: Fetcher, home: PageSnapshot, budget: DomainBudget, crawl_delay: float | None
 ) -> list[HostVariant] | None:
-    """Sa proverom sertifikata i bez ponovnog pokušaja: TLS greška varijante je podatak o njoj."""
+    """Sa proverom sertifikata i bez ponovnog pokušaja: TLS greška varijante je podatak o njoj.
+
+    Varijanta koja preusmerava na početnu dobija njen status i canonical, a početna se ne traži
+    ponovo: na sporom hostingu to je bilo 3 × nekoliko sekundi budžeta (prolaz D).
+    """
+    final_url = home.final_url or home.url
     urls = variant_urls(final_url)
     if not urls:
         return None
     variants = []
     for url in urls:
-        outcome = await fetcher.request(url, budget, crawl_delay=crawl_delay, retries=0)
-        canonical = None
-        if outcome.status == 200 and outcome.body:
+        outcome = await fetcher.request(url, budget, crawl_delay=crawl_delay, retries=0, stop_at=final_url)
+        status, canonical = outcome.status, None
+        if outcome.final_url and normalize(outcome.final_url) == normalize(final_url):
+            status, canonical = home.status, home.canonical_normalized
+        elif outcome.status == 200 and outcome.body:
             strana = page_builder.build(
                 url, final_url=outcome.final_url, status=200, headers=outcome.headers, body=outcome.body
             )
@@ -542,7 +565,7 @@ async def _fetch_variants(
         variants.append(
             HostVariant(
                 url=url,
-                status=outcome.status,
+                status=status,
                 final_url=outcome.final_url,
                 redirect_chain=outcome.redirect_chain,
                 canonical=canonical,

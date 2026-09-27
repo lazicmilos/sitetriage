@@ -143,7 +143,7 @@ def test_www_i_bez_www_dele_kljuc_pristojnosti():
     uporedo, najvise, pocetak = 0, 0, []
 
     class Sporo(Fetcher):
-        async def _send(self, url: str, *, verify: bool) -> Outcome:
+        async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
             nonlocal uporedo, najvise
             uporedo += 1
             najvise = max(najvise, uporedo)
@@ -263,6 +263,31 @@ def test_preusmerenja_se_belezе():
     assert snapshot.entry.status == 200
     assert len(snapshot.entry.redirect_chain) == 4
     assert run_level(1, snapshot)["perf.redirect.chain"].status == "finding"
+
+
+@pytest.mark.parametrize(
+    "stop_at, trazeno, status", [("/", ["/stara", "/nova"], 302), ("/drugde", None, 200)]
+)
+def test_preusmerenje_na_vec_preuzetu_adresu_se_ne_prati(stop_at, trazeno, status):
+    """Varijanta hosta staje pred početnom koja je već preuzeta; inače ide do kraja (Z-26)."""
+    cfg = load_config()
+    cfg["http"]["delay_ms"] = [0, 0]
+    with FakeSite(
+        extra={
+            "/stara": Response(b"", status=301, headers={"Location": "/nova"}),
+            "/nova": Response(b"", status=302, headers={"Location": "/"}),
+        }
+    ) as site:
+        b = site.base_url
+
+        async def run():
+            async with Fetcher(cfg) as fetcher:
+                return await fetcher.request(f"{b}/stara", DomainBudget(5, 30), stop_at=f"{b}{stop_at}")
+
+        outcome = asyncio.run(run())
+        assert site.paths() == (trazeno or ["/stara", "/nova", "/"])
+    assert (outcome.status, outcome.final_url) == (status, f"{b}/")
+    assert outcome.redirect_chain == [f"{b}/stara", f"{b}/nova", f"{b}/"]
 
 
 def test_kompresovan_odgovor_ne_pali_nalaz():
@@ -477,7 +502,7 @@ def test_sonde_idu_na_poreklo_a_ne_na_putanju_pocetne():
 class IstekaoSertifikat(Fetcher):
     """Bez pravog TLS servera: provera sertifikata pada, dohvat bez provere uspeva."""
 
-    async def _send(self, url: str, *, verify: bool) -> Outcome:
+    async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
         if verify:
             return Outcome(url=url, error_kind="tls", error_detail="certificate has expired")
         if url.endswith("/"):
@@ -557,7 +582,7 @@ def test_prekinuto_rukovanje_se_ne_klasifikuje_kao_sertifikat():
 class PrekinutoRukovanje(Fetcher):
     """Snimljeno: server prekida rukovanje sa Python klijentom, a preko http-a radi."""
 
-    async def _send(self, url: str, *, verify: bool) -> Outcome:
+    async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
         if url.startswith("https://"):
             return Outcome(
                 url=url, error_kind="tls_handshake", error_detail="[SSL: UNEXPECTED_EOF_WHILE_READING]"
@@ -629,7 +654,7 @@ class TabelaIshoda(Fetcher):
         self.tabela = tabela
         self.poslato: list[tuple[str, bool]] = []
 
-    async def _send(self, url: str, *, verify: bool) -> Outcome:
+    async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
         sema = url.split("://")[0]
         self.poslato.append((sema, verify))
         if not url.endswith("/") or url.count("/") > 3:

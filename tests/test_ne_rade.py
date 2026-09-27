@@ -55,7 +55,7 @@ def _prolaz(monkeypatch, tabela: dict, *, posle_s: float = 0.0):
     class PoTabeli(http.Fetcher):
         pokusaj = 0
 
-        async def _send(self, url: str, *, verify: bool) -> Outcome:
+        async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
             if url not in (f"https://{DOMEN}/", f"http://{DOMEN}/"):
                 return Outcome(url=url, status=404, final_url=url, redirect_chain=[url], body=b"")
             ishod = tabela.get((self.pokusaj, url.split("://")[0]), 200)

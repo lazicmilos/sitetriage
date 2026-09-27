@@ -31,6 +31,7 @@ class Sajt(Fetcher):
     """`ponasanje[poreklo]`: "200", poreklo na koje preusmerava, ili greška iz `GRESKE`.
 
     Poreklo kog nema u tabeli nema DNS zapis. Sertifikat sa greškom prolazi kad se ne proverava.
+    `posluzeno` su adrese koje su vratile stranu, a preusmerenje na `stop_at` se ne prati.
     """
 
     def __init__(self, cfg: dict, ponasanje: dict[str, str], canonical: dict[str, str] | None = None) -> None:
@@ -38,8 +39,9 @@ class Sajt(Fetcher):
         self.ponasanje = ponasanje
         self.canonical = canonical or {}
         self.poslato: list[str] = []
+        self.posluzeno: list[str] = []
 
-    async def _send(self, url: str, *, verify: bool) -> Outcome:
+    async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
         self.poslato.append(url)
         lanac = [url]
         while True:
@@ -54,8 +56,11 @@ class Sajt(Fetcher):
                 break
             url = ishod + url.removeprefix(poreklo)
             lanac.append(url)
+            if url == stop_at:
+                return Outcome(url=lanac[0], status=301, final_url=url, redirect_chain=lanac)
         if url != f"{poreklo}/":
             return Outcome(url=lanac[0], status=404, final_url=url, redirect_chain=lanac, body=b"")
+        self.posluzeno.append(url)
         canonical = self.canonical.get(poreklo)
         glava = f'<link rel="canonical" href="{canonical}">' if canonical else ""
         return Outcome(
@@ -125,6 +130,14 @@ def test_varijante_su_u_snimku_sa_lancem(monkeypatch):
     assert set(varijante) == {f"{SA}/", f"{HTTP_BEZ}/", f"{HTTP_SA}/"}
     assert varijante[f"{HTTP_SA}/"].redirect_chain == [f"{HTTP_SA}/", f"{SA}/"]
     assert varijante[f"{HTTP_SA}/"].status == 200
+
+
+def test_varijanta_koja_vodi_na_pocetnu_je_ne_trazi_ponovo(monkeypatch):
+    """Početna se preuzima jednom; varijanta koja na nju vodi dobija njen status i canonical."""
+    snapshot, fetcher = skeniraj(monkeypatch, sajt(True, True, False), canonical={BEZ: f"{BEZ}/"})
+    assert fetcher.posluzeno.count(f"{BEZ}/") == 1
+    [http] = [v for v in snapshot.host_variants if v.url == f"{HTTP_BEZ}/"]
+    assert (http.status, http.canonical, http.redirect_chain) == (200, f"{BEZ}/", [f"{HTTP_BEZ}/", f"{BEZ}/"])
 
 
 def test_varijante_idu_pre_mape_sajta_u_budzetu(monkeypatch):
