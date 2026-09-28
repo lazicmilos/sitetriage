@@ -80,6 +80,25 @@ def test_canonical_koji_se_razlikuje_samo_po_normalizaciji_nije_tudji():
 
 
 @pytest.mark.parametrize(
+    "cilj",
+    [
+        pytest.param("http://cist.rs/", id="http"),
+        pytest.param("https://www.cist.rs/", id="www"),
+        pytest.param("http://www.cist.rs/", id="http-www"),
+    ],
+)
+def test_canonical_na_istu_stranicu_sa_drugom_semom_ili_www_nije_tudji(cilj):
+    """Z-50: početna upućuje na svoju `http` ili `www` verziju, a jedna podstranica na početnu.
+    „Druga adresa" iz rečenice bila bi vlasnikova sopstvena početna."""
+    assert canonical(sajt(7, {0: cilj, 1: cilj})).status == "ok"
+
+
+def test_druga_sema_ka_drugoj_stranici_je_i_dalje_tudji():
+    nalaz = canonical(sajt(7, {1: "http://cist.rs/", 2: "http://cist.rs/"})).findings[0]
+    assert nalaz.evidence["stranica"] == 2
+
+
+@pytest.mark.parametrize(
     "lang, ocekivano",
     [
         pytest.param("sr", "2 od 7 proverenih stranica sajta", id="sr"),

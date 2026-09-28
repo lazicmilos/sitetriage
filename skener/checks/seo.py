@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Callable
 
 from skener.checks.registry import CheckSpec, Context, check, finding, not_applicable, ok, unknown
 from skener.fetch.urls import collapse_ws, normalize, path_group, same_site
 from skener.models import CheckResult, PageSnapshot, SiteSnapshot
+
+_SEMA_I_WWW = re.compile(r"^https?://(www\.)?")
 
 
 def _premalo_stranica(snapshot: SiteSnapshot, ctx: Context, spec: CheckSpec) -> CheckResult | None:
@@ -101,7 +104,7 @@ def canonical_missing(snapshot: SiteSnapshot, ctx: Context):
     requires=["home"],
     description=(
         "Više stranica iz različitih delova sajta upućuje canonical-om na istu drugu adresu. "
-        "Stranica koja upućuje na sebe se ne broji."
+        "Stranica koja upućuje na sebe, ili na svoju `http` ili `www` verziju, se ne broji."
     ),
     threshold=(
         "≥ 2 stranice sa tuđim canonical-om ka istoj adresi, iz ≥ 2 grupe putanja; udeo u uzorku "
@@ -114,8 +117,11 @@ def canonical_duplicate(snapshot: SiteSnapshot, ctx: Context):
 
     def tudji(page: PageSnapshot) -> str | None:
         # Tuđi canonical: postoji i upućuje na drugu adresu od one na kojoj je stranica (Z-23).
+        # `http`/`https` i vodeće `www.` iste stranice nisu druga adresa: Google prikazuje tu
+        # istu stranicu, pa bi rečenica vlasniku pokazala njegovu sopstvenu adresu (Z-50).
         target = page.canonical_normalized
-        return target if target and target != normalize(page.final_url or page.url) else None
+        own = normalize(page.final_url or page.url) or ""
+        return target if target and _SEMA_I_WWW.sub("", target) != _SEMA_I_WWW.sub("", own) else None
 
     hit = _duplicates(snapshot, tudji, ctx.th("thresholds.seo.canonical_foreign_min"))
     if not hit:

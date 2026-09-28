@@ -95,6 +95,9 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- `seo.canonical.duplicate` je stranicu čiji canonical upućuje na njenu `http` ili `www` verziju
+  brojao kao stranicu sa tuđim canonical-om, pa je rečenica vlasniku kao „drugu adresu" pokazivala
+  njegovu sopstvenu početnu. Takav canonical se više ne broji (Z-50).
 - Privremena greška DNS-a (EAI_AGAIN) se ponavlja jednom, na nivou 1 i u proveri adresa na nivou 2.
   Preko mobilnog hotspota je bila na svakom četvrtom domenu, pa su sajtovi koji rade ispadali kao
   `failed`, a na nivou 2 jedna greška je blokirala sve zahteve ka tom hostu. Varijanta hosta sa
