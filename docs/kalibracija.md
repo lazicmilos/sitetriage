@@ -46,7 +46,8 @@ odluci vlasnika, bez novog skeniranja. Raspodelu daje `scripts/raspodela.py`. Do
   (2 od 8 stranica). Kod prvog dve podstranice, „o nama” i kategorija proizvoda, prijavljuju
   početnu kao zvaničnu adresu, pa ih Google može izostaviti iz pretrage. To je stvaran problem.
   Kod drugog početna na `https://` ima canonical na svoju `http://` verziju, a jedna podstranica
-  ispravno upućuje na početnu.
+  ispravno upućuje na početnu. Sve četiri stranice su 28.09. proverene `curl`-om, i canonical je
+  isti kao u snimku.
 - **Uzrok:** poređenje je `http`/`https` i vodeće `www.` iste stranice računalo kao drugu adresu, pa
   bi rečenica vlasniku kao „drugu adresu” pokazala njegovu sopstvenu početnu.
 - **Odluka (vlasnik, 28.09.):** canonical koji se od stranice razlikuje samo po `http`/`https` ili po
