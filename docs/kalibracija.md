@@ -3,6 +3,51 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-28 — prolazi G i H: Z-32, Z-31 i Z-24 sa brze veze
+
+Oba prolaza su 27.09. rađena nad listom A, sa istim kodom (`3607cb7`: 16 domena odjednom na nivou
+1, privremena greška DNS-a se ponavlja jednom). Prolaz G je rađen preko mobilnog hotspota, a prolaz
+H na drugom računaru, sa brze veze. Z-33 je pre nivoa 2 izmerio 17,4 Mb/s (G) i 107 Mb/s (H).
+
+| | G (hotspot) | H (brza veza) |
+|---|---|---|
+| nivo 1 | 192 s | 168 s |
+| nivo 2 (60 domena) | 763 s | 500 s |
+| procena za 200 domena | 19,1 min | 13,9 min |
+| udeo potrošenog budžeta | 20,5 % | 7,8 % |
+| `failed` zbog privremene greške DNS-a | 7 | 0 |
+| do `load` pod profilom: medijana / p90 | 7,5 / 21,8 s | 5,5 / 14,1 s |
+| rok od 25 s istekao | 9 | 2 |
+
+U oba prolaza „Ne rade” ima istih 7 domena kao u prolazu D. U prolazu H su `failed` samo 3 sajta sa
+odgovorom 403 ili 429, kao u prolazu D.
+
+- **Zapažanje (Z-32):** na brzoj vezi procena je 2 × 168 s + 500 s = 13,9 min, ispod granice od
+  15 min, i to uz učitavanje jedan po jedan. Na hotspotu je 19,1 min. U oba prolaza najveći deo
+  vremena odnosi nivo 2, jer se 60 sajtova učitava jedan po jedan pod profilom od 4,8 Mb/s.
+- **Uzrok (G):** na hotspotu 16 domena odjednom dele vezu od oko 17 Mb/s, pa su sajtovi sporiji i
+  više njih potroši budžet. Privremena greška DNS-a posle ponavljanja ostala je kod 7 domena (F: 24).
+  Na brzoj vezi se ne javlja ni jedno ni drugo.
+- **Zapažanje (Z-31, ponovljeno sa brze veze):** isti postupak i istih 10 sajtova kao 27.09.
+  Stvarna veza pre četiri prolaza: 280, 358, 280 i 360 Mb/s (preuzimanje 25 MB). Odnos „u prolazu /
+  sam” je u opsegu 0,8–1,25 kod 19 od 20 merenja, a kod 15 je između 0,97 i 1,03. Jedino odstupanje
+  je 0,77: taj sajt se sam učitao za 5,2 s, a u ostala tri merenja za 4,0–4,1 s. Razlika je na
+  strani sajta, jer ometanje daje odnos veći od 1. Nivo 2 za 10 sajtova traje 41,5 s uporedo, a
+  93–95 s jedan po jedan.
+- **Z-24, sa brze veze:** kad se sajtovi mere sami, težina i broj zahteva do `load` su u granici od
+  10 % kod 10 od 10 sajtova. Najveća razlika je 5,7 % broja zahteva. Uslov „bar 9 od 10” je sada
+  ispunjen i formalno.
+- **Odluka (vlasnik, 28.09.):** Z-32 je ispunjen. 16 domena odjednom ostaje, jer je udeo potrošenog
+  budžeta na brzoj vezi 7,8 % (kriterijum < 10 %), a `max_level2` ostaje 60. `browser.serial_load`
+  ostaje `true`, jer uslov iz Z-31 traži svih 20 merenja, a Z-32 je ispunjen i bez uporednog
+  učitavanja. Veza mašine na kojoj skener radi nije unapred poznata. Jedan po jedan daje tačno
+  vreme na svakoj vezi od 9,6 Mb/s naviše (Z-33), a uporedno je provereno samo na vezi od oko
+  100 Mb/s i više. Automatski izbor prema izmerenoj vezi tražio bi merenja između 17 i 107 Mb/s, pa
+  ostaje za kasnije. Ako se uporedno učitavanje ikad uključi, `min_link_ratio` mora biti bar 3, jer
+  se tada tri sajta učitavaju odjednom.
+- **Otvoreno:** na hotspotu procena prelazi 15 min, pa i dalje ostaje pitanje gde se rade pravi
+  prolazi. Z-32, Z-50 i Z-51 važe za brzu vezu.
+
 ## 2026-09-27 — prolaz F: vreme pod profilom, DNS preko hotspota i Z-32
 
 Lista A, 100 domena, 14,6 min. Računar je bio na mobilnom hotspotu, preko Wi-Fi adaptera 802.11g
