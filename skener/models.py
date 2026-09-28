@@ -340,6 +340,9 @@ class BrowserSnapshot:
     network_profile: NetworkProfile | None = None
     # Stvarna veza izmerena pre nivoa 2, u Mb/s (Z-33); `None`: merenje nije uspelo ili nije rađeno
     link_mbps: float | None = None
+    # Trajanje nivoa 2 bez čekanja u redu za učitavanje, isto što meri tvrdi limit (Z-50);
+    # `None`: snimak pre Z-50
+    elapsed_ms: int | None = None
 
 
 # --------------------------------------------------------------------------- #

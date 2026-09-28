@@ -388,6 +388,24 @@ def test_tvrdi_limit_po_domenu_prekida_nivo_2():
     assert trajanje < 15, f"tvrdi limit od 3 s nije poštovan: {trajanje:.0f} s"
     assert snimak.status == "failed"
     assert any("tvrdog limita" in e.detail for e in snimak.errors), snimak.errors
+    assert snimak.elapsed_ms >= 3000
+
+
+def test_trajanje_nivoa_2_je_u_snimku():
+    """Z-50: granica `browser.max_seconds_per_domain` se određuje iz raspodele trajanja."""
+    import time
+
+    with FakeSite(
+        extra={
+            "/": Response(b"<html><h1>Strana</h1><img src='/spora.png'></html>"),
+            "/spora.png": Response(png(10, 10), headers={"content-type": "image/png"}, delay=1.0),
+        }
+    ) as site:
+        started = time.monotonic()
+        snimak = snimi(site)
+        trajanje_ms = (time.monotonic() - started) * 1000
+
+    assert 1000 <= snimak.elapsed_ms <= trajanje_ms
 
 
 # --------------------------------------------------------------------------- #

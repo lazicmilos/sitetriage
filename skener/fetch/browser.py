@@ -16,6 +16,7 @@ import gc
 import logging
 import os
 import socket
+import time
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -436,11 +437,12 @@ async def _capture_within_limit(
     limit_s = get(config, "browser.max_seconds_per_domain")
     slot = _LoadSlot(load_lock)
     await slot.acquire()
+    started = time.monotonic()
     try:
-        return await asyncio.wait_for(capture(browser, site, config, slot), limit_s)
+        snapshot = await asyncio.wait_for(capture(browser, site, config, slot), limit_s)
     except TimeoutError:
         log.error("nivo 2 prekinut posle %s s", limit_s, extra={"domain": site.domain})
-        return BrowserSnapshot(
+        snapshot = BrowserSnapshot(
             domain=site.domain,
             url=(site.home.final_url if site.home else None) or "",
             fetched_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -449,6 +451,8 @@ async def _capture_within_limit(
         )
     finally:
         slot.release()
+    snapshot.elapsed_ms = round((time.monotonic() - started) * 1000)
+    return snapshot
 
 
 def _tiho_za_zatvoren_kontekst(prethodni: Callable | None) -> Callable:

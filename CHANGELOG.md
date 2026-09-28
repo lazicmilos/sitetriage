@@ -57,6 +57,10 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   (`link_mbps`) i u `environment` JSON izveštaja. Kad je veza sporija od `min_link_ratio` × profil,
   `perf.load.time` je `unknown` (`link_slow`), jer profil može samo da uspori, a vreme bi bilo
   precenjeno. Snimak bez izmerene veze daje `unknown` (`requires.link`), uz jedno upozorenje u logu (Z-33).
+- Snimak nivoa 2 beleži trajanje nivoa 2 za domen (`elapsed_ms`), bez čekanja u redu za
+  učitavanje, isto vreme koje ograničava `browser.max_seconds_per_domain`. Skripta
+  `scripts/raspodela.py` iz snimaka ispisuje raspodelu težine, broja zahteva i vremena do `load`,
+  trajanja nivoa 2 i canonical nalaze, za kalibraciju pragova (Z-50).
 - Prekidač `browser.serial_load` (podrazumevano `true`). Sa `false` se sajtovi na nivou 2 učitavaju
   uporedo, a ne jedan po jedan. Pod mrežnim profilom svaki kontekst ima svoju simuliranu vezu, pa se
   eksperimentom proverava da li je serijsko učitavanje iz BUG-006 i dalje potrebno (Z-31).
