@@ -75,7 +75,7 @@ executable_path = ""            # prazno = Playwright-ov Chromium; postavi za si
 download_mbps = 4.8             # 0,6 MB/s, spora 4G veza (§10.3); jedini izvor brzine, i za
                                 # merenje i za sekunde u rečenicama za klijenta
 upload_mbps = 1.5               # početna vrednost
-latency_ms = 150                # početna vrednost; obrazloženje ide u kalibracija.md (Z-50)
+latency_ms = 150                # isto kašnjenje kao Lighthouse za mobilno merenje (Z-50)
 # Profil samo usporava: na sporijoj stvarnoj vezi vreme bi bilo precenjeno (Z-33). Zato se pre
 # nivoa 2 preuzima probni fajl, najviše `probe_max_s` sekundi.
 probe_url = "https://speed.cloudflare.com/__down?bytes=25000000"
@@ -87,14 +87,14 @@ min_link_ratio = 2.0            # stvarna veza ≥ 2 × profil, jer se uz učita
 duplicate_min_pages = 3         # ≥ 3 stranice iz različitih grupa putanja (§5)
 canonical_foreign_min = 2       # stranice sa tuđim canonical-om ka istoj adresi, iz toliko grupa putanja
 canonical_share = { high = 0.4, critical = 0.6 }   # udeo tih stranica u uzorku; ispod je medium.
-                                # Početne vrednosti (Z-23); konačne posle kalibracije na listi A (Z-50)
+                                # Početne vrednosti (Z-23); na listi A je jedan stvaran slučaj, pa ostaju (Z-50)
 h1_multiple = 3
 
 [thresholds.perf]
-page_weight_mb = { medium = 3.0, high = 5.0, critical = 8.0 }   # preneti bajtovi bez videa; ≈ medijana,
-                                # p75 i p90 za 60 pravih sajtova (docs/izvestaj-testiranja-2.md)
-request_count = { medium = 100, high = 150 }
-load_ms = { medium = 4000, high = 8000 }
+# Zaokruženi p50, p75 i p90 sa liste A, pod mrežnim profilom (Z-50, docs/kalibracija.md).
+page_weight_mb = { medium = 2.0, high = 4.0, critical = 7.0 }   # preneto do load, bez videa
+request_count = { medium = 60, high = 90 }
+load_ms = { medium = 6000, high = 9000 }
 image_ratio = 2.5               # 2 bi svaki retina sajt proglasio pokvarenim (§7.5)
 oversized_min_count = 3
 oversized_waste_kb = 700

@@ -76,19 +76,18 @@ def test_pozitivan_nalaz(check_id):
 @pytest.mark.parametrize(
     "total_bytes, expected",
     [
-        # Granične vrednosti (trotačkasto) za pragove kalibrisane nad 60 pravih sajtova:
-        # medijana 2,8 MB, p75 5,2 MB, p90 8,1 MB prenetih bajtova bez videa
-        # (docs/izvestaj-testiranja-2.md).
+        # Granične vrednosti (trotačkasto) za pragove kalibrisane na listi A (Z-50):
+        # p50 2,2 MB, p75 3,6 MB, p90 7,3 MB prenetih do `load` bez videa (docs/kalibracija.md).
         pytest.param(1_000_000, None, id="ke-lagana"),
-        pytest.param(2_999_999, None, id="gv-3MB-minus"),
-        pytest.param(3_000_000, None, id="gv-3MB"),
-        pytest.param(3_000_001, "medium", id="gv-3MB-plus"),
-        pytest.param(4_999_999, "medium", id="gv-5MB-minus"),
-        pytest.param(5_000_000, "medium", id="gv-5MB"),
-        pytest.param(5_000_001, "high", id="gv-5MB-plus"),
-        pytest.param(7_999_999, "high", id="gv-8MB-minus"),
-        pytest.param(8_000_000, "high", id="gv-8MB"),
-        pytest.param(8_000_001, "critical", id="gv-8MB-plus"),
+        pytest.param(1_999_999, None, id="gv-2MB-minus"),
+        pytest.param(2_000_000, None, id="gv-2MB"),
+        pytest.param(2_000_001, "medium", id="gv-2MB-plus"),
+        pytest.param(3_999_999, "medium", id="gv-4MB-minus"),
+        pytest.param(4_000_000, "medium", id="gv-4MB"),
+        pytest.param(4_000_001, "high", id="gv-4MB-plus"),
+        pytest.param(6_999_999, "high", id="gv-7MB-minus"),
+        pytest.param(7_000_000, "high", id="gv-7MB"),
+        pytest.param(7_000_001, "critical", id="gv-7MB-plus"),
         pytest.param(22_100_000, "critical", id="ke-najteza-izmerena"),
     ],
 )
@@ -103,7 +102,7 @@ def test_tezina_stranice_stepenasto(total_bytes, expected):
         assert result.findings[0].severity == expected
 
 
-@pytest.mark.parametrize("count, expected", [(50, None), (120, "medium"), (175, "high")])
+@pytest.mark.parametrize("count, expected", [(50, None), (75, "medium"), (175, "high")])
 def test_broj_zahteva_stepenasto(count, expected):
     browser = clean_browser()
     browser.network.requests_at_load = count
@@ -111,7 +110,7 @@ def test_broj_zahteva_stepenasto(count, expected):
     assert (result.findings[0].severity if expected else result.status) == (expected or "ok")
 
 
-@pytest.mark.parametrize("load_ms, expected", [(2_000, None), (5_000, "medium"), (9_000, "high")])
+@pytest.mark.parametrize("load_ms, expected", [(2_000, None), (7_000, "medium"), (10_000, "high")])
 def test_vreme_ucitavanja_stepenasto(load_ms, expected):
     browser = clean_browser()
     browser.timing.load_ms = load_ms
@@ -322,8 +321,8 @@ def test_veliki_visak_bajtova_pali_nalaz_i_ispod_tri_slike():
 def test_video_se_ne_racuna_u_prag_tezine():
     """Isti sajt je u jednom prolazu preneo 77 MB videa, a u drugom 39 MB."""
     browser = clean_browser()
-    browser.network.bytes_at_load = 24_500_000
-    browser.network.bytes_by_type_at_load = {"media": 22_000_000, "image": 2_000_000, "script": 500_000}
+    browser.network.bytes_at_load = 23_800_000
+    browser.network.bytes_by_type_at_load = {"media": 22_000_000, "image": 1_500_000, "script": 300_000}
     assert run_level(2, browser)["perf.page.weight"].status == "ok"
 
 
@@ -332,7 +331,7 @@ def test_nalaz_tezine_pominje_video_posebno():
     browser.network.bytes_at_load = 30_000_000
     browser.network.bytes_by_type_at_load = {"media": 8_000_000, "image": 21_000_000, "script": 1_000_000}
     nalaz = run_level(2, browser)["perf.page.weight"].findings[0]
-    assert nalaz.severity == "critical", "22 MB bez videa je iznad 8 MB"
+    assert nalaz.severity == "critical", "22 MB bez videa je iznad 7 MB"
     assert nalaz.evidence["mb"] == 22.0
     assert nalaz.evidence["video_mb"] == 8.0
     assert nalaz.variant == "video"

@@ -119,7 +119,7 @@ def html_size(snapshot: SiteSnapshot, ctx: Context):
     base_severity="critical",
     requires=["network", "v2:network.bytes_at_load"],
     description="Težina početne strane: šta se prenese za zahteve započete do događaja `load`.",
-    threshold="preneto do load, bez videa: > 3 MB medium · > 5 MB high · > 8 MB critical",
+    threshold="preneto do load, bez videa: > 2 MB medium · > 4 MB high · > 7 MB critical",
 )
 def page_weight(snapshot, ctx: Context):
     network = snapshot.network
@@ -170,7 +170,7 @@ def page_weight(snapshot, ctx: Context):
     base_severity="high",
     requires=["network", "v2:network.requests_at_load"],
     description="Broj mrežnih zahteva započetih do događaja `load` pri otvaranju početne.",
-    threshold="zahtevi do load: > 100 medium · > 150 high",
+    threshold="zahtevi do load: > 60 medium · > 90 high",
 )
 def request_count(snapshot, ctx: Context):
     count = snapshot.network.requests_at_load
@@ -201,7 +201,7 @@ def request_count(snapshot, ctx: Context):
     # a profil ne može da ubrza vezu sporiju od sebe (Z-33).
     requires=["browser", "network_profile", "link"],
     description="Vreme do potpunog učitavanja početne, na simuliranoj vezi iz `[network_profile]`.",
-    threshold="> 4 s medium · > 8 s high · prekid posle tvrdog limita = high",
+    threshold="> 6 s medium · > 9 s high · prekid posle tvrdog limita = high",
 )
 def load_time(snapshot, ctx: Context):
     potrebno = ctx.th("network_profile.min_link_ratio") * snapshot.network_profile.download_mbps

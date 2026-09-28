@@ -3,6 +3,56 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-28 — Z-50: pragovi težine, broja zahteva i vremena, i canonical na listi A
+
+Ulaz je prolaz H (lista A, 100 domena, kod `3607cb7`, brza veza; Z-33 je izmerio 107 Mb/s), po
+odluci vlasnika, bez novog skeniranja. Raspodelu daje `scripts/raspodela.py`. Do `load` je stiglo
+58 sajtova. Pod profilom je mereno 60, od toga su 2 prekida, računata kao 25 s.
+
+| | p50 | p75 | p90 | p95 | max |
+|---|---|---|---|---|---|
+| težina do `load` bez videa | 2,2 MB | 3,6 MB | 7,3 MB | 8,7 MB | 13,4 MB |
+| zahteva do `load` | 57 | 87 | 130 | 185 | 310 |
+| vreme do `load` pod profilom | 5,6 s | 9,3 s | 15,2 s | 22,1 s | ≥ 25 s |
+
+- **Zapažanje:** pragovi 3 / 5 / 8 MB i 100 / 150 zahteva kalibrisani su u v1, na ukupnim
+  vrednostima, sa onim što stigne posle `load`. Pragovi 4 / 8 s određeni su na stvarnoj vezi. Pod
+  profilom je `perf.load.time` imao nalaz kod 42 od 60 sajtova.
+- **Uzrok:** posle Z-24 se broji samo do `load`, pa su težina i broj zahteva manji. Posle Z-30 se
+  vreme meri na sporijoj simuliranoj vezi, pa je duže.
+- **Odluka (vlasnik, 28.09.):** pragovi su zaokruženi p50, p75 i p90, isti postupak kao u v1. Kod
+  provera sa dva nivoa isti percentil daje istu ozbiljnost kao kod težine: p50 medium, p75 high.
+
+| Prag | Bilo | Sada | Nalaza u prolazu H, pre → posle |
+|---|---|---|---|
+| težina (medium / high / critical) | 3 / 5 / 8 MB | 2 / 4 / 7 MB | 20 → 32 |
+| zahteva (medium / high) | 100 / 150 | 60 / 90 | 11 → 28 |
+| vreme (medium / high) | 4 / 8 s | 6 / 9 s | 42 → 25 |
+
+- `browser.timeout_s` ostaje 25 s: p95 je 22,1 s, pa je rezerva oko 3 s.
+- `browser.max_seconds_per_domain` ostaje 60 s (vlasnik, 28.09.). Trajanje nivoa 2 po domenu nije
+  bilo u snimcima, a log ga ne daje tačno, jer „nivo 2 počinje" stoji pre čekanja u redu za
+  učitavanje. Od sada je u snimku (`elapsed_ms`), a prvi put se meri na listi B. U prolazima F, G
+  i H nijedan domen nije dostigao granicu.
+- Mrežni profil ostaje 4,8 / 1,5 Mb/s i 150 ms. Kašnjenje od 150 ms je isto koje Lighthouse koristi
+  za mobilno merenje. Pri učitavanju stranica šalje uglavnom kratke zahteve, pa se odlazni protok
+  ne kalibriše.
+- Posle `recheck`-a sa novim pragovima prvih 10 u rangiranju su isti sajtovi kao u prolazu H.
+  Jedan se popeo sa 8. na 1. mesto, jer mu je težina sada `critical`.
+
+### canonical
+
+- **Zapažanje:** na listi A su 2 nalaza `seo.canonical.duplicate`, oba medium, sa udelom 0,25
+  (2 od 8 stranica). Kod prvog dve podstranice, „o nama” i kategorija proizvoda, prijavljuju
+  početnu kao zvaničnu adresu, pa ih Google može izostaviti iz pretrage. To je stvaran problem.
+  Kod drugog početna na `https://` ima canonical na svoju `http://` verziju, a jedna podstranica
+  ispravno upućuje na početnu.
+- **Uzrok:** poređenje je `http`/`https` i vodeće `www.` iste stranice računalo kao drugu adresu, pa
+  bi rečenica vlasniku kao „drugu adresu” pokazala njegovu sopstvenu početnu.
+- **Odluka (vlasnik, 28.09.):** canonical koji se od stranice razlikuje samo po `http`/`https` ili po
+  vodećem `www.` ne računa se kao tuđi, pa drugi nalaz nestaje. Granice udela (0,4 high, 0,6
+  critical) ostaju početne. Na A je samo jedan stvaran slučaj, i on sa udelom 0,25 dobija medium.
+
 ## 2026-09-28 — prolazi G i H: Z-32, Z-31 i Z-24 sa brze veze
 
 Oba prolaza su 27.09. rađena nad listom A, sa istim kodom (`3607cb7`: 16 domena odjednom na nivou

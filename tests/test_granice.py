@@ -197,10 +197,10 @@ def test_jezik_oznaka_klase(lang, ocekivano):
 @pytest.mark.parametrize(
     "zahteva, ocekivano",
     [
-        pytest.param(100, None, id="gv-100"),
-        pytest.param(101, "medium", id="gv-100-plus"),
-        pytest.param(150, "medium", id="gv-150"),
-        pytest.param(151, "high", id="gv-150-plus"),
+        pytest.param(60, None, id="gv-60"),
+        pytest.param(61, "medium", id="gv-60-plus"),
+        pytest.param(90, "medium", id="gv-90"),
+        pytest.param(91, "high", id="gv-90-plus"),
     ],
 )
 def test_broj_zahteva_granice(zahteva, ocekivano):
@@ -213,10 +213,10 @@ def test_broj_zahteva_granice(zahteva, ocekivano):
 @pytest.mark.parametrize(
     "load_ms, ocekivano",
     [
-        pytest.param(4000, None, id="gv-4s"),
-        pytest.param(4001, "medium", id="gv-4s-plus"),
-        pytest.param(8000, "medium", id="gv-8s"),
-        pytest.param(8001, "high", id="gv-8s-plus"),
+        pytest.param(6000, None, id="gv-6s"),
+        pytest.param(6001, "medium", id="gv-6s-plus"),
+        pytest.param(9000, "medium", id="gv-9s"),
+        pytest.param(9001, "high", id="gv-9s-plus"),
     ],
 )
 def test_vreme_ucitavanja_granice(load_ms, ocekivano):

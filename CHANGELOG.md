@@ -93,11 +93,19 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 - Greška i upozorenje u listi domena navode red u kom su, onako kako ga prikazuje Excel
   („red 3: domen se ponavlja u listi").
 
+### Promenjeno
+
+- Pragovi težine, broja zahteva i vremena učitavanja kalibrisani su na listi A, pod mrežnim
+  profilom: težina do `load` bez videa 2 / 4 / 7 MB (bilo 3 / 5 / 8), zahtevi do `load` 60 / 90
+  (bilo 100 / 150), vreme do `load` 6 / 9 s (bilo 4 / 8). To su zaokruženi p50, p75 i p90; kod
+  provera sa dva nivoa medium je p50, a high p75 (Z-50, [kalibracija](docs/kalibracija.md)).
+
 ### Ispravljeno
 
 - `seo.canonical.duplicate` je stranicu čiji canonical upućuje na njenu `http` ili `www` verziju
   brojao kao stranicu sa tuđim canonical-om, pa je rečenica vlasniku kao „drugu adresu" pokazivala
   njegovu sopstvenu početnu. Takav canonical se više ne broji (Z-50).
+
 - Privremena greška DNS-a (EAI_AGAIN) se ponavlja jednom, na nivou 1 i u proveri adresa na nivou 2.
   Preko mobilnog hotspota je bila na svakom četvrtom domenu, pa su sajtovi koji rade ispadali kao
   `failed`, a na nivou 2 jedna greška je blokirala sve zahteve ka tom hostu. Varijanta hosta sa

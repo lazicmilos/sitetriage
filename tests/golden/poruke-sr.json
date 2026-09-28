@@ -106,13 +106,6 @@
  },
  {
   "slucaj": "ispitni/spec/prodavnica.example",
-  "check_id": "perf.load.time",
-  "severity": "medium",
-  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 5,2 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
-  "tech": "load_ms=5200, reached=load"
- },
- {
-  "slucaj": "ispitni/spec/prodavnica.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
   "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s, a mnogi posetioci ne čekaju toliko.",
@@ -173,6 +166,13 @@
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://restoran-centar.example/: nedostaje <link rel=canonical>"
+ },
+ {
+  "slucaj": "ispitni/spec/restoran-centar.example",
+  "check_id": "perf.request.count",
+  "severity": "medium",
+  "client": "Otvaranje početne strane pokreće 87 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
+  "tech": "requests_at_load=87, sa onim posle load 87 (reached=load)"
  },
  {
   "slucaj": "ispitni/toml/restoran-ugao.example",
@@ -252,6 +252,13 @@
   "tech": "load_ms=6100, reached=load"
  },
  {
+  "slucaj": "ispitni/toml/b2b-firma.example",
+  "check_id": "perf.page.weight",
+  "severity": "medium",
+  "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s, a mnogi posetioci ne čekaju toliko.",
+  "tech": "bytes_at_load=2100000, bez videa 2.1 MB, video 0.0 MB, zahteva=60, nemereno=0, reached=load; sa onim posle load 2100000 B i 60 zahteva (informativno)"
+ },
+ {
   "slucaj": "ispitni/toml/prodavnica.example",
   "check_id": "perf.request.count",
   "severity": "high",
@@ -274,10 +281,10 @@
  },
  {
   "slucaj": "ispitni/toml/prodavnica.example",
-  "check_id": "perf.load.time",
+  "check_id": "perf.page.weight",
   "severity": "medium",
-  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 5,2 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
-  "tech": "load_ms=5200, reached=load"
+  "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s, a mnogi posetioci ne čekaju toliko.",
+  "tech": "bytes_at_load=2600000, bez videa 2.6 MB, video 0.0 MB, zahteva=175, nemereno=0, reached=load; sa onim posle load 2600000 B i 175 zahteva (informativno)"
  },
  {
   "slucaj": "ispitni/toml/institucija.example",
@@ -334,6 +341,13 @@
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://restoran-centar.example/: nedostaje <link rel=canonical>"
+ },
+ {
+  "slucaj": "ispitni/toml/restoran-centar.example",
+  "check_id": "perf.request.count",
+  "severity": "medium",
+  "client": "Otvaranje početne strane pokreće 87 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
+  "tech": "requests_at_load=87, sa onim posle load 87 (reached=load)"
  },
  {
   "slucaj": "nivo1/i18n.lang.invalid",
@@ -506,7 +520,7 @@
  {
   "slucaj": "nivo2/perf.load.time",
   "check_id": "perf.load.time",
-  "severity": "high",
+  "severity": "medium",
   "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 9 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
   "tech": "load_ms=9000, reached=load"
  },
@@ -611,21 +625,21 @@
  {
   "slucaj": "posebno/zahtevi-101",
   "check_id": "perf.request.count",
-  "severity": "medium",
+  "severity": "high",
   "client": "Otvaranje početne strane pokreće 101 odvojeno preuzimanje. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=101, sa onim posle load 101 (reached=load)"
  },
  {
   "slucaj": "posebno/zahtevi-102",
   "check_id": "perf.request.count",
-  "severity": "medium",
+  "severity": "high",
   "client": "Otvaranje početne strane pokreće 102 odvojena preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=102, sa onim posle load 102 (reached=load)"
  },
  {
   "slucaj": "posebno/zahtevi-150",
   "check_id": "perf.request.count",
-  "severity": "medium",
+  "severity": "high",
   "client": "Otvaranje početne strane pokreće 150 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=150, sa onim posle load 150 (reached=load)"
  },
