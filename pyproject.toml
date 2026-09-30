@@ -42,10 +42,10 @@ markers = [
     "browser: trazi instaliran Playwright/Chromium; preskace se ako ga nema",
 ]
 
-# Mutaciono testiranje (docs/plan-testiranja.md): moduli sa logikom, brzi testovi.
+# Mutaciono testiranje (docs/plan-testiranja.md): moduli sa logikom.
 # Nov modul pod skener/ je obuhvaćen sam, osim ako je u do_not_mutate. Zato čisti
-# moduli (poruke, diff, ishodi, klasifikacija adresa) ne idu u fetch/* ni report/*, a
-# njihovi testovi se dodaju u pytest_add_cli_args_test_selection.
+# moduli (poruke, diff, ishodi, klasifikacija adresa) ne idu u fetch/* ni report/*.
+# mutmut 3.2.3 pokreće ceo skup testova; izbor testova iz podešavanja ne čita.
 # Radi samo na Linux-u, pa kroz Docker:
 #   docker compose run --rm skener python scripts/mutacije.py
 [tool.mutmut]
@@ -54,13 +54,7 @@ do_not_mutate = [
     "skener/__init__.py", "skener/cli.py", "skener/pipeline.py", "skener/models.py", "skener/store.py",
     "skener/fetch/*", "skener/report/*",
 ]
-tests_dir = ["tests/"]
-also_copy = ["skener.toml"]
-pytest_add_cli_args_test_selection = [
-    "tests/test_checks_level1.py", "tests/test_checks_level2.py", "tests/test_granice.py",
-    "tests/test_score.py", "tests/test_config.py", "tests/test_ispitni_skup.py", "tests/test_poruke.py",
-    "tests/test_inputs.py", "tests/test_addresses.py",
-]
+also_copy = ["skener.toml", "skener/schema/"]
 
 [tool.ruff]
 line-length = 110

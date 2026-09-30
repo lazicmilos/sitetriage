@@ -9,6 +9,7 @@ Rečenice žive u katalogu (`skener.messages`), a nalaz nosi samo dokaz.
 from __future__ import annotations
 
 import json
+import os
 import re
 
 import pytest
@@ -55,6 +56,7 @@ def test_katalog_je_potpun_za_svaki_jezik(lang):
     assert {f"requires.{ime}" for ime in registry.REQUIREMENTS} <= set(cat.REASONS)
 
 
+@pytest.mark.skipif("MUTANT_UNDER_TEST" in os.environ, reason="pod mutmut-om izvor sadrži i mutante")
 def test_svaki_kod_razloga_iz_koda_postoji_u_katalogu():
     """Kod razloga je string u proveri; greška u kucanju bi se videla tek kad provera ne zna."""
     from pathlib import Path
