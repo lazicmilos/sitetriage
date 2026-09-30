@@ -340,9 +340,12 @@ produkciji mora da ima i filter izlaznog saobraćaja na nivou mreže
 ([ADR-006](docs/adr/ADR-006-ssrf.md)). Nivo 1 ne čita `HTTP(S)_PROXY` iz okruženja, jer bi
 proxy zaobišao proveru.
 
-## Planirano, nije u v1
+## Planirano, nije u v2
 
-- Core Web Vitals (LCP, CLS): vredni brojevi, ali traže pažljivije merenje nego što v1 zaslužuje.
-- `skener diff` između dva prolaza. Rečenica „sajt je od marta postao 3 MB teži" je dobar uvod u mejl.
+- `skener diff` između dva prolaza i `skener outcomes` (koji leadovi su odgovorili i postali posao).
+  Dolaze kad pretplata postane stvarna. Rečenica „sajt je od marta postao 3 MB teži" je dobar uvod
+  u mejl.
+- Core Web Vitals (LCP, CLS): vredni brojevi, ali traže pažljivije merenje.
+- Emulacija procesora, pa vreme učitavanja i dalje malo zavisi od mašine.
 - Provera strukturiranih podataka (`schema.org`), koja restoranima i klinikama ima stvarnu vrednost.
 - Prepoznavanje CMS-a (WordPress, Wix, pravljen po meri), jer menja način na koji se piše ponuda.

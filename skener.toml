@@ -66,7 +66,8 @@ drain_timeout_s = 5             # telo odgovora koje ne stigne dotad je nemereno
 max_seconds_per_domain = 60     # tvrd limit za ceo nivo 2; najgori regularan slučaj je ~40 s
                                 # (25 učitavanje + mirovanje + skrol + 5 drain)
 serial_load = true              # do `load` jedan po jedan, jer sajtovi dele stvarnu vezu (BUG-006);
-                                # pod mrežnim profilom možda nije potrebno (Z-31)
+                                # uporedo je pod profilom tačno samo na brzoj vezi, a veza mašine
+                                # se ne zna unapred (Z-31, docs/kalibracija.md)
 executable_path = ""            # prazno = Playwright-ov Chromium; postavi za sistemski
                                 # Chrome ili kontejner sa gotovim browserom. Može i preko
                                 # promenljive okruženja SKENER_CHROMIUM.

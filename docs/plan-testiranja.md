@@ -2,8 +2,8 @@
 
 ```
 Oznaka:    PT-SKENER-001
-Verzija:   2.0
-Datum:     25.09.2026.
+Verzija:   2.1
+Datum:     30.09.2026.
 Autor:     Milos Lazic
 Status:    Nacrt
 ```
@@ -12,6 +12,7 @@ Status:    Nacrt
 |---|---|---|---|
 | 1.0 | 24.09.2026. | Milos Lazic | Ciklus ispravki posle prvog prolaza nad 100 domena (IT-SKENER-002) |
 | 2.0 | 25.09.2026. | Milos Lazic | Ciklus v2: pooštreni pragovi kvaliteta, liste A i B, podeljen kriterijum za `partial` |
+| 2.1 | 30.09.2026. | Milos Lazic | Raspored: F5 pre F4 |
 
 ## 1. Uvod
 
@@ -112,8 +113,9 @@ u formatu iz skripte (BUG-xxx).
 2. F1, jezgro: pipeline, čitanje liste, katalog poruka, JSON, SSRF, izuzeti domeni.
 3. F2, tačnost: zatvaranje zapažanja O-5 i O-7 … O-12.
 4. F3, merenje: fiksni mrežni profil, paralelno učitavanje, trajanje prolaza.
-5. F4, poslovni sloj: `diff` i `outcomes`.
-6. F5, validacija: kalibracija na A, prolaz na B, ručna provera, izveštaj IT-SKENER-003.
+5. F5, validacija: kalibracija na A, prolaz na B, ručna provera, izveštaj IT-SKENER-003.
+6. F4, poslovni sloj: `diff` i `outcomes`, tek posle ručne prodaje izveštaja (odluka vlasnika od
+   27.09.2026.).
 
 ## 7. Rizici testiranja
 

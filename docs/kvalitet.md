@@ -8,16 +8,19 @@ kolona „Dokaz" ne može da se popuni, tvrdnja ide u „Rupe".
 
 | Potkarakteristika | Kako | Dokaz |
 |---|---|---|
-| kompletnost | 28 provera iz specifikacije, sve iz jednog registra | `checks/registry.py`; CI poredi registar sa tabelom u README-u |
+| kompletnost | 30 provera, sve iz jednog registra | `checks/registry.py`; CI poredi registar sa tabelom u README-u |
 | ispravnost | svaki pozitivan test kvari tačno jednu stvar na čistom sajtu | `tests/factories.py`, `test_checks_level1.py`, `test_checks_level2.py` |
 | ispravnost | broj u rečenici za klijenta mora postojati u dokazu; tvrdnja mora biti proverljiva; broj i imenica se slažu | `test_poruke.py` |
 | ispravnost | ono što se ne zna je `unknown`, ne nalaz: sajt iza zaštite od botova, prekinuto TLS rukovanje | `test_blokiran_sajt_nema_nijedan_nalaz`, `test_prelazi_stanja_ulaznog_zahteva` |
 | ispravnost | težina stranice je ono što je preneto preko mreže, ne raspakovano telo | `test_tezina_broji_prenete_bajtove_a_ne_raspakovane` |
+| ispravnost | sajt koji se ne otvara ni u drugom pokušaju ide u „Ne rade", ne u rangiranje | `test_unreachable_nije_u_rangiranju` |
 | prikladnost | delatnost menja težinu nalaza, ne ozbiljnost | `score.weigh`, `test_score.py` |
 
-**Rupe.** Pragovi težine su kalibrisani nad 60 sajtova sa jedne liste leadova. Za druge delatnosti
-i tržišta raspodela može biti drugačija, pa kalibraciju treba ponavljati nad listama kupaca
-([`kalibracija.md`](kalibracija.md)).
+**Rupe.** Pragovi težine, broja zahteva i vremena su kalibrisani nad 58 sajtova liste A (Z-50), a
+provera na novoj listi B tek predstoji. Za druge delatnosti i tržišta raspodela može biti
+drugačija, pa kalibraciju treba ponavljati nad listama kupaca ([`kalibracija.md`](kalibracija.md)).
+Sa adrese van Srbije deo sajtova izgleda kao da ne radi, jer ih hosting odbija, pa lista „Ne rade"
+važi samo za prolaz sa adrese u Srbiji (kalibracija, 28.09.).
 
 ## 2. Performansna efikasnost — radi li dovoljno brzo i uz razumne resurse?
 
@@ -26,12 +29,12 @@ i tržišta raspodela može biti drugačija, pa kalibraciju treba ponavljati nad
 | vremensko ponašanje | domeni idu paralelno; budžet vremena teče tek kad domen dobije red | `test_domeni_idu_paralelno_a_ne_jedan_za_drugim`, `test_budzet_vremena_krece_tek_kad_domen_dobije_red` |
 | iskorišćenje resursa | nivo 2 na 3 konteksta (svaki su stotine MB), gornji limit od 60 domena | `skener.toml [browser]`, `score.select_for_level2` |
 | kapacitet | tvrd budžet: 19 zahteva i 40 s po domenu; tvrd limit od 60 s za nivo 2 | `test_budzet_se_postuje_na_svakom_domenu`, `test_tvrdi_limit_po_domenu_prekida_nivo_2` |
-| vremensko ponašanje | vreme učitavanja se meri bez tuđeg saobraćaja na vezi; na 10 pravih sajtova u prolazu je 0,72–1,24× vremena kad se sajt meri sam | `test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju`, [`izvestaj-testiranja-2.md`](izvestaj-testiranja-2.md) |
+| vremensko ponašanje | vreme učitavanja se meri pod fiksnim mrežnim profilom i bez tuđeg saobraćaja na vezi; na 10 pravih sajtova u prolazu je 19 od 20 odnosa 0,8–1,25× vremena kad se sajt meri sam | `test_profil_usporava_ucitavanje`, `test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju`, [`kalibracija.md`](kalibracija.md) (Z-31) |
 
-**Rupe.** U1 („200 domena ≤ 15 min") je izmeren na 100 domena: 9,3 min, od toga 3,6 min nivo 1 i
-5,6 min nivo 2 ([`izvestaj-testiranja-2.md`](izvestaj-testiranja-2.md)). Za 200 domena je procena
-oko 13 min, jer nivo 1 raste linearno, a nivo 2 je ograničen na 60 domena. Rezerva je mala: nivo 2
-sada učitava jedan po jedan, pa svaki spor sajt produžava ceo prolaz.
+**Rupe.** U1 („200 domena ≤ 15 min") zavisi od veze. Na 107 Mb/s (prolaz H nad 100 domena) nivo 1
+traje 168 s, a nivo 2 500 s, pa je procena za 200 domena 13,9 min, jer nivo 1 raste linearno, a
+nivo 2 je ograničen na 60 domena. Na 17 Mb/s je procena 19,1 min. Nivo 2 učitava jedan po jedan
+pod profilom od 4,8 Mb/s, pa taj deo ne ubrzava ni najbrža veza.
 
 ## 3. Kompatibilnost — radi li zajedno sa drugim sistemima?
 
@@ -64,12 +67,13 @@ za nekog ko nije programer i dalje teško za čitanje.
 | Potkarakteristika | Kako | Dokaz |
 |---|---|---|
 | otpornost na greške | izuzetak nikad ne napušta domen; svaka provera u sopstvenom `try` | `test_u2_koliko_udje_toliko_izadje`, `registry.run` |
-| otpornost na greške | tri stanja rezultata: `ok`, `finding`, `unknown` sa obaveznim razlogom | `test_pokvareni_domeni_su_failed_a_ne_izuzetak` |
+| otpornost na greške | četiri stanja rezultata: `ok`, `finding`, `unknown` i `not_applicable`, poslednja dva sa obaveznim razlogom | `test_pokvareni_domeni_su_failed_a_ne_izuzetak`, `test_not_applicable_bez_razloga_je_bug` |
 | oporavljivost | snapshot ide na disk čim je domen gotov; `recheck` ponavlja bodovanje bez mreže | `test_snapshot_se_pise_na_disk_cim_je_domen_gotov`, `test_recheck_daje_isti_rezultat_bez_ijednog_zahteva` |
 | zrelost | determinističko uzorkovanje i sonde, pa isti ulaz daje isti izlaz | `test_uzorkovanje_je_deterministicko_i_grupisano`, `test_sonde_su_deterministicke` |
 
 **Rupe.** Prekinut prolaz ne može da se nastavi: snapshoti postoje, ali `scan` ih ne preskače.
-Zrelost je nepoznata dok alat ne prođe bar jedan pravi prolaz.
+Zrelost je izmerena samo na listi A: prolazi D do H i prolaz sa GitHub-a završeni su bez pada, a
+na brzoj vezi i bez ijednog WARNING-a ili ERROR-a u logu ([`kalibracija.md`](kalibracija.md)).
 
 ## 6. Bezbednost — jesu li podaci zaštićeni?
 
@@ -93,10 +97,12 @@ sajta. Izuzetak je TLS nalaz. `tests/fixtures/` posle `record` sadrže javni HTM
 | ponovna upotrebljivost | nova provera = jedna funkcija sa dekoratorom | `@check(...)` u `checks/*.py` |
 | analizabilnost | `--debug-domain`, sirovi snapshoti na disku | `cli.setup_logging` |
 | izmenljivost | svi pragovi u `skener.toml`; `git diff` nad njim je istorija kalibracije | `test_config.py` |
-| testabilnost | preko 600 testova bez mreže, lokalni server umesto pravih sajtova; pokrivenost linija i grana 97 %, mutacioni skor 100 % neekvivalentnih | `tests/`, CI (`--cov-fail-under=95`), `[tool.mutmut]` |
+| testabilnost | preko 1000 testova bez mreže, lokalni server umesto pravih sajtova; pokrivenost linija i grana 98 %; mutacioni skor v2 944 od 944 neekvivalentnih mutanata (100 %) | `tests/`, CI (`--cov-fail-under=95`), `[tool.mutmut]`, `scripts/mutacije.py` |
 
-**Rupe.** `fetch/http.py` ima 550 linija i nosi četiri odgovornosti (klijent, budžet, sklapanje
-snapshota, orkestracija). Sva četiri baga iz revizije su bila tu. Kandidat za podelu u v2.
+**Rupe.** `fetch/http.py` ima 800 linija i nosi četiri odgovornosti (klijent, budžet, sklapanje
+snapshota, orkestracija). Sva četiri baga iz revizije v1 su bila tu. Kandidat za podelu posle v2.
+mutmut 3 ne vidi kod koji radi pri importu (dekorator `check(...)`) ni testove koji računaju nalaze
+pri importu modula, pa se takvi preživeli proveravaju ručno.
 
 ## 8. Prenosivost — može li se preneti u drugo okruženje?
 
@@ -105,11 +111,14 @@ snapshota, orkestracija). Sva četiri baga iz revizije su bila tu. Kandidat za p
 | instalabilnost | `pip install -e .`; nivo 2 opcion (`.[browser]`) | `pyproject.toml` |
 | instalabilnost | Docker slika zaključana digest-om, sa Chromium-om za tačnu verziju Playwright-a; radi bez root-a | `Dockerfile`, `compose.yaml`, CI posao `docker` |
 | prilagodljivost | sistemski Chromium preko `SKENER_CHROMIUM` / `browser.executable_path` | `browser._launch_options` |
+| prilagodljivost | nivo 2 meri pod istim simuliranim mrežnim profilom na svakoj mašini; kad je stvarna veza sporija od dvostrukog profila, vreme je `unknown`, a ne precenjeno | `test_profil_je_u_snapshotu_i_jsonu`, `test_vreme_na_vezi_sporijoj_od_profila_je_unknown`, [ADR-010](adr/ADR-010-mrezni-profil.md) |
 | prilagodljivost | browser testovi se preskaču uz razlog kad Chromium ne može da se pokrene | `chromium_se_pokrece` u `test_fetch_browser.py` |
 | zamenljivost | Playwright je zakucan u `dev`, jer paket traži tačno svoju reviziju Chromium-a | `pyproject.toml` |
 
 **Rupe.** Van Docker-a testirano samo na Linuxu (Python 3.11 u CI-ju, 3.12 u slici). Windows bez Docker-a
-(putanje, `asyncio` event loop) nije proveren.
+(putanje, `asyncio` event loop) nije proveren. Procesor se ne simulira, pa vreme učitavanja i dalje
+malo zavisi od mašine. Mašina koja skenira mora da ima adresu u Srbiji (§1) i brzu vezu:
+na 17 Mb/s je 20,5 % domena potrošilo budžet, a na 107 Mb/s 7,8 %. Između nema merenja.
 
 ---
 
@@ -119,7 +128,7 @@ snapshota, orkestracija). Sva četiri baga iz revizije su bila tu. Kandidat za p
 |---|---|---|
 | proizvod | ISO/IEC 25010 | ovaj dokument |
 | proizvod | ISO/IEC 25040 (evaluacija) | `docs/provera-na-pravim-sajtovima.md`: merljivi kriterijumi pre v2 |
-| proces | ISO/IEC/IEEE 29119 (testiranje) | [`plan-testiranja.md`](plan-testiranja.md), izveštaji o testiranju, prijave defekata BUG-001 do BUG-015; nivoi: jedinični, integracioni (lokalni server, pravi Chromium), sistemski (100 pravih domena) |
+| proces | ISO/IEC/IEEE 29119 (testiranje) | [`plan-testiranja.md`](plan-testiranja.md), izveštaji o testiranju, prijave defekata BUG-001 do BUG-016; nivoi: jedinični, integracioni (lokalni server, pravi Chromium), sistemski (100 pravih domena) |
 | proces | ISO/IEC/IEEE 12207 (životni ciklus) | faze 0–7 u istoriji commit-a; CI na push u `main` i na svaki PR |
 | dokumentacija | IEEE 1016 (opis dizajna) | README „Kako je podeljen": moduli, odgovornosti, pristup mreži i disku |
 | dokumentacija | ISO/IEC/IEEE 26511/26515 (korisnička) | README „Upotreba", `skener explain` |
