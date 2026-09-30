@@ -107,7 +107,7 @@ su prošli nivo 2. Oba udela su izlazni kriterijumi v2, a HTML izveštaj ih prik
 Nalaz u JSON-u nema rečenicu, nego `check_id`, dokaz i `variant`. Rečenica se pravi iz dokaza,
 na jeziku onoga ko čita.
 
-Pravila promene šeme:
+Pravila promene šeme ([ADR-011](docs/adr/ADR-011-json-sema.md)):
 
 - dodato polje podiže drugi broj (`2.0` → `2.1`), jer ga stari čitalac može preskočiti;
 - obrisano polje, promenjen tip ili značenje polja i preimenovan `check_id` podižu prvi broj
