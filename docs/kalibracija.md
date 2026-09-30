@@ -3,6 +3,26 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-09-28 — prolaz nad listom A sa GitHub Actions: sajtovi koji rade u „Ne rade”
+
+Prolaz je pušten ručno iz `.github/workflows/prolaz.yml` (kod `a9cbabb`), jer kod kuće nema brze
+veze za Z-51. Z-33 je izmerio 763 Mb/s, a u logu nema nijednog WARNING ni ERROR.
+
+- **Zapažanje:** u „Ne rade” je 13 domena, a u prolazu H, dan ranije sa veze u Srbiji, bilo ih je 7.
+  Svih 7 iz H su i ovde. Novih 6 ne prihvataju vezu ni na 443 ni na 80, u oba pokušaja. Pet od njih
+  je kod istog hostinga u Srbiji, na susednim adresama. U prolazu H svih šest je skenirano, a
+  28.09. sa kućne adrese pet od šest odgovara sa 200 ili 301.
+- **Uzrok:** hosting odbacuje veze sa GitHub-ovih adresa (datacentar van Srbije). Za alat to
+  izgleda isto kao ugašen server, pa sajt ide u „Ne rade”, sa nacrtom mejla koji vlasniku kaže da
+  mu sajt ne radi. To je lažan nalaz.
+- Ostalo se poklapa sa H: težina i broj zahteva do `load` su p50 2,1 MB i 56 (H 2,2 MB i 57),
+  vreme do `load` je p50 / p90
+  5,7 / 16,9 s (H 5,6 / 15,2 s), a prekida je 4. Trajanje nivoa 2 po domenu (`elapsed_ms`) je ovde
+  izmereno prvi put: p50 8,8 s, p95 26,6 s, najviše 31,4 s, dakle daleko ispod granice od 60 s.
+- **Odluka:** prolaz sa GitHub-a ne važi za Z-51, jer lista „Ne rade” ima poznate lažne unose.
+  Prolaz nad B ide sa adrese u Srbiji. Za web fazu je ovo rizik: server van Srbije ili u
+  datacentru dobija isti odgovor od istih hostinga.
+
 ## 2026-09-28 — Z-50: pragovi težine, broja zahteva i vremena, i canonical na listi A
 
 Ulaz je prolaz H (lista A, 100 domena, kod `3607cb7`, brza veza; Z-33 je izmerio 107 Mb/s), po
