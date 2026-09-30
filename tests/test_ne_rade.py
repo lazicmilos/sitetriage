@@ -305,6 +305,13 @@ def test_nije_skenirano_ima_razlog(izmena, kod):
     assert "{" not in reason(izvestaj.reason, "en")
 
 
+def test_razlog_greske_nosi_detalj():
+    site = clean_site(pages=[])
+    site.entry.status = None
+    site.entry.error_kind, site.entry.error_detail = "tls_handshake", "EOF occurred in violation of protocol"
+    assert analyze(site, load_config()).reason.evidence["detalj"] == "EOF occurred in violation of protocol"
+
+
 def test_unreachable_nije_u_rangiranju(tmp_path):
     for site in (_ne_radi(), _ne_skeniran(), clean_site(domain="radi.rs")):
         store.write_site(tmp_path, site)

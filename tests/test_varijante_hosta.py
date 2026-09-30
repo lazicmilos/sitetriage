@@ -124,6 +124,19 @@ def test_cetiri_varijante(monkeypatch, ponasanje, manjkava, duplikat):
     assert (rezultati[MANJKAVA].status, rezultati[DUPLIKAT].status) == (manjkava, duplikat)
 
 
+def test_dokaz_duplikata_je_poreklo_svake_adrese(monkeypatch):
+    snapshot, _ = skeniraj(monkeypatch, sajt(True, True, True))
+    [nalaz] = run_level(1, snapshot)[DUPLIKAT].findings
+    assert nalaz.evidence["adrese"] == [BEZ, SA]
+
+
+def test_https_se_proverava_na_hostu_na_koji_pocetna_stigne(monkeypatch):
+    """Početna preusmerava na www, a http bez www ne preusmerava: to je duplikat, ne manjkava."""
+    snapshot, _ = skeniraj(monkeypatch, {BEZ: SA, SA: "200", HTTP_BEZ: "200", HTTP_SA: SA})
+    rezultati = run_level(1, snapshot)
+    assert (rezultati[MANJKAVA].status, rezultati[DUPLIKAT].status) == ("ok", "finding")
+
+
 def test_varijante_su_u_snimku_sa_lancem(monkeypatch):
     """Tri preostale varijante konačnog porekla, svaka sa statusom, konačnom adresom i lancem."""
     snapshot, _ = skeniraj(monkeypatch, sajt(True, True, True))

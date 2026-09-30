@@ -130,3 +130,8 @@ def test_fajl_sa_izuzetim_domenima():
     data = "\ufeffx.rs\n\n# ko je tražio i kada\ny.rs  # posle tarabe je komentar\n   \n".encode()
     assert read_exclusions(data) == ["x.rs", "y.rs"]
     assert not is_excluded("x.rs", read_exclusions(b"# samo komentar\n"))
+
+
+def test_fajl_sa_izuzetim_domenima_u_windows_1250():
+    """pg-: Notepad na srpskom Windows-u čuva komentar u windows-1250, a domen se svejedno čita."""
+    assert read_exclusions("# tražio vlasnik iz Niša\nx.rs\n".encode("cp1250")) == ["x.rs"]
