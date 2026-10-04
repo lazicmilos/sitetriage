@@ -13,6 +13,7 @@ from localserver import html
 
 from skener.config import load_config
 from skener.fetch.http import Fetcher, Outcome, fetch_site
+from skener.messages import render
 from skener.models import DomainInput, HostVariant
 
 DOMEN = "primer.rs"
@@ -124,10 +125,17 @@ def test_cetiri_varijante(monkeypatch, ponasanje, manjkava, duplikat):
     assert (rezultati[MANJKAVA].status, rezultati[DUPLIKAT].status) == (manjkava, duplikat)
 
 
-def test_dokaz_duplikata_je_poreklo_svake_adrese(monkeypatch):
+def test_dokaz_duplikata_su_hostovi(monkeypatch):
     snapshot, _ = skeniraj(monkeypatch, sajt(True, True, True))
     [nalaz] = run_level(1, snapshot)[DUPLIKAT].findings
-    assert nalaz.evidence["adrese"] == [BEZ, SA]
+    assert nalaz.evidence["adrese"] == [DOMEN, f"www.{DOMEN}"]
+
+
+def test_broj_adresa_u_recenici_odgovara_spisku(monkeypatch):
+    """BUG-017: http bez preusmerenja ulazio je u spisak, pa je uz „2 adrese" stajalo četiri."""
+    snapshot, _ = skeniraj(monkeypatch, sajt(True, False, True))
+    [nalaz] = run_level(1, snapshot)[DUPLIKAT].findings
+    assert f"na 2 adrese ({DOMEN}, www.{DOMEN})" in render(nalaz, "sr").client
 
 
 def test_https_se_proverava_na_hostu_na_koji_pocetna_stigne(monkeypatch):

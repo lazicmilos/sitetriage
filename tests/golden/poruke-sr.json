@@ -374,8 +374,8 @@
   "slucaj": "nivo1/infra.host.duplicate",
   "check_id": "infra.host.duplicate",
   "severity": "medium",
-  "client": "Isti sajt se otvara na 2 adrese (https://cist.rs, https://www.cist.rs), a nijedna ne preusmerava na drugu. Google ih zato vidi kao različite adrese sa istim sadržajem i sam bira koju da prikaže u pretrazi.",
-  "tech": "200 bez preusmerenja na: https://cist.rs, https://www.cist.rs; isti canonical na svima: 0"
+  "client": "Isti sajt se otvara na 2 adrese (cist.rs, www.cist.rs), a nijedna ne preusmerava na drugu. Google ih zato vidi kao različite adrese sa istim sadržajem i sam bira koju da prikaže u pretrazi.",
+  "tech": "200 bez preusmerenja na: cist.rs, www.cist.rs; isti canonical na svima: 0"
  },
  {
   "slucaj": "nivo1/infra.https.redirect.missing",

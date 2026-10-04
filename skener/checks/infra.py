@@ -211,7 +211,8 @@ def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
         spec,
         ctx,
         evidence={
-            "adrese": sorted({_poreklo(v.final_url) for v in sluze}),
+            # Hostovi, ne poreklo: uz http bez preusmerenja spisak je imao četiri adrese (BUG-017).
+            "adrese": sorted(hostovi),
             "broj_adresa": len(hostovi),
             "isti_canonical": int(isti),
         },
