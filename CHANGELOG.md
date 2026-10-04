@@ -102,6 +102,10 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- `qa.console.errors` je sve greške iz konzole nazivao „JavaScript greške", a konzola beleži i
+  blokiran „Mixed Content" i resurse koji vraćaju 404. Na listi B kod 3 od 6 nalaza nijedna greška
+  nije bila iz skripte. Rečenica sada kaže da Chrome prijavljuje greške i šta one mogu da budu
+  (BUG-018).
 - `infra.host.duplicate` je u spisak adresa stavljao i http varijante, pa je rečenica uz „2 adrese"
   nabrajala četiri kad http ne preusmerava na https. Spisak su sada hostovi (`x.rs`, `www.x.rs`), kao
   i broj; http bez preusmerenja ostaje nalaz `infra.https.redirect.missing` (BUG-017).

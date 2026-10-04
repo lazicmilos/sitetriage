@@ -162,6 +162,9 @@ def test_svaki_broj_u_recenici_potice_iz_dokaza(lang, sablon):
         pytest.param("sr", "prvo traži", id="sr-robots-svaki-pretrazivac"),
         pytest.param("en", "turn back", id="en-tls-posetioci-odustaju"),
         pytest.param("en", "asks for first", id="en-robots-svaki-pretrazivac"),
+        # BUG-018: konzola broji i blokiran Mixed Content i resurse koji vraćaju 404.
+        pytest.param("sr", "JavaScript greš", id="sr-konzola-nije-samo-javascript"),
+        pytest.param("en", "JavaScript error", id="en-konzola-nije-samo-javascript"),
     ],
 )
 def test_ispravljena_netacna_tvrdnja_se_ne_vraca(lang, tvrdnja):
@@ -263,10 +266,10 @@ def test_poruka_o_vise_h1_je_pravilna(lang, h1, ocekivano):
 @pytest.mark.parametrize(
     "lang, greske, ocekivano",
     [
-        pytest.param("sr", 4, "4 JavaScript greške", id="sr-paukal"),
-        pytest.param("sr", 7, "7 JavaScript grešaka", id="sr-mnozina"),
-        pytest.param("sr", 21, "21 JavaScript grešku", id="sr-jednina-akuzativ"),
-        pytest.param("en", 4, "4 JavaScript errors", id="en-mnozina"),
+        pytest.param("sr", 4, "prijavljuje 4 greške", id="sr-paukal"),
+        pytest.param("sr", 7, "prijavljuje 7 grešaka", id="sr-mnozina"),
+        pytest.param("sr", 21, "prijavljuje 21 grešku", id="sr-jednina-akuzativ"),
+        pytest.param("en", 4, "reports 4 errors", id="en-mnozina"),
     ],
 )
 def test_poruka_o_greskama_u_konzoli_je_pravilna(lang, greske, ocekivano):

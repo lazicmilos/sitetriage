@@ -542,7 +542,7 @@
   "slucaj": "nivo2/qa.console.errors",
   "check_id": "qa.console.errors",
   "severity": "low",
-  "client": "Na početnoj strani ima 5 JavaScript grešaka. Deo stranice zato možda ne radi kako treba.",
+  "client": "Pri otvaranju početne strane Chrome prijavljuje 5 grešaka (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=5, warnings=2"
  },
  {
@@ -605,21 +605,21 @@
   "slucaj": "posebno/konzola-4",
   "check_id": "qa.console.errors",
   "severity": "low",
-  "client": "Na početnoj strani ima 4 JavaScript greške. Deo stranice zato možda ne radi kako treba.",
+  "client": "Pri otvaranju početne strane Chrome prijavljuje 4 greške (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=4, warnings=2"
  },
  {
   "slucaj": "posebno/konzola-7",
   "check_id": "qa.console.errors",
   "severity": "low",
-  "client": "Na početnoj strani ima 7 JavaScript grešaka. Deo stranice zato možda ne radi kako treba.",
+  "client": "Pri otvaranju početne strane Chrome prijavljuje 7 grešaka (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=7, warnings=2"
  },
  {
   "slucaj": "posebno/konzola-21",
   "check_id": "qa.console.errors",
   "severity": "low",
-  "client": "Na početnoj strani ima 21 JavaScript grešku. Deo stranice zato možda ne radi kako treba.",
+  "client": "Pri otvaranju početne strane Chrome prijavljuje 21 grešku (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=21, warnings=2"
  },
  {

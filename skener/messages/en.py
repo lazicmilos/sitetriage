@@ -104,8 +104,8 @@ FINDINGS: dict[str, dict] = {
     },
     "qa.console.errors": {
         "client": (
-            "The home page has {greske:n:JavaScript error|JavaScript errors}. Part of the page may "
-            "therefore not work as intended."
+            "When the home page opens, Chrome reports {greske:n:error|errors} (parts of the page that "
+            "failed to load, or script errors). Part of the page may therefore not work as intended."
         ),
         "tech": "console errors={greske}, warnings={upozorenja}",
     },

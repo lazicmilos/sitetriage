@@ -287,7 +287,7 @@ def img_oversized(snapshot, ctx: Context):
     category="qa",
     base_severity="low",
     requires=["browser"],
-    description="JavaScript greške u konzoli.",
+    description="Greške u konzoli: skripte i delovi strane koji se nisu učitali.",
     threshold="> thresholds.qa.console_errors (3)",
 )
 def console_errors(snapshot, ctx: Context):

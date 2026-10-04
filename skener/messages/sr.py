@@ -119,8 +119,8 @@ FINDINGS: dict[str, dict] = {
     },
     "qa.console.errors": {
         "client": (
-            "Na početnoj strani ima {greske:n:JavaScript grešku|JavaScript greške|JavaScript grešaka}. "
-            "Deo stranice zato možda ne radi kako treba."
+            "Pri otvaranju početne strane Chrome prijavljuje {greske:n:grešku|greške|grešaka} (delovi "
+            "strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba."
         ),
         "tech": "console errors={greske}, warnings={upozorenja}",
     },
