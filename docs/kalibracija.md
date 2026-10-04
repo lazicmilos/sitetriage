@@ -3,6 +3,37 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-10-04 — ručna provera liste B (Z-52): User-Agent nivoa 2 i strane bez nivoa 2
+
+Ulaz je prolaz nad B od 3. 10. (veza 136,4 Mb/s) i merenje van alata 4. 10.: svoj Chromium sa
+UA browsera, pod istim profilom (4,8 / 1,5 Mb/s, 150 ms), dva učitavanja po sajtu.
+
+- **Zapažanje:** u prvih 10 dva nalaza na istom sajtu ne stoje. Alat je izmerio 2,7 MB i 129
+  zahteva do `load` i 6,2 s, a browser 2,2 MB sa svim posle `load` i 4,4 s. Kod kuće, po hostu: sa
+  UA alata 2,1–2,4 MB i 120–133 zahteva do `load`, sa UA browsera 1,2–1,3 MB i 58. Razliku prave
+  reklame: više reklamnih mreža i više aukcija. Na drugom sajtu Google Fonts je UA alata slao
+  fontove od 1315 kB, a browseru 657 kB. Ostalih 8 iz prvih 10 je u granici ±4 %.
+- **Uzrok:** UA nivoa 2 bio je samo identitet operatera (`MlazicSiteScanner/…`). Servisi koji
+  biraju sadržaj po UA takvom posetiocu šalju težu stranu nego browseru.
+- **Odluka (vlasnik):** browser šalje UA koji Chromium sam prijavljuje, sa identitetom dopisanim na
+  kraj (BUG-019). Izmereno: isto kao Chrome (1,31 MB, fontovi 657 kB), pa nije potrebno sakrivati
+  da je browser automatizovan. Pragovi iz Z-50 ostaju. Kalibrisani su sa starim UA, a novi daje
+  iste ili manje brojeve, pa prag može samo da da manje nalaza. Ponovo se proveravaju pri sledećem
+  prolazu nad A.
+
+- **Zapažanje:** od poslednjih 5 rangiranih dve strane imaju 4,8 i 4,9 MB (jedna i `load` preko
+  9 s), a ostale tri 3,2 MB, do 107 zahteva i 3,4 MB. Nijedna nije bila na nivou 2, pa u
+  izveštaju stoje sa „0 nalaza".
+- **Uzrok:** nisu imale razlog za eskalaciju: HTML 89–148 kB, sažet, početna ispod 1,5 s, h1
+  postoji, dovoljno teksta, nijedan nalaz ≥ medium. Broj slika, skripti i stilova u HTML-u ne
+  razdvaja ih od lakih strana. Na B je bio 91 kandidat na 60 mesta, pa ni nov razlog za eskalaciju
+  ne bi pomogao.
+- **Odluka (vlasnik):** svaki sajt sa početnom koja radi, a bez mesta na punom nivou 2, dobija
+  lagani nivo 2: posle punog, bez profila i bez reda za učitavanje (BUG-020). Vreme učitavanja je
+  za njih `unknown` (`requires.level2_full`) i ne ulazi u kriterijum „`unknown` < 20 %": imenilac
+  za vreme su sajtovi mereni pod profilom. Lagani nivo 2 raste sa brojem domena, pa je procena
+  za 200 domena 200 / n × (nivo 1 + lagani nivo 2) + nivo 2. Meri se u ponovljenom prolazu nad B.
+
 ## 2026-09-28 — prolaz nad listom A sa GitHub Actions: sajtovi koji rade u „Ne rade”
 
 Prolaz je pušten ručno iz `.github/workflows/prolaz.yml` (kod `a9cbabb`), jer kod kuće nema brze

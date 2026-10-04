@@ -24,7 +24,7 @@ Podaci o prolazu:
 | | |
 |---|---|
 | datum prolaza | |
-| verzija alata (`tool_version` iz `report.json`) | |
+| verzija alata (`scanner_version` iz `report.json`) | |
 | otisak konfiguracije (`config_digest`) | |
 | datum provere | |
 | proverio | |
