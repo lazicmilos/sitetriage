@@ -437,6 +437,11 @@ REASONS: dict[str, str] = {
     "requires.host_variants": (
         "the address variants (http/https, with and without www) were not fetched in this snapshot"
     ),
+    # light level 2 for sites over the limit (BUG-020)
+    "requires.level2_full": (
+        "the site was measured lightly, without the network profile, because it was not among the sites "
+        "chosen for full level 2, so the load time was not measured"
+    ),
     # network profile of level 2 (Z-30)
     "requires.network_profile": (
         "the snapshot predates the network profile, so the load time was measured on the real connection"

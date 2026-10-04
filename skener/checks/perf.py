@@ -199,7 +199,7 @@ def request_count(snapshot, ctx: Context):
     base_severity="high",
     # Sekunde važe za vezu pod kojom su izmerene; snimak bez profila meren je na stvarnoj (Z-30),
     # a profil ne može da ubrza vezu sporiju od sebe (Z-33).
-    requires=["browser", "network_profile", "link"],
+    requires=["browser", "level2_full", "network_profile", "link"],
     description="Vreme do potpunog učitavanja početne, na simuliranoj vezi iz `[network_profile]`.",
     threshold="> 6 s medium · > 9 s high · prekid posle tvrdog limita = high",
 )

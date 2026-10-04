@@ -81,6 +81,20 @@ def test_udeo_unknown_ne_broji_domene_koji_ne_rade():
     assert po_proveri["perf.page.weight"] == 0.0
 
 
+def test_vreme_se_ne_broji_kao_unknown_na_laganom_nivou_2():
+    """BUG-020: lagani nivo 2 vreme namerno ne meri. Imenilac za vreme su sajtovi mereni pod profilom."""
+    config = load_config()
+    lagan = clean_browser(domain="lagan.rs", light=True, network_profile=None, link_mbps=None)
+    izvestaji = [
+        analyze(_sajt("pun.rs"), config, browser=clean_browser(domain="pun.rs")),
+        analyze(_sajt("lagan.rs"), config, browser=lagan),
+    ]
+    vreme = [u for u in izvestaji[1].unknowns if u.check_id == "perf.load.time"]
+    assert vreme, "kartica sajta kaže da vreme nije mereno"
+    _, po_proveri = partial_shares(izvestaji)
+    assert po_proveri["perf.load.time"] == 0.0 and po_proveri["perf.page.weight"] == 0.0
+
+
 def test_provera_nivoa_2_bez_ijednog_domena_na_nivou_2_nema_udeo():
     _, po_proveri = partial_shares([analyze(_sajt("cist.rs"), load_config())])
     assert "perf.page.weight" not in po_proveri and "seo.title.missing" in po_proveri

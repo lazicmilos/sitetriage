@@ -343,6 +343,8 @@ class BrowserSnapshot:
     # Trajanje nivoa 2 bez čekanja u redu za učitavanje, isto što meri tvrdi limit (Z-50);
     # `None`: snimak pre Z-50
     elapsed_ms: int | None = None
+    # Sajt van `max_level2`: meren bez profila i bez reda za učitavanje, pa vreme nije mereno (BUG-020)
+    light: bool = False
 
 
 # --------------------------------------------------------------------------- #
@@ -437,7 +439,7 @@ class Event:
     """Napredak prolaza. Web worker iz njega pravi traku napretka, a CLI ga loguje."""
 
     kind: Literal["phase_started", "phase_finished", "domain_finished"]
-    phase: Literal["level1", "level2", "recheck"]
+    phase: Literal["level1", "level2", "level2_light", "recheck"]
     total: int
     done: int = 0
     domain: str | None = None

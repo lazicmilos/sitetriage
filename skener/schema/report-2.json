@@ -16,10 +16,10 @@
     "started_at": {"$ref": "#/$defs/utc"},
     "finished_at": {"$ref": "#/$defs/utc"},
     "duration_s": {
-      "description": "Trajanje u sekundama: level1, level2 i total za scan, samo total za recheck.",
+      "description": "Trajanje u sekundama: level1, level2, level2_light i total za scan, samo total za recheck.",
       "type": "object",
       "required": ["total"],
-      "propertyNames": {"enum": ["level1", "level2", "total"]},
+      "propertyNames": {"enum": ["level1", "level2", "level2_light", "total"]},
       "additionalProperties": {"type": "number", "minimum": 0}
     },
     "config_digest": {

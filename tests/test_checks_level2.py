@@ -153,6 +153,13 @@ def test_vreme_na_vezi_sporijoj_od_profila_je_unknown(reached, load_ms):
     assert run_level(2, clean_browser(link_mbps=9.6))["perf.load.time"].status == "ok", "granica je uključena"
 
 
+def test_vreme_na_laganom_nivou_2_je_unknown_sa_svojim_razlogom():
+    """BUG-020: sajt van limita meren je bez profila; razlog nije „snimak pre profila"."""
+    result = run_level(2, clean_browser(light=True, network_profile=None, link_mbps=None))["perf.load.time"]
+    assert result.status == "unknown" and result.reason.code == "requires.level2_full"
+    assert "lagano" in reason(result.reason)
+
+
 def test_vreme_bez_izmerene_veze_je_unknown():
     result = run_level(2, clean_browser(link_mbps=None))["perf.load.time"]
     assert result.status == "unknown" and "nije izmerena" in reason(result.reason)

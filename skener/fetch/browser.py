@@ -264,7 +264,12 @@ class _LoadSlot:
 
 
 async def capture(
-    browser: Any, site: SiteSnapshot, config: dict, ua: str, slot: _LoadSlot | None = None
+    browser: Any,
+    site: SiteSnapshot,
+    config: dict,
+    ua: str,
+    slot: _LoadSlot | None = None,
+    light: bool = False,
 ) -> BrowserSnapshot:
     """Nov kontekst po domenu = prazan keš.
 
@@ -283,6 +288,7 @@ async def capture(
         fetched_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         scanner_version=__version__,
         browser_version=browser.version,
+        light=light,
     )
     timeout_ms = get(config, "browser.timeout_s") * 1000
     recorder = _Recorder()
@@ -300,11 +306,12 @@ async def capture(
     try:
         await context.route("**/*", _cuvar(addresses.allowlist(config), PlaywrightError, site.domain))
         page = await context.new_page()
-        # Pre navigacije, da i prvi zahtev ide simuliranom vezom (Z-30).
-        profile = network_profile(config)
-        cdp = await context.new_cdp_session(page)
-        await cdp.send("Network.emulateNetworkConditions", network_conditions(profile))
-        snapshot.network_profile = profile
+        if not light:
+            # Pre navigacije, da i prvi zahtev ide simuliranom vezom (Z-30).
+            profile = network_profile(config)
+            cdp = await context.new_cdp_session(page)
+            await cdp.send("Network.emulateNetworkConditions", network_conditions(profile))
+            snapshot.network_profile = profile
         page.on("request", recorder.on_request)
         page.on("load", recorder.on_load)
         page.on("response", recorder.on_response)
@@ -427,7 +434,12 @@ async def _read_dom(
 
 
 async def _capture_within_limit(
-    browser: Any, site: SiteSnapshot, config: dict, ua: str, load_lock: asyncio.Lock | None = None
+    browser: Any,
+    site: SiteSnapshot,
+    config: dict,
+    ua: str,
+    load_lock: asyncio.Lock | None = None,
+    light: bool = False,
 ) -> BrowserSnapshot:
     """Tvrd limit po domenu — poslednja odbrana od zastoja za koji još ne znamo.
 
@@ -439,7 +451,7 @@ async def _capture_within_limit(
     await slot.acquire()
     started = time.monotonic()
     try:
-        snapshot = await asyncio.wait_for(capture(browser, site, config, ua, slot), limit_s)
+        snapshot = await asyncio.wait_for(capture(browser, site, config, ua, slot, light), limit_s)
     except TimeoutError:
         log.error("nivo 2 prekinut posle %s s", limit_s, extra={"domain": site.domain})
         snapshot = BrowserSnapshot(
@@ -558,17 +570,20 @@ async def capture_all(
     config: dict,
     snapshot_dir: Path | None = None,
     on_done: Callable[[BrowserSnapshot], None] | None = None,
+    *,
+    light: bool = False,
 ) -> dict[str, BrowserSnapshot]:
     """Jedna instanca browsera za ceo prolaz, nov kontekst po domenu (§7.1).
 
-    `on_done` se zove za svaki završen domen, posle upisa na disk.
+    `on_done` se zove za svaki završen domen, posle upisa na disk. `light` meri bez profila i bez
+    reda za učitavanje: težinu, zahteve i DOM, ali ne i vreme (BUG-020).
     """
     sites = list(sites)
     if not sites:
         return {}
 
-    # Jednom po prolazu, pre prvog sajta: profil samo usporava (Z-33).
-    link_mbps = await measure_link(config)
+    # Jednom po prolazu, pre prvog sajta: profil samo usporava (Z-33). Bez profila veza nije bitna.
+    link_mbps = None if light else await measure_link(config)
     potrebno = get(config, "network_profile.min_link_ratio") * get(config, "network_profile.download_mbps")
     if link_mbps is not None and link_mbps < potrebno:
         log.warning(
@@ -582,7 +597,7 @@ async def capture_all(
     prethodni = loop.get_exception_handler()
     loop.set_exception_handler(_tiho_za_zatvoren_kontekst(prethodni))
     try:
-        return await _capture_all(sites, config, snapshot_dir, on_done, link_mbps)
+        return await _capture_all(sites, config, snapshot_dir, on_done, link_mbps, light)
     finally:
         # Zaostale greške zatvorenih konteksta stižu kad sakupljač smeća pokupi napuštene
         # future-e. Zato se to radi ovde, dok je rukovalac još postavljen (BUG-007), a
@@ -598,6 +613,7 @@ async def _capture_all(
     snapshot_dir: Path | None,
     on_done: Callable[[BrowserSnapshot], None] | None,
     link_mbps: float | None,
+    light: bool = False,
 ) -> dict[str, BrowserSnapshot]:
     from playwright.async_api import async_playwright
 
@@ -605,7 +621,7 @@ async def _capture_all(
     # Nivo 2 ide na 3 istovremena konteksta, ne 8: svaki je stotine MB RAM-a (§8.1).
     limit = asyncio.Semaphore(get(config, "browser.concurrency"))
     # Učitava se jedan po jedan; ostatak merenja ide paralelno (BUG-006, Z-31).
-    load_lock = asyncio.Lock() if get(config, "browser.serial_load") else None
+    load_lock = asyncio.Lock() if get(config, "browser.serial_load") and not light else None
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(**_launch_options(config))
@@ -615,7 +631,7 @@ async def _capture_all(
             async def one(site: SiteSnapshot) -> tuple[str, BrowserSnapshot]:
                 async with limit:
                     log.info("nivo 2 počinje", extra={"domain": site.domain})
-                    snapshot = await _capture_within_limit(browser, site, config, ua, load_lock)
+                    snapshot = await _capture_within_limit(browser, site, config, ua, load_lock, light)
                     snapshot.link_mbps = link_mbps
                     if snapshot_dir is not None:
                         store.write_browser(snapshot_dir, snapshot)

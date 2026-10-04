@@ -102,7 +102,8 @@ Domen je `partial` iz dva razloga, a `partial_causes` kaže iz kog: potrošen bu
 provera koja nije mogla da se izvrši (`unknown`). Zbir ih broji posebno, a `budget_share` i
 `unknown_share` daju udeo budžeta među domenima koji rade i udeo `unknown`-a za svaku proveru.
 Imenilac su domeni koji rade i na kojima je provera pokrenuta, pa za proveru nivoa 2 samo oni koji
-su prošli nivo 2. Oba udela su izlazni kriterijumi v2, a HTML izveštaj ih prikazuje ispod zbira.
+su prošli nivo 2, a za vreme učitavanja samo oni mereni pod profilom. Oba udela su izlazni kriterijumi
+v2, a HTML izveštaj ih prikazuje ispod zbira.
 
 Nalaz u JSON-u nema rečenicu, nego `check_id`, dokaz i `variant`. Rečenica se pravi iz dokaza,
 na jeziku onoga ko čita.
@@ -155,7 +156,7 @@ domen da čudan rezultat, tačan ulaz koji ga je proizveo stoji sačuvan na disk
 |---|---|---|---|
 | `cli` | argumenti, log, izveštaji | ne | čita |
 | `inputs` | lista domena i drugi CSV-ovi iz Excel-a; greške i upozorenja sa brojem reda | ne | ne |
-| `pipeline` | redosled faza: nivo 1 → eskalacija → nivo 2 → bodovanje → rangiranje | kroz `fetch.*` | kroz `store` |
+| `pipeline` | redosled faza: nivo 1 → eskalacija → nivo 2 → lagani nivo 2 → bodovanje → rangiranje | kroz `fetch.*` | kroz `store` |
 | `config` | pragovi iz TOML-a, identitet operatera | ne | čita |
 | `models` | šeme podataka, serijalizacija | ne | ne |
 | `fetch.urls`, `fetch.page`, `fetch.robots`, `fetch.sitemap` | normalizacija i parsiranje | delom | ne |
@@ -247,7 +248,7 @@ ispisuje obe. Isto važi za razloge zašto nešto nije provereno i zašto je dom
 | duplikati | ≥ 3 stranice iz ≥ 3 grupe putanja | Osam blog postova sa istim naslovom šablona nije isto što i ceo sajt koji se Google-u predstavlja kao jedna stranica. |
 | prazan HTML za eskalaciju | 800 znakova | Namerno drugačije od praga jezičke heuristike (400): 400 je granica pouzdanosti prepoznavanja jezika, a 800 granica „ovo izgleda kao prazan HTML". |
 | spora početna za eskalaciju | 1500 ms | Jedini uslov koji hvata sajt sa čistim SEO-om i sporom stranicom. |
-| gornji limit za nivo 2 | 60 domena | Bez limita, na listi od 200 domena skoro sve ide na nivo 2 i prolaz traje sat vremena. Prvi idu sajtovi bez jakog nalaza nivoa 1, jer je njima nivo 2 jedina šansa da se nešto nađe. Sajt koji već ima jak nalaz ima i razlog za mejl. |
+| gornji limit za nivo 2 | 60 domena | Bez limita, na listi od 200 domena skoro sve ide na nivo 2 i prolaz traje sat vremena. Prvi idu sajtovi bez jakog nalaza nivoa 1, jer je njima nivo 2 jedina šansa da se nešto nađe. Sajt koji već ima jak nalaz ima i razlog za mejl. Ostali sajtovi sa početnom koja radi dobijaju lagani nivo 2: browser bez mrežnog profila, više sajtova odjednom, posle punog nivoa 2. Meri težinu, zahteve, h1, alt i slike, a vreme učitavanja je `unknown`. Brz i čist HTML ne govori ništa o težini strane: na listi B dve strane od 4,8 i 4,9 MB nisu imale nijedan razlog za eskalaciju (BUG-020). |
 | nemereni odgovori | > 5 → `unknown` | Merenje kojem ne veruješ gore je od merenja koje nemaš. |
 | bodovi po ozbiljnosti | 40 / 20 / 8 / 3 | Razmak je namerno nelinearan: jedan `critical` mora da nadjača pet `low` nalaza. |
 | mrežni profil nivoa 2 | 4,8 Mb/s (0,6 MB/s) dolazno, 1,5 Mb/s odlazno, 150 ms kašnjenja | Nivo 2 meri pod ovom simuliranom vezom (`[network_profile]`), pa isti sajt daje isto vreme na kućnoj vezi, na serveru i kod kupca. Iz iste brzine se računaju sekunde u rečenicama za klijenta, i ta brzina piše u samoj rečenici. Broj koji šalješ klijentu moraš umeti da odbraniš. Procesor se ne simulira, pa vreme i dalje malo zavisi od mašine; mrežni deo je fiksan ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)). Profil može samo da uspori, pa alat pre nivoa 2 preuzima probni fajl (`probe_url`, podrazumevano `speed.cloudflare.com`) i meri stvarnu vezu. Ako je sporija od 2 × profila, vreme učitavanja je `unknown`, jer bi bilo precenjeno. |

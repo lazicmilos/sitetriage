@@ -108,6 +108,12 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   129 zahteva, a posetilac u Chrome-u dobija 1,3 MB i oko 60. Browser sada šalje svoj UA, a
   identitet operatera je dopisan na kraj, kao kod Googlebot-a. Nivo 1 šalje isti UA kao i pre
   (BUG-019).
+- Sajt bez razloga za eskalaciju ili van `max_level2` nije išao u browser, pa je u izveštaju stajao
+  sa „0 nalaza", a težina, zahtevi i slike nisu ni mereni. Na listi B dve strane od 4,8 i 4,9 MB
+  imale su brz i čist HTML. Takvi sajtovi sada dobijaju lagani nivo 2: posle punog nivoa 2,
+  bez mrežnog profila i bez reda za učitavanje. Vreme učitavanja je za njih `unknown` sa razlogom
+  `requires.level2_full`, a u `unknown_share` se ne broji. Snimak nosi `light`, `duration_s`
+  nosi `level2_light`, a traka napretka fazu `level2_light` (BUG-020).
 - `qa.console.errors` je sve greške iz konzole nazivao „JavaScript greške", a konzola beleži i
   blokiran „Mixed Content" i resurse koji vraćaju 404. Na listi B kod 3 od 6 nalaza nijedna greška
   nije bila iz skripte. Rečenica sada kaže da Chrome prijavljuje greške i šta one mogu da budu

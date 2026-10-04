@@ -113,15 +113,23 @@ async def scan(
     progress.finish()
     t1 = time.monotonic()
 
-    reasons, chosen = _escalate(sites, config, level)
+    reasons, chosen, rest = _escalate(sites, config, level)
     browsers = await _level2(chosen, config, snapshot_dir, on_event)
     t2 = time.monotonic()
+    # Posle punog nivoa 2, da lagano merenje ne deli vezu sa merenjem vremena (BUG-006).
+    browsers |= await _level2(rest, config, snapshot_dir, on_event, light=True)
+    t3 = time.monotonic()
 
     reports = [
         analyze(site, config, browser=browsers.get(site.domain), escalation=reasons.get(site.domain, []))
         for site in sites
     ]
-    durations = {"level1": t1 - t0, "level2": t2 - t1, "total": time.monotonic() - t0}
+    durations = {
+        "level1": t1 - t0,
+        "level2": t2 - t1,
+        "level2_light": t3 - t2,
+        "total": time.monotonic() - t0,
+    }
     return _result(reports, started_at, durations, config, browsers.values(), excluded=izuzeto)
 
 
@@ -140,10 +148,15 @@ def _level1_status(site: SiteSnapshot) -> str:
 
 def _escalate(
     sites: Sequence[SiteSnapshot], config: dict, level: str
-) -> tuple[dict[str, list[Reason]], list[SiteSnapshot]]:
-    """Eskalacija (§6) i gornji limit; vraća razloge za izveštaj i izabrane domene."""
+) -> tuple[dict[str, list[Reason]], list[SiteSnapshot], list[SiteSnapshot]]:
+    """Eskalacija (§6) i gornji limit; vraća razloge za izveštaj, izabrane domene i ostale.
+
+    Ostali su sajtovi sa početnom koja radi, a bez mesta na punom nivou 2. Brz i čist HTML ne
+    govori ništa o težini strane: na listi B dve strane od 4,8 i 4,9 MB nisu imale nijedan razlog za
+    eskalaciju, pa su stajale sa „0 nalaza" (BUG-020). Zato dobijaju lagano merenje.
+    """
     if level == "1":
-        return {}, []
+        return {}, [], []
 
     registry.load_all()
     candidates: list[tuple[SiteSnapshot, list]] = []
@@ -163,20 +176,27 @@ def _escalate(
         len(chosen),
         len(candidates) - len(chosen),
     )
-    return reasons, chosen
+    izabrani = {site.domain for site in chosen}
+    rest = [s for s in sites if _level1_status(s) == "ok" and s.domain not in izabrani]
+    return reasons, chosen, rest
 
 
 async def _level2(
-    chosen: Sequence[SiteSnapshot], config: dict, snapshot_dir: Path | None, on_event: OnEvent | None
+    chosen: Sequence[SiteSnapshot],
+    config: dict,
+    snapshot_dir: Path | None,
+    on_event: OnEvent | None,
+    light: bool = False,
 ) -> dict[str, BrowserSnapshot]:
     if not chosen or not _playwright_installed("nivo 2 se preskače"):
         return {}
-    progress = _Progress(on_event, "level2", len(chosen))
+    progress = _Progress(on_event, "level2_light" if light else "level2", len(chosen))
     browsers = await capture_all(
         chosen,
         config,
         snapshot_dir=snapshot_dir,
         on_done=lambda snapshot: progress.domain(snapshot.domain, snapshot.status),
+        light=light,
     )
     progress.finish()
     return browsers

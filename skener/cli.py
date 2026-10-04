@@ -69,7 +69,7 @@ class OnlyDomain(logging.Filter):
         return getattr(record, "domain", None) == self.domain
 
 
-FAZE = {"level1": "nivo 1", "level2": "nivo 2"}
+FAZE = {"level1": "nivo 1", "level2": "nivo 2", "level2_light": "nivo 2 lagano"}
 
 
 def log_event(event: Event) -> None:

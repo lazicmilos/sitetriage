@@ -185,6 +185,25 @@ def test_profil_vazi_i_za_iframe_sa_drugog_porekla(monkeypatch):
             assert snimi(site).timing.load_ms >= 1000
 
 
+def test_lagano_merenje_je_bez_profila_i_bez_merenja_veze(monkeypatch):
+    """BUG-020: sajt van limita meri težinu, zahteve i DOM bez profila; vreme ostaje za pun nivo 2."""
+    from skener.fetch import browser as modul
+
+    async def ne_sme(_config):
+        raise AssertionError("lagano merenje ne meri vezu")
+
+    monkeypatch.setattr(modul, "measure_link", ne_sme)
+    with teski_sajt() as site:
+        fake = SiteSnapshot(
+            domain=site.base_url,
+            pages=[PageSnapshot(url=site.base_url + "/", final_url=site.base_url + "/", status=200)],
+        )
+        snimljeno = asyncio.run(modul.capture_all([fake], load_config(), light=True))[site.base_url]
+    assert (snimljeno.light, snimljeno.network_profile, snimljeno.link_mbps) == (True, None, None)
+    assert snimljeno.status == "ok" and snimljeno.network.bytes_at_load > 300_000
+    assert snimljeno.dom.h1_count == 0 and len(snimljeno.dom.oversized_images) > 0
+
+
 def test_profil_je_u_snapshotu_i_jsonu(snimak):
     profil = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
     assert snimak.network_profile == profil

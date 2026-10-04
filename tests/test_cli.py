@@ -114,7 +114,7 @@ def test_scan_pise_json_po_semi(prolaz):
     _code, out, _cist, _los = prolaz
     dokument = json.loads((out / "report.json").read_text(encoding="utf-8"))
     jsonschema.validate(dokument, SEMA)
-    assert set(dokument["duration_s"]) == {"level1", "level2", "total"}
+    assert set(dokument["duration_s"]) == {"level1", "level2", "level2_light", "total"}
     assert dokument["environment"]["chromium"] is None, "nivo 2 nije radio (--level 1)"
 
 
@@ -421,7 +421,7 @@ BOGATA_POCETNA = html(
 
 
 @pytest.mark.browser
-def test_scan_auto_salje_na_nivo_2_samo_kandidate(tmp_path):
+def test_scan_auto_salje_na_pun_nivo_2_samo_kandidate(tmp_path):
     config = tmp_path / "brzo.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
     with FakeSite(extra={"/": Response(BOGATA_POCETNA)}) as cist, FakeSite(
@@ -434,9 +434,11 @@ def test_scan_auto_salje_na_nivo_2_samo_kandidate(tmp_path):
         out = tmp_path / "izvestaj"
         assert cli.main(["scan", str(domains), "--out", str(out), "--config", str(config)]) == 0
 
-    redovi = {r["domain"]: r for r in csv.DictReader((out / "summary.csv").open(encoding="utf-8"))}
-    assert redovi[bez_h1.base_url]["level2_ran"] == "1", "sirovi HTML bez h1 mora na nivo 2"
-    assert redovi[cist.base_url]["level2_ran"] == "0", "čist i brz sajt ne ide na nivo 2"
+    snimci = [json.loads(p.read_text(encoding="utf-8")) for p in (out / "snapshots").glob("*/browser.json")]
+    lagano = {s["domain"]: s["light"] for s in snimci}
+    assert lagano[bez_h1.base_url] is False, "sirovi HTML bez h1 mora na pun nivo 2"
+    # BUG-020: čist i brz HTML ne govori ništa o težini strane, pa i taj sajt meri težinu, ali bez profila.
+    assert lagano[cist.base_url] is True, "čist i brz sajt dobija lagan nivo 2"
     nalazi = [r for r in csv.DictReader((out / "findings.csv").open(encoding="utf-8"))]
     assert any(r["domain"] == bez_h1.base_url and r["check_id"] == "seo.h1.missing" for r in nalazi)
     assert list((out / "snapshots").glob("*/browser.json")), "snapshot nivoa 2 mora na disk"

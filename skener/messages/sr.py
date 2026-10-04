@@ -447,6 +447,11 @@ REASONS: dict[str, str] = {
     "requires.host_variants": "varijante adrese (http/https, sa i bez www) nisu dohvaćene u ovom snimku",
     "variant_unchecked": "{adresa} nije viđena kao u pretraživaču ({vrsta}), pa se ne zna da li služi sajt",
     "no_https": "https na {adresa} ne vraća stranicu, pa nema na šta da se preusmerava",
+    # lagani nivo 2 za sajtove van limita (BUG-020)
+    "requires.level2_full": (
+        "sajt je meren lagano, bez mrežnog profila, jer nije bio među sajtovima izabranim za pun "
+        "nivo 2, pa vreme učitavanja nije mereno"
+    ),
     # mrežni profil nivoa 2 (Z-30)
     "requires.network_profile": (
         "snimak je napravljen pre mrežnog profila, pa je vreme izmereno bez mrežnog profila, na stvarnoj vezi"

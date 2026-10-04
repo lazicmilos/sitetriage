@@ -90,8 +90,24 @@ def test_dva_prolaza_u_istoj_petlji(dva_prolaza):
     for rezultat in rezultati:
         assert sorted(r.domain for r in rezultat.ranked) == sorted(t.domain for t in targets)
         assert all(r.level2_ran for r in rezultat.ranked)
-        assert set(rezultat.duration_s) == {"level1", "level2", "total"}
+        assert set(rezultat.duration_s) == {"level1", "level2", "level2_light", "total"}
         assert rezultat.environment["chromium"], "verzija Chromium-a kojim je meren nivo 2"
+
+
+@pytest.mark.browser
+def test_sajt_van_limita_dobija_lagani_nivo_2():
+    """BUG-020: strana od 4,8 MB sa brzim i čistim HTML-om nije imala razlog za nivo 2, pa je u
+    izveštaju stajala sa „0 nalaza", a težina nije ni merena."""
+    config = brza_konfiguracija()
+    config["escalation"]["max_level2"] = 0
+    with FakeSite() as site:
+        rezultat = asyncio.run(pipeline.scan([DomainInput(site.base_url)], config))
+    izvestaj = rezultat.ranked[0]
+    nepoznate = {u.check_id: u.reason.code for u in izvestaj.unknowns}
+    assert izvestaj.level2_ran
+    assert nepoznate.get("perf.load.time") == "requires.level2_full"
+    assert "perf.page.weight" not in nepoznate and "seo.h1.missing" not in nepoznate
+    assert set(rezultat.duration_s) == {"level1", "level2", "level2_light", "total"}
 
 
 @pytest.mark.browser
