@@ -306,6 +306,10 @@ Ime alata, ko skenira i kako da ga kontaktira moraju biti u svakom zahtevu. Bez 
 koji sa jedne adrese obilazi dvesta sajtova, i administrator koji te blokira postupa ispravno. Zato
 User-Agent predstavlja onoga ko pokreće alat, a ne autora alata.
 
+Browser na nivou 2 šalje UA koji Chromium sam prijavljuje, a isti identitet je dopisan na kraj
+(`Mozilla/5.0 … HeadlessChrome/141… Safari/537.36 MlazicSiteScanner/…`). Reklame i Google Fonts
+po User-Agent-u biraju šta šalju, a strana se meri onakva kakvu je dobija posetilac (BUG-019).
+
 - Nikad dva zahteva istovremeno ka istom sajtu, a `www.x.rs` i `x.rs` su isti sajt. Globalni semafor
   ograničava tebe, a semafor po sajtu (uvek 1) štiti njih. To je granica između alata i napada.
 - Između dva zahteva ka istom sajtu ide pauza od 0,5 do 1 s, a duža ako je traži `Crawl-delay`.

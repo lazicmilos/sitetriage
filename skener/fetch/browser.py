@@ -264,7 +264,7 @@ class _LoadSlot:
 
 
 async def capture(
-    browser: Any, site: SiteSnapshot, config: dict, slot: _LoadSlot | None = None
+    browser: Any, site: SiteSnapshot, config: dict, ua: str, slot: _LoadSlot | None = None
 ) -> BrowserSnapshot:
     """Nov kontekst po domenu = prazan keš.
 
@@ -292,7 +292,7 @@ async def capture(
             "height": get(config, "browser.viewport_height"),
         },
         device_scale_factor=1,
-        user_agent=user_agent(config),
+        user_agent=ua,
         ignore_https_errors=True,  # nevalidan sertifikat je nalaz nivoa 1, ne razlog da nivo 2 stane
         # `route` ne vidi zahteve koje šalje service worker (ADR-006).
         service_workers="block",
@@ -427,7 +427,7 @@ async def _read_dom(
 
 
 async def _capture_within_limit(
-    browser: Any, site: SiteSnapshot, config: dict, load_lock: asyncio.Lock | None = None
+    browser: Any, site: SiteSnapshot, config: dict, ua: str, load_lock: asyncio.Lock | None = None
 ) -> BrowserSnapshot:
     """Tvrd limit po domenu — poslednja odbrana od zastoja za koji još ne znamo.
 
@@ -439,7 +439,7 @@ async def _capture_within_limit(
     await slot.acquire()
     started = time.monotonic()
     try:
-        snapshot = await asyncio.wait_for(capture(browser, site, config, slot), limit_s)
+        snapshot = await asyncio.wait_for(capture(browser, site, config, ua, slot), limit_s)
     except TimeoutError:
         log.error("nivo 2 prekinut posle %s s", limit_s, extra={"domain": site.domain})
         snapshot = BrowserSnapshot(
@@ -528,6 +528,20 @@ async def _zasto_odbiti(host: str, port: int, allowed: addresses.Allowlist) -> s
     return None
 
 
+async def _browser_ua(browser: Any, config: dict) -> str:
+    """UA koji Chromium sam šalje, sa identitetom operatera na kraju, kao kod Googlebot-a.
+
+    Servisi koje sajt učitava biraju sadržaj po UA: na UA koji nije browser reklame pokreću
+    dodatne aukcije, a Google Fonts šalje veći format, pa su težina, zahtevi i vreme bili do dva
+    puta veći nego kod posetioca u Chrome-u (BUG-019).
+    """
+    cdp = await browser.new_browser_cdp_session()
+    try:
+        return f"{(await cdp.send('Browser.getVersion'))['userAgent']} {user_agent(config)}"
+    finally:
+        await cdp.detach()
+
+
 def _launch_options(config: dict) -> dict[str, Any]:
     """Gotov Chromium umesto Playwright-ovog, kad ga okruženje već ima.
 
@@ -596,11 +610,12 @@ async def _capture_all(
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(**_launch_options(config))
         try:
+            ua = await _browser_ua(browser, config)
 
             async def one(site: SiteSnapshot) -> tuple[str, BrowserSnapshot]:
                 async with limit:
                     log.info("nivo 2 počinje", extra={"domain": site.domain})
-                    snapshot = await _capture_within_limit(browser, site, config, load_lock)
+                    snapshot = await _capture_within_limit(browser, site, config, ua, load_lock)
                     snapshot.link_mbps = link_mbps
                     if snapshot_dir is not None:
                         store.write_browser(snapshot_dir, snapshot)

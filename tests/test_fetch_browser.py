@@ -15,7 +15,7 @@ from factories import run_level
 from localserver import FakeSite, Response
 
 from skener import addresses, pipeline
-from skener.config import load_config
+from skener.config import load_config, user_agent
 from skener.fetch.browser import est_waste_kb
 from skener.models import (
     BrowserSnapshot,
@@ -222,6 +222,19 @@ def test_browser_belezi_tekst_i_lang_posle_javascript_a():
     assert snimljeno.dom.lang == "sr"
     assert snimljeno.dom.text_sample == "Dobrodošli u ordinaciju. Zakažite pregled."
     assert snimljeno.dom.text_length == len(snimljeno.dom.text_sample)
+
+
+def test_browser_se_predstavlja_svojim_user_agentom_uz_identitet_operatera():
+    """BUG-019: sa UA koji nije browser reklame su pokretale dodatne aukcije, a Google Fonts je slao
+    veći format, pa su težina, zahtevi i vreme bili veći nego kod posetioca u Chrome-u."""
+    strana = (
+        b"<!doctype html><html><body><p id='u'></p>"
+        b"<script>u.textContent = navigator.userAgent</script></body></html>"
+    )
+    with FakeSite(extra={"/": Response(strana)}) as site:
+        ua = snimi(site).dom.text_sample
+    assert ua.startswith("Mozilla/5.0 ") and "Chrome/" in ua, ua
+    assert ua.endswith(" " + user_agent(load_config())), ua
 
 
 def test_browser_belezi_interne_veze_iz_renderovanog_doma():

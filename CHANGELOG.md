@@ -102,6 +102,12 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- Nivo 2 se predstavljao samo identitetom operatera (`MlazicSiteScanner/…`), a ne kao browser.
+  Servisi koje sajt učitava biraju sadržaj po User-Agent-u: reklamne mreže su pokretale dodatne
+  aukcije, a Google Fonts je slao veći format fonta. Na sajtu sa reklamama alat je izmerio 2,7 MB i
+  129 zahteva, a posetilac u Chrome-u dobija 1,3 MB i oko 60. Browser sada šalje svoj UA, a
+  identitet operatera je dopisan na kraj, kao kod Googlebot-a. Nivo 1 šalje isti UA kao i pre
+  (BUG-019).
 - `qa.console.errors` je sve greške iz konzole nazivao „JavaScript greške", a konzola beleži i
   blokiran „Mixed Content" i resurse koji vraćaju 404. Na listi B kod 3 od 6 nalaza nijedna greška
   nije bila iz skripte. Rečenica sada kaže da Chrome prijavljuje greške i šta one mogu da budu
