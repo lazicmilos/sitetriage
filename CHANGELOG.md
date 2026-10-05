@@ -92,6 +92,11 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
   Snapshot beleži interne veze sa početne, a nivo 2 i veze iz renderovanog DOM-a.
 - Greška i upozorenje u listi domena navode red u kom su, onako kako ga prikazuje Excel
   („red 3: domen se ponavlja u listi").
+- Lagani nivo 2 bira broj konteksta po mašini: jedan na svaki slobodan GB memorije, najviše dva
+  po jezgru i najviše 8. Pun nivo 2 i dalje radi sa `browser.concurrency`, jer učitava jedan po
+  jedan. `browser.light_concurrency = 0` je automatski izbor, a broj ≥ 1 ga fiksira. Na listi B
+  je lagani nivo 2 sa tri konteksta trajao 168 s za 40 sajtova, a na 200 domena ih je oko 140
+  (Z-32).
 
 ### Promenjeno
 

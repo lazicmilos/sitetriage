@@ -52,6 +52,11 @@ docker compose run --rm skener skener scan /rad/leads.csv --config /rad/moj.toml
 Na Linux-u pre toga postavi `SKENER_UID=$(id -u)` i `SKENER_GID=$(id -g)`, da izveštaji u `rad/`
 pripadaju tebi. Docker Desktop na Windows-u i Mac-u to rešava sam.
 
+Preporučena mašina ima 16 GB RAM-a i vezu od bar 50 Mb/s. Za nju je cilj da lista od 200 domena
+traje do 15 minuta (Z-32). Alat radi i na slabijoj mašini, samo duže, jer lagani nivo 2 pokreće
+onoliko browsera koliko mašina podnese: jedan na svaki slobodan GB memorije, najviše dva po jezgru i
+najviše 8. Broj može da se fiksira u `[browser] light_concurrency`.
+
 Bez Docker-a treba Python 3.11 ili noviji:
 
 ```bash

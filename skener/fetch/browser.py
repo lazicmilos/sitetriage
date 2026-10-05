@@ -607,6 +607,34 @@ async def capture_all(
         loop.set_exception_handler(prethodni)
 
 
+def _slobodno_kb() -> int | None:
+    """`MemAvailable` iz /proc/meminfo; van Linux-a ga nema."""
+    try:
+        for red in Path("/proc/meminfo").read_text().splitlines():
+            if red.startswith("MemAvailable:"):
+                return int(red.split()[1])
+    except OSError:
+        pass
+    return None
+
+
+def _konteksta(config: dict, light: bool) -> int:
+    """Koliko domena ide kroz browser odjednom; svaki kontekst je stotine MB RAM-a (§8.1).
+
+    Pun nivo 2 učitava jedan po jedan (BUG-006), pa mu je dosta `browser.concurrency`. Laganom
+    brzinu određuje baš broj konteksta, a granicu mašina: jedan na svaki slobodan GB, najviše dva
+    po jezgru i najviše 8 (Z-32). `browser.light_concurrency` ≥ 1 to fiksira.
+    """
+    if not light:
+        return get(config, "browser.concurrency")
+    if zadato := get(config, "browser.light_concurrency"):
+        return zadato
+    kb = _slobodno_kb()
+    if kb is None:
+        return get(config, "browser.concurrency")
+    return max(1, min(8, kb // 1_048_576, 2 * (os.cpu_count() or 1)))
+
+
 async def _capture_all(
     sites: list[SiteSnapshot],
     config: dict,
@@ -618,8 +646,9 @@ async def _capture_all(
     from playwright.async_api import async_playwright
 
     results: dict[str, BrowserSnapshot] = {}
-    # Nivo 2 ide na 3 istovremena konteksta, ne 8: svaki je stotine MB RAM-a (§8.1).
-    limit = asyncio.Semaphore(get(config, "browser.concurrency"))
+    odjednom = _konteksta(config, light)
+    log.info("nivo 2%s: %d domena odjednom", " lagano" if light else "", odjednom)
+    limit = asyncio.Semaphore(odjednom)
     # Učitava se jedan po jedan; ostatak merenja ide paralelno (BUG-006, Z-31).
     load_lock = asyncio.Lock() if get(config, "browser.serial_load") and not light else None
 

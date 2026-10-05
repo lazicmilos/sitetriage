@@ -9,6 +9,7 @@ import asyncio
 import gzip
 import struct
 import zlib
+from pathlib import Path
 
 import pytest
 from factories import run_level
@@ -202,6 +203,37 @@ def test_lagano_merenje_je_bez_profila_i_bez_merenja_veze(monkeypatch):
     assert (snimljeno.light, snimljeno.network_profile, snimljeno.link_mbps) == (True, None, None)
     assert snimljeno.status == "ok" and snimljeno.network.bytes_at_load > 300_000
     assert snimljeno.dom.h1_count == 0 and len(snimljeno.dom.oversized_images) > 0
+
+
+@pytest.mark.parametrize(
+    "slobodno_gb, jezgara, zadato, ocekivano",
+    [
+        pytest.param(3.5, 4, 0, 3, id="ke-masina-sa-8-gb"),
+        pytest.param(0.5, 4, 0, 1, id="gv-najmanje-1"),
+        pytest.param(20, 16, 0, 8, id="gv-najvise-8"),
+        pytest.param(16, 2, 0, 4, id="gv-dva-po-jezgru"),
+        pytest.param(None, 4, 0, 3, id="nv-bez-meminfo"),
+        pytest.param(20, 16, 5, 5, id="tab-fiksirano"),
+    ],
+)
+def test_lagani_nivo_2_bira_broj_konteksta_po_masini(monkeypatch, slobodno_gb, jezgara, zadato, ocekivano):
+    """Z-32: lagani nivo 2 ne meri vreme, pa ide brzinom mašine; pun ostaje na `browser.concurrency`."""
+    from skener.fetch import browser as modul
+
+    config = load_config()
+    config["browser"]["light_concurrency"] = zadato
+    kb = None if slobodno_gb is None else int(slobodno_gb * 1_048_576)
+    monkeypatch.setattr(modul, "_slobodno_kb", lambda: kb)
+    monkeypatch.setattr(modul.os, "cpu_count", lambda: jezgara)
+    assert modul._konteksta(config, light=True) == ocekivano
+    assert modul._konteksta(config, light=False) == 3
+
+
+def test_slobodna_memorija_se_cita_iz_proc_meminfo():
+    from skener.fetch import browser as modul
+
+    kb = modul._slobodno_kb()
+    assert kb is None if not Path("/proc/meminfo").exists() else kb > 0
 
 
 def test_profil_je_u_snapshotu_i_jsonu(snimak):

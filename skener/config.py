@@ -30,6 +30,7 @@ BEZ_UTICAJA_NA_REZULTAT = (
     "http.domain_concurrency",
     "http.user_agent",
     "browser.concurrency",
+    "browser.light_concurrency",
     "browser.executable_path",
 )
 
@@ -172,6 +173,9 @@ def _validate(cfg: dict[str, Any]) -> None:
         value = get(cfg, dotted)
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             raise ConfigError(f"{dotted} mora biti ceo broj ≥ 1, a jeste {value!r}")
+    value = get(cfg, "browser.light_concurrency")
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ConfigError(f"browser.light_concurrency mora biti ceo broj ≥ 0, a jeste {value!r}")
     # Brzina 0 deli sa nulom u rečenicama, a Chromium je čita kao „bez ograničenja".
     for dotted in (
         "http.max_seconds_per_domain",

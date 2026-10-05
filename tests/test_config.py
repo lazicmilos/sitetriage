@@ -163,6 +163,26 @@ def test_paralelizam_i_budzet_moraju_biti_pozitivni(tmp_path, kljuc, vrednost, i
             load_config(override)
 
 
+@pytest.mark.parametrize(
+    "vrednost, ispravna",
+    [
+        pytest.param("-1", False, id="nv-negativna"),
+        pytest.param("true", False, id="nv-logicka"),
+        pytest.param("0", True, id="gv-0-po-masini"),
+        pytest.param("1", True, id="gv-1"),
+    ],
+)
+def test_broj_konteksta_laganog_nivoa_2_je_ceo_broj_od_nule(tmp_path, vrednost, ispravna):
+    """0 znači „po mašini" (Z-32), pa za razliku od ostalog paralelizma nula ovde važi."""
+    override = tmp_path / "moj.toml"
+    override.write_text(f"[browser]\nlight_concurrency = {vrednost}\n", encoding="utf-8")
+    if ispravna:
+        assert get(load_config(override), "browser.light_concurrency") == int(vrednost)
+    else:
+        with pytest.raises(ConfigError, match="browser.light_concurrency"):
+            load_config(override)
+
+
 def test_neispravan_toml_puca_i_imenuje_fajl(tmp_path):
     override = tmp_path / "pokvaren.toml"
     override.write_text("[http\nconcurrency = 8\n", encoding="utf-8")
@@ -227,6 +247,7 @@ def test_otisak_ne_zavisi_od_identiteta_i_paralelizma():
     druga["identitet"] = {"naziv": "Drugi studio", "kontakt": "drugi@primer.rs"}
     druga["http"]["concurrency"] = druga["http"]["domain_concurrency"] = 2
     druga["browser"]["concurrency"] = 1
+    druga["browser"]["light_concurrency"] = 5
     druga["browser"]["executable_path"] = "/usr/bin/chromium"
     assert digest(prva) == digest(druga)
     assert len(digest(prva)) == 64

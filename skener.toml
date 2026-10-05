@@ -56,6 +56,8 @@ raw_html_bytes = 300_000
 
 [browser]
 concurrency = 3                 # svaki kontekst je stotine MB RAM-a (§8.1)
+light_concurrency = 0           # lagani nivo 2: 0 = po mašini, jedan na svaki slobodan GB, najviše
+                                # dva po jezgru i najviše 8; broj ≥ 1 ga fiksira (Z-32)
 viewport_width = 1366
 viewport_height = 768
 timeout_s = 25
