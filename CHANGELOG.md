@@ -107,6 +107,16 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- Recenzija kataloga poruka: rečenice više ne tvrde ništa što dokaz ne pokriva. h1, alt i lang se
+  mere samo na početnoj, pa to i piše („Početna strana nema glavni naslov"). Lažni 404 kaže da sajt
+  „odgovara kao da stranica postoji", a ne da vraća običnu stranicu. Ponovljen naslov i opis više
+  ne tvrde kako izgledaju u Google rezultatima. „lang" sa pogrešnim zapisom (`en_EN`) nije oznaka
+  „bez jezika". Bez izvora su izbačeni „mnogi posetioci ne čekaju toliko" (težina i vreme) i „Viber
+  grupe" (og:image); „mnogi" i „često" su na listi reči koje traže izvor. Tekst izveštaja više ne
+  tvrdi da alat ne dira ono što `robots.txt` zabranjuje: početnu i dve sonde za 404 otvara uvek.
+  Ispravljeni su i razlozi `requires.entry`, `requires.soft404` i `no_h1_raw`, engleski
+  `requires.robots`, `requires.sitemap` i pretpostavka u izveštaju, kao i padeži („bodovi: 24",
+  „od 22 slike", „301 znak").
 - Nivo 2 nije gledao HTTP status početne, pa je strana greške merena kao početna. Na listi B jedan
   server je UA sa „HeadlessChrome" odbio sa 403, a alat je izmerio stranu greške od 358 B umesto
   prave od oko 2 MB. Status ≥ 400 je sada neuspelo snimanje (`http_status`), pa su provere nivoa 2

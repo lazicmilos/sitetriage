@@ -31,8 +31,7 @@ CODES: dict[str, dict[object, str]] = {
 }
 
 _WEIGHT = (
-    "On a slower mobile connection ({brzina} Mb/s) that takes about {sekundi} s, and many visitors "
-    "do not wait that long."
+    "On a slower mobile connection ({brzina} Mb/s) that takes about {sekundi} s."
 )
 
 FINDINGS: dict[str, dict] = {
@@ -79,15 +78,14 @@ FINDINGS: dict[str, dict] = {
     },
     "perf.load.time": {
         "client": (
-            "On a simulated {brzina} Mb/s connection, the home page needs {sekundi} s to load completely. "
-            "Many visitors do not wait that long, especially on a phone."
+            "On a simulated {brzina} Mb/s connection, the home page needs {sekundi} s to load completely."
         ),
         "tech": "load_ms={load_ms}, reached={reached}",
         "variants": {
             "timeout": {
                 "client": (
                     "On a simulated {brzina} Mb/s connection, the home page did not finish loading even "
-                    "in {sekundi} s. Many visitors do not wait that long, especially on a phone."
+                    "in {sekundi} s."
                 )
             }
         },
@@ -138,9 +136,8 @@ FINDINGS: dict[str, dict] = {
     },
     "seo.title.duplicate": {
         "client": (
-            "Different pages of the site have the same title (“{naslov}”). In Google results they look "
-            "like {stranica:n:copy|copies} of the same page, so Google has a harder time choosing "
-            "which one to show."
+            "Different pages of the site have the same title (“{naslov}”), {stranica} of them. So the "
+            "title tells neither Google nor a visitor how those pages differ."
         ),
         "tech": "identical normalized <title> on {stranica} pages from {grupa_putanja} path groups",
     },
@@ -153,21 +150,22 @@ FINDINGS: dict[str, dict] = {
     },
     "seo.description.duplicate": {
         "client": (
-            "Different pages of the site have the same description in Google results. A visitor "
-            "coming from search therefore cannot tell the {stranica:n:page|pages} apart."
+            "Different pages of the site have the same short description for Google, {stranica} of "
+            "them. So the description tells neither Google nor a visitor from search how those pages "
+            "differ."
         ),
         "tech": "identical normalized meta description on {stranica} pages from {grupa_putanja} path groups",
     },
     "seo.h1.missing": {
         "client": (
-            "The page has no main heading (h1). Headings are one of the signals Google uses to "
+            "The home page has no main heading (h1). Headings are one of the signals Google uses to "
             "understand what a page is about, and screen reader users navigate the page by them."
         ),
         "tech": "h1_count == {h1_count} (measured in the browser, reached={reached})",
     },
     "seo.h1.multiple": {
         "client": (
-            "The page has {h1_count:n:main heading|main headings} (h1) instead of one. Screen reader "
+            "The home page has {h1_count:n:main heading|main headings} (h1) instead of one. Screen reader "
             "users then find it harder to recognize the main topic of the page."
         ),
         "tech": "h1_count == {h1_count} > {prag}",
@@ -189,24 +187,23 @@ FINDINGS: dict[str, dict] = {
     },
     "social.og.image.missing": {
         "client": (
-            "A shared link to the site has no prepared image. In Viber and WhatsApp groups, where "
-            "recommendations are often sent, a link without an image easily goes unnoticed."
+            "A shared link to the site has no prepared image, so platforms pick an image from the page "
+            "themselves or show none."
         ),
         "tech": "{stranica}: missing og:image (og tags in total: {og_oznaka_ukupno})",
     },
     # ------------------------------------------------------------------ i18n
     "i18n.lang.missing": {
         "client": (
-            "Nowhere in the site's code does it say what language the site is in. Screen readers, "
-            "used by blind and visually impaired visitors, therefore do not know which pronunciation "
-            "to read it with."
+            "The home page has no language tag (lang) in its code. Screen readers, used by blind and "
+            "visually impaired visitors, therefore do not know which pronunciation to read it with."
         ),
         "tech": "{stranica}: <html> without a lang attribute (source: {izvor})",
     },
     "i18n.lang.invalid": {
         "client": (
-            "The site is marked in its code with “{lang}”, which does not denote any language. "
-            "For screen readers that is the same as having no language tag."
+            "The site is marked in its code with “{lang}”, which is not a valid tag for any language. "
+            "Screen readers therefore cannot rely on it."
         ),
         "tech": '{stranica}: lang="{lang}" is not a usable BCP-47 code (source: {izvor})',
     },
@@ -240,8 +237,8 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.soft404": {
         "client": (
-            "For an address that does not exist, the site returns an ordinary page instead of an "
-            "error message — both made-up addresses we checked returned status {status}. Search "
+            "For an address that does not exist, the site answers as if the page existed — both "
+            "made-up addresses we checked opened a page with status {status}. Search "
             "engines therefore have a harder time telling real pages from nonexistent ones and "
             "spend their crawl of the site on empty addresses."
         ),
@@ -291,8 +288,9 @@ FINDINGS: dict[str, dict] = {
     # ------------------------------------------------------------------ a11y
     "a11y.img.alt.missing": {
         "client": (
-            "{bez_alta} of {ukupno:n:image|images} have no text description (alt). Visitors who use "
-            "screen readers do not learn what is on them, and Google has less data for image search."
+            "On the home page, {bez_alta} of {ukupno:n:image|images} have no text description (alt). "
+            "Visitors who use screen readers do not learn what is on them, and Google has less data "
+            "for image search."
         ),
         "tech": (
             "images_without_alt_attr={bez_alta}/{ukupno} (share {udeo}), "
@@ -347,12 +345,13 @@ TEXT: dict[str, str] = {
     "assumption_html": (
         "<b>Assumption for the loading time estimate:</b> effective speed\n"
         "{speed} Mb/s ({mb_per_s} MB/s, a slow 4G connection) plus {overhead} s of overhead\n"
-        "time. A number you send to a client is one you must be able to defend, and a number without\n"
-        "a stated assumption is not."
+        "time. A number you send to a client must be one you can defend, and you cannot defend a\n"
+        "number without a stated assumption."
     ),
     "read_only_html": (
-        "The tool reads, it never writes. It does not scan ports, attempt logins, look for\n"
-        "vulnerabilities, or touch paths that <code>robots.txt</code> disallows."
+        "The tool reads, it never writes. It does not scan ports, attempt logins, or look for\n"
+        "vulnerabilities. Apart from the home page and two made-up addresses for the 404 check, it\n"
+        "does not open pages that <code>robots.txt</code> disallows."
     ),
     "summary_meta": "{industry} · score {score} ·\nworst {worst} · {findings:n:finding|findings}",
     "copy_draft": "Copy email draft",
@@ -361,7 +360,7 @@ TEXT: dict[str, str] = {
     "unknowns": "Could not be checked ({count})",
     "not_applicable": "does not apply: {tekst}",
     "escalated_because": "Sent to level 2 because: ",
-    "finding_meta": "· level {level} · {weight} points",
+    "finding_meta": "· level {level} · points: {weight}",
     "draft_clean": "I did not find any significant problems on {domain}.",
     "draft_opening": "Hello,\n\nI reviewed the site {domain} and noticed the following:\n\n",
     "draft_closing": (
@@ -378,13 +377,13 @@ TEXT: dict[str, str] = {
 }
 
 REASONS: dict[str, str] = {
-    "requires.entry": "the home page was not even attempted (budget spent before it)",
+    "requires.entry": "the home page was not recorded (fetching crashed, see the log)",
     "requires.entry_response": "the home page returned no response (network error before HTTP)",
     "requires.home": "the home page was not fetched successfully",
     "requires.home_html": "the raw HTML of the home page was not saved",
-    "requires.robots": "the robots.txt request was not made (network error or budget)",
-    "requires.sitemap": "the sitemap request was not made (network error or budget)",
-    "requires.soft404": "the two soft 404 probes were not both made",
+    "requires.robots": "the robots.txt request did not complete (network error or budget)",
+    "requires.sitemap": "the sitemap request did not complete (network error or budget)",
+    "requires.soft404": "at least one of the two soft 404 probes did not complete",
     "requires.browser": "the page was not opened in the browser",
     "requires.network": "network traffic was not measured",
     "v1_snapshot": "a snapshot from version {verzija} has no {polje}",
@@ -466,7 +465,7 @@ REASONS: dict[str, str] = {
     "entry_error": "{vrsta}: {detalj}",
     # escalation to level 2
     "raw_text_short": "the raw HTML has {znakova} characters of text (< {prag})",
-    "no_h1_raw": "the raw HTML has no h1 — the content is probably drawn by JavaScript",
+    "no_h1_raw": "the raw HTML has no h1 — level 2 checks whether JavaScript draws it",
     "medium_finding": "there is at least one level 1 finding of severity ≥ medium",
     "html_large": "the home page HTML is {bajtova} B (> {prag})",
     "html_uncompressed": "the HTML is not sent compressed",

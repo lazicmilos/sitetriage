@@ -165,16 +165,26 @@ def test_svaki_broj_u_recenici_potice_iz_dokaza(lang, sablon):
         # BUG-018: konzola broji i blokiran Mixed Content i resurse koji vraćaju 404.
         pytest.param("sr", "JavaScript greš", id="sr-konzola-nije-samo-javascript"),
         pytest.param("en", "JavaScript error", id="en-konzola-nije-samo-javascript"),
+        # Recenzija kataloga, 05.10.2026.
+        pytest.param("sr", "ne dira putanje", id="sr-robots-ne-stiti-pocetnu-ni-sonde"),
+        pytest.param("en", "or touch paths", id="en-robots-ne-stiti-pocetnu-ni-sonde"),
+        pytest.param("sr", "budžet potrošen pre nje", id="sr-pocetna-je-prvi-zahtev"),
+        pytest.param("en", "budget spent before it", id="en-pocetna-je-prvi-zahtev"),
+        pytest.param("sr", "verovatno crta", id="sr-h1-retko-iz-javascript-a"),
+        pytest.param("en", "probably drawn", id="en-h1-retko-iz-javascript-a"),
+        pytest.param("sr", "ne označava nijedan jezik", id="sr-en-EN-je-jezik"),
+        pytest.param("en", "does not denote any language", id="en-en-EN-je-jezik"),
     ],
 )
 def test_ispravljena_netacna_tvrdnja_se_ne_vraca(lang, tvrdnja):
-    assert not [ime for ime, s in sabloni(lang) if tvrdnja.lower() in s.lower()]
+    tekstovi = sabloni(lang) + [*catalog(lang).TEXT.items(), *catalog(lang).REASONS.items()]
+    assert not [ime for ime, s in tekstovi if tvrdnja.lower() in s.lower()]
 
 
 # Reči koje tvrde učestalost ili ponašanje ljudi (Z-27). Lista sme da raste.
 BEZ_IZVORA = {
-    "sr": ("većina", "većinu", "najčešće", "uvek", "nikad", "svaki", "svi", "niko"),
-    "en": ("most", "usually", "always", "never", "every", "all", "nobody"),
+    "sr": ("većina", "većinu", "najčešće", "uvek", "nikad", "svaki", "svi", "niko", "mnogi", "često"),
+    "en": ("most", "usually", "always", "never", "every", "all", "nobody", "many", "often"),
 }
 # Jedini način da takva reč ostane: {check_id: (reč, obrazloženje ili izvor)}.
 IZUZECI: dict[str, tuple[str, str]] = {}
@@ -305,9 +315,8 @@ def _isti(site, polje: str, broj: int) -> None:
 @pytest.mark.parametrize(
     "lang, broj, ocekivano",
     [
-        pytest.param("sr", 3, "kao 3 kopije iste stranice", id="sr-paukal"),
-        pytest.param("sr", 5, "kao 5 kopija iste stranice", id="sr-mnozina"),
-        pytest.param("en", 3, "like 3 copies of the same page", id="en-mnozina"),
+        pytest.param("sr", 3, "(„Ista vrednost na više stranica”), njih 3.", id="sr"),
+        pytest.param("en", 3, "(“Ista vrednost na više stranica”), 3 of them.", id="en"),
     ],
 )
 def test_poruka_o_istom_naslovu_je_pravilna(lang, broj, ocekivano):
@@ -320,9 +329,8 @@ def test_poruka_o_istom_naslovu_je_pravilna(lang, broj, ocekivano):
 @pytest.mark.parametrize(
     "lang, broj, ocekivano",
     [
-        pytest.param("sr", 3, "između 3 stranice.", id="sr-paukal"),
-        pytest.param("sr", 5, "između 5 stranica.", id="sr-mnozina"),
-        pytest.param("en", 3, "tell the 3 pages apart.", id="en-mnozina"),
+        pytest.param("sr", 3, "isti kratak opis za Google, njih 3.", id="sr"),
+        pytest.param("en", 3, "the same short description for Google, 3 of them.", id="en"),
     ],
 )
 def test_poruka_o_istom_opisu_je_pravilna(lang, broj, ocekivano):

@@ -48,8 +48,7 @@ CODES: dict[str, dict[object, str]] = {
 }
 
 _TEZINA = (
-    "Na sporijoj mobilnoj vezi ({brzina} Mb/s) za to je potrebno oko {sekundi} s, a mnogi posetioci "
-    "ne čekaju toliko."
+    "Na sporijoj mobilnoj vezi ({brzina} Mb/s) za to je potrebno oko {sekundi} s."
 )
 
 FINDINGS: dict[str, dict] = {
@@ -98,14 +97,14 @@ FINDINGS: dict[str, dict] = {
     "perf.load.time": {
         "client": (
             "Na simuliranoj vezi od {brzina} Mb/s početnoj strani treba {sekundi} s da se do kraja "
-            "učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu."
+            "učita."
         ),
         "tech": "load_ms={load_ms}, reached={reached}",
         "variants": {
             "timeout": {
                 "client": (
                     "Na simuliranoj vezi od {brzina} Mb/s početna strana se ni za {sekundi} s nije "
-                    "do kraja učitala. Mnogi posetioci ne čekaju toliko, naročito na telefonu."
+                    "do kraja učitala."
                 )
             }
         },
@@ -153,9 +152,8 @@ FINDINGS: dict[str, dict] = {
     },
     "seo.title.duplicate": {
         "client": (
-            "Različite stranice sajta imaju isti naslov („{naslov}”). U Google rezultatima "
-            "izgledaju kao {stranica:n:kopija|kopije|kopija} iste stranice, pa Google teže bira "
-            "koju da prikaže."
+            "Različite stranice sajta imaju isti naslov („{naslov}”), njih {stranica}. Naslov tako ni "
+            "Google-u ni posetiocu ne govori po čemu se te stranice razlikuju."
         ),
         "tech": "identičan normalizovan <title> na {stranica} stranica iz {grupa_putanja} grupa putanja",
     },
@@ -168,21 +166,21 @@ FINDINGS: dict[str, dict] = {
     },
     "seo.description.duplicate": {
         "client": (
-            "Različite stranice sajta imaju isti opis u Google rezultatima. Posetilac iz pretrage "
-            "zato ne vidi razliku između {stranica:n:stranice|stranice|stranica}."
+            "Različite stranice sajta imaju isti kratak opis za Google, njih {stranica}. Opis tako ni "
+            "Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju."
         ),
         "tech": "identičan normalizovan meta opis na {stranica} stranica iz {grupa_putanja} grupa putanja",
     },
     "seo.h1.missing": {
         "client": (
-            "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google "
+            "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google "
             "razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu."
         ),
         "tech": "h1_count == {h1_count} (mereno u browseru, reached={reached})",
     },
     "seo.h1.multiple": {
         "client": (
-            "Stranica ima {h1_count:n:glavni naslov|glavna naslova|glavnih naslova} (h1) umesto "
+            "Početna strana ima {h1_count:n:glavni naslov|glavna naslova|glavnih naslova} (h1) umesto "
             "jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane."
         ),
         "tech": "h1_count == {h1_count} > {prag}",
@@ -204,23 +202,23 @@ FINDINGS: dict[str, dict] = {
     },
     "social.og.image.missing": {
         "client": (
-            "Podeljen link sajta nema pripremljenu sliku. U Viber i WhatsApp grupama, gde se "
-            "preporuke često šalju, link bez slike lako prođe neprimećeno."
+            "Podeljen link sajta nema pripremljenu sliku, pa platforme same biraju sliku sa strane "
+            "ili je ne prikazuju."
         ),
         "tech": "{stranica}: nedostaje og:image (ukupno og oznaka: {og_oznaka_ukupno})",
     },
     # ------------------------------------------------------------------ i18n
     "i18n.lang.missing": {
         "client": (
-            "U kodu sajta nigde ne piše na kom je jeziku. Čitači ekrana, koje koriste slepi i "
-            "slabovidi posetioci, zato ne znaju kojim izgovorom da ga čitaju."
+            "Početna strana u kodu nema oznaku jezika (lang). Čitači ekrana, koje koriste slepi i "
+            "slabovidi posetioci, zato ne znaju kojim izgovorom da je čitaju."
         ),
         "tech": "{stranica}: <html> bez lang atributa (izvor: {izvor})",
     },
     "i18n.lang.invalid": {
         "client": (
-            "Sajt je u kodu označen oznakom „{lang}”, koja ne označava nijedan jezik. "
-            "Za čitače ekrana je to isto kao da oznake nema."
+            "Sajt je u kodu označen oznakom „{lang}”, koja nije ispravna oznaka nijednog jezika. "
+            "Čitači ekrana zato ne mogu da se oslone na nju."
         ),
         "tech": '{stranica}: lang="{lang}" nije upotrebljiv BCP-47 kod (izvor: {izvor})',
     },
@@ -253,8 +251,8 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.soft404": {
         "client": (
-            "Na nepostojeću adresu sajt vraća običnu stranicu umesto poruke o grešci — obe "
-            "proverene izmišljene adrese vratile su status {status}. Pretraživači zato teže "
+            "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene "
+            "izmišljene adrese otvorile su stranicu sa statusom {status}. Pretraživači zato teže "
             "razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese."
         ),
         "tech": "obe sonde status={status}, sličnost sa početnom {slicnost}",
@@ -303,9 +301,9 @@ FINDINGS: dict[str, dict] = {
     # ------------------------------------------------------------------ a11y
     "a11y.img.alt.missing": {
         "client": (
-            "{bez_alta} od {ukupno:n:slike|slike|slika} nema tekstualni opis (alt). Posetioci koji "
-            "koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za "
-            "pretragu slika."
+            "Na početnoj strani {bez_alta} od {ukupno:n:slike|slike|slika} nema tekstualni opis "
+            "(alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima "
+            "manje podataka za pretragu slika."
         ),
         "tech": (
             "images_without_alt_attr={bez_alta}/{ukupno} (udeo {udeo}), "
@@ -365,8 +363,9 @@ TEXT: dict[str, str] = {
         "ne možeš."
     ),
     "read_only_html": (
-        "Alat čita, nikad ne piše. Ne skenira portove, ne pokušava prijavu, ne traži ranjivosti i\n"
-        "ne dira putanje koje <code>robots.txt</code> zabranjuje."
+        "Alat čita, nikad ne piše. Ne skenira portove, ne pokušava prijavu i ne traži ranjivosti.\n"
+        "Osim početne strane i dve izmišljene adrese za proveru greške 404, ne otvara stranice koje\n"
+        "<code>robots.txt</code> zabranjuje."
     ),
     "summary_meta": (
         "{industry} · skor {score} ·\nnajteži {worst} · {findings:n:nalaz|nalaza|nalaza}"
@@ -377,7 +376,7 @@ TEXT: dict[str, str] = {
     "unknowns": "Nije moglo da se proveri ({count})",
     "not_applicable": "ne primenjuje se: {tekst}",
     "escalated_because": "Na nivo 2 poslat jer: ",
-    "finding_meta": "· nivo {level} · {weight} bodova",
+    "finding_meta": "· nivo {level} · bodovi: {weight}",
     "draft_clean": "Na sajtu {domain} nisam našao značajnije probleme.",
     "draft_opening": "Poštovani,\n\npregledao sam sajt {domain} i primetio sledeće:\n\n",
     "draft_closing": (
@@ -396,13 +395,13 @@ TEXT: dict[str, str] = {
 # Razlozi: zašto nešto nije provereno (`unknown`) i zašto domen ide na nivo 2. Čita ih
 # operater, ne klijent, pa su tehnički.
 REASONS: dict[str, str] = {
-    "requires.entry": "početna strana nije ni pokušana (budžet potrošen pre nje)",
+    "requires.entry": "početna strana nije zabeležena (dohvatanje je puklo, vidi log)",
     "requires.entry_response": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)",
     "requires.home": "početna strana nije uspešno dohvaćena",
     "requires.home_html": "sirovi HTML početne strane nije sačuvan",
     "requires.robots": "zahtev za robots.txt nije izvršen (mrežna greška ili budžet)",
     "requires.sitemap": "zahtev za sitemap nije izvršen (mrežna greška ili budžet)",
-    "requires.soft404": "obe sonde za lažni 404 nisu izvršene",
+    "requires.soft404": "bar jedna od dve sonde za lažni 404 nije izvršena",
     "requires.browser": "stranica nije otvorena u browseru",
     "requires.network": "mrežni saobraćaj nije izmeren",
     "v1_snapshot": "snapshot iz verzije {verzija} nema {polje}",
@@ -420,7 +419,7 @@ REASONS: dict[str, str] = {
     "unmeasured_responses": "{nemereno} odgovora nije izmereno (prag {prag})",
     "load_incomplete": "učitavanje prekinuto pre kraja, izmereno je nepotpuno",
     "load_not_measured": "vreme učitavanja nije izmereno",
-    "images_unmeasured": "{nemereno} od {ukupno} slika nije izmereno",
+    "images_unmeasured": "{nemereno} od {ukupno:n:slike|slike|slika} nije izmereno",
     "h1_timeout": "stranica nije dovršila učitavanje, h1 može da stigne kasnije",
     "images_timeout": "stranica nije dovršila učitavanje, slike nisu prebrojane",
     "text_too_short": "premalo teksta u sirovom HTML-u ({duzina} < {prag} znakova)",
@@ -469,8 +468,8 @@ REASONS: dict[str, str] = {
     "entry_status": "početna je vratila status {status}",
     "entry_error": "{vrsta}: {detalj}",
     # eskalacija na nivo 2
-    "raw_text_short": "sirovi HTML ima {znakova} znakova teksta (< {prag})",
-    "no_h1_raw": "sirovi HTML nema nijedan h1 — sadržaj se verovatno crta iz JS-a",
+    "raw_text_short": "sirovi HTML ima {znakova:n:znak|znaka|znakova} teksta (< {prag})",
+    "no_h1_raw": "sirovi HTML nema nijedan h1 — nivo 2 proverava da li ga crta JavaScript",
     "medium_finding": "ima bar jedan nalaz nivoa 1 ozbiljnosti ≥ medium",
     "html_large": "HTML početne je {bajtova} B (> {prag})",
     "html_uncompressed": "HTML se ne šalje kompresovan",

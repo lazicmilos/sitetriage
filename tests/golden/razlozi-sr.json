@@ -37,17 +37,17 @@
  {
   "slucaj": "nivo1/prazan-snapshot",
   "provera": "infra.soft404",
-  "razlog": "obe sonde za lažni 404 nisu izvršene"
+  "razlog": "bar jedna od dve sonde za lažni 404 nije izvršena"
  },
  {
   "slucaj": "nivo1/prazan-snapshot",
   "provera": "infra.tls.invalid",
-  "razlog": "početna strana nije ni pokušana (budžet potrošen pre nje)"
+  "razlog": "početna strana nije zabeležena (dohvatanje je puklo, vidi log)"
  },
  {
   "slucaj": "nivo1/prazan-snapshot",
   "provera": "infra.unreachable",
-  "razlog": "početna strana nije ni pokušana (budžet potrošen pre nje)"
+  "razlog": "početna strana nije zabeležena (dohvatanje je puklo, vidi log)"
  },
  {
   "slucaj": "nivo1/prazan-snapshot",
@@ -247,7 +247,7 @@
  {
   "slucaj": "eskalacija",
   "provera": "eskalacija",
-  "razlog": "sirovi HTML nema nijedan h1 — sadržaj se verovatno crta iz JS-a"
+  "razlog": "sirovi HTML nema nijedan h1 — nivo 2 proverava da li ga crta JavaScript"
  },
  {
   "slucaj": "eskalacija",

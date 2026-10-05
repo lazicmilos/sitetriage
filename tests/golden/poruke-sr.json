@@ -45,14 +45,14 @@
   "slucaj": "ispitni/spec/hotel-planina.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
   "slucaj": "ispitni/spec/hotel-planina.example",
   "check_id": "i18n.lang.invalid",
   "severity": "medium",
-  "client": "Sajt je u kodu označen oznakom „zxx”, koja ne označava nijedan jezik. Za čitače ekrana je to isto kao da oznake nema.",
+  "client": "Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.",
   "tech": "https://hotel-planina.example/: lang=\"zxx\" nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)"
  },
  {
@@ -73,14 +73,14 @@
   "slucaj": "ispitni/spec/b2b-firma.example",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita.",
   "tech": "load_ms=6100, reached=load"
  },
  {
   "slucaj": "ispitni/spec/b2b-firma.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
-  "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s.",
   "tech": "bytes_at_load=2100000, bez videa 2.1 MB, video 0.0 MB, zahteva=60, nemereno=0, reached=load; sa onim posle load 2100000 B i 60 zahteva (informativno)"
  },
  {
@@ -94,7 +94,7 @@
   "slucaj": "ispitni/spec/prodavnica.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
@@ -108,7 +108,7 @@
   "slucaj": "ispitni/spec/prodavnica.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
-  "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s.",
   "tech": "bytes_at_load=2600000, bez videa 2.6 MB, video 0.0 MB, zahteva=175, nemereno=0, reached=load; sa onim posle load 2600000 B i 175 zahteva (informativno)"
  },
  {
@@ -122,21 +122,21 @@
   "slucaj": "ispitni/spec/institucija.example",
   "check_id": "infra.soft404",
   "severity": "high",
-  "client": "Na nepostojeću adresu sajt vraća običnu stranicu umesto poruke o grešci — obe proverene izmišljene adrese vratile su status 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
+  "client": "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
   "tech": "obe sonde status=200, sličnost sa početnom 1.0"
  },
  {
   "slucaj": "ispitni/spec/institucija.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
   "slucaj": "ispitni/spec/ordinacija.example",
   "check_id": "a11y.img.alt.missing",
   "severity": "high",
-  "client": "28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
+  "client": "Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
   "tech": "images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=1 se namerno ne broji, nemereno=0"
  },
  {
@@ -157,7 +157,7 @@
   "slucaj": "ispitni/spec/restoran-centar.example",
   "check_id": "perf.page.weight",
   "severity": "critical",
-  "client": "Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s.",
   "tech": "bytes_at_load=14903221, bez videa 14.9 MB, video 0.0 MB, zahteva=87, nemereno=0, reached=load; sa onim posle load 14903221 B i 87 zahteva (informativno)"
  },
  {
@@ -220,14 +220,14 @@
   "slucaj": "ispitni/toml/hotel-planina.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
   "slucaj": "ispitni/toml/hotel-planina.example",
   "check_id": "i18n.lang.invalid",
   "severity": "medium",
-  "client": "Sajt je u kodu označen oznakom „zxx”, koja ne označava nijedan jezik. Za čitače ekrana je to isto kao da oznake nema.",
+  "client": "Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.",
   "tech": "https://hotel-planina.example/: lang=\"zxx\" nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)"
  },
  {
@@ -248,14 +248,14 @@
   "slucaj": "ispitni/toml/b2b-firma.example",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita.",
   "tech": "load_ms=6100, reached=load"
  },
  {
   "slucaj": "ispitni/toml/b2b-firma.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
-  "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s.",
   "tech": "bytes_at_load=2100000, bez videa 2.1 MB, video 0.0 MB, zahteva=60, nemereno=0, reached=load; sa onim posle load 2100000 B i 60 zahteva (informativno)"
  },
  {
@@ -269,7 +269,7 @@
   "slucaj": "ispitni/toml/prodavnica.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
@@ -283,7 +283,7 @@
   "slucaj": "ispitni/toml/prodavnica.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
-  "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s.",
   "tech": "bytes_at_load=2600000, bez videa 2.6 MB, video 0.0 MB, zahteva=175, nemereno=0, reached=load; sa onim posle load 2600000 B i 175 zahteva (informativno)"
  },
  {
@@ -297,21 +297,21 @@
   "slucaj": "ispitni/toml/institucija.example",
   "check_id": "infra.soft404",
   "severity": "high",
-  "client": "Na nepostojeću adresu sajt vraća običnu stranicu umesto poruke o grešci — obe proverene izmišljene adrese vratile su status 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
+  "client": "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
   "tech": "obe sonde status=200, sličnost sa početnom 1.0"
  },
  {
   "slucaj": "ispitni/toml/institucija.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
   "slucaj": "ispitni/toml/ordinacija.example",
   "check_id": "a11y.img.alt.missing",
   "severity": "high",
-  "client": "28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
+  "client": "Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
   "tech": "images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=1 se namerno ne broji, nemereno=0"
  },
  {
@@ -332,7 +332,7 @@
   "slucaj": "ispitni/toml/restoran-centar.example",
   "check_id": "perf.page.weight",
   "severity": "critical",
-  "client": "Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s.",
   "tech": "bytes_at_load=14903221, bez videa 14.9 MB, video 0.0 MB, zahteva=87, nemereno=0, reached=load; sa onim posle load 14903221 B i 87 zahteva (informativno)"
  },
  {
@@ -353,7 +353,7 @@
   "slucaj": "nivo1/i18n.lang.invalid",
   "check_id": "i18n.lang.invalid",
   "severity": "medium",
-  "client": "Sajt je u kodu označen oznakom „zxx”, koja ne označava nijedan jezik. Za čitače ekrana je to isto kao da oznake nema.",
+  "client": "Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.",
   "tech": "https://cist.rs/: lang=\"zxx\" nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)"
  },
  {
@@ -367,7 +367,7 @@
   "slucaj": "nivo1/i18n.lang.missing",
   "check_id": "i18n.lang.missing",
   "severity": "medium",
-  "client": "U kodu sajta nigde ne piše na kom je jeziku. Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato ne znaju kojim izgovorom da ga čitaju.",
+  "client": "Početna strana u kodu nema oznaku jezika (lang). Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato ne znaju kojim izgovorom da je čitaju.",
   "tech": "https://cist.rs/: <html> bez lang atributa (izvor: sirovi HTML)"
  },
  {
@@ -402,7 +402,7 @@
   "slucaj": "nivo1/infra.soft404",
   "check_id": "infra.soft404",
   "severity": "high",
-  "client": "Na nepostojeću adresu sajt vraća običnu stranicu umesto poruke o grešci — obe proverene izmišljene adrese vratile su status 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
+  "client": "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
   "tech": "obe sonde status=200, sličnost sa početnom 0.012"
  },
  {
@@ -458,7 +458,7 @@
   "slucaj": "nivo1/seo.description.duplicate",
   "check_id": "seo.description.duplicate",
   "severity": "medium",
-  "client": "Različite stranice sajta imaju isti opis u Google rezultatima. Posetilac iz pretrage zato ne vidi razliku između 5 stranica.",
+  "client": "Različite stranice sajta imaju isti kratak opis za Google, njih 5. Opis tako ni Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan meta opis na 5 stranica iz 5 grupa putanja"
  },
  {
@@ -472,7 +472,7 @@
   "slucaj": "nivo1/seo.title.duplicate",
   "check_id": "seo.title.duplicate",
   "severity": "high",
-  "client": "Različite stranice sajta imaju isti naslov („Dobrodošli”). U Google rezultatima izgledaju kao 5 kopija iste stranice, pa Google teže bira koju da prikaže.",
+  "client": "Različite stranice sajta imaju isti naslov („Dobrodošli”), njih 5. Naslov tako ni Google-u ni posetiocu ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan <title> na 5 stranica iz 5 grupa putanja"
  },
  {
@@ -493,7 +493,7 @@
   "slucaj": "nivo1/social.og.image.missing",
   "check_id": "social.og.image.missing",
   "severity": "medium",
-  "client": "Podeljen link sajta nema pripremljenu sliku. U Viber i WhatsApp grupama, gde se preporuke često šalju, link bez slike lako prođe neprimećeno.",
+  "client": "Podeljen link sajta nema pripremljenu sliku, pa platforme same biraju sliku sa strane ili je ne prikazuju.",
   "tech": "https://cist.rs/: nedostaje og:image (ukupno og oznaka: 3)"
  },
  {
@@ -507,7 +507,7 @@
   "slucaj": "nivo2/a11y.img.alt.missing",
   "check_id": "a11y.img.alt.missing",
   "severity": "high",
-  "client": "28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
+  "client": "Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
   "tech": "images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=0 se namerno ne broji, nemereno=0"
  },
  {
@@ -521,14 +521,14 @@
   "slucaj": "nivo2/perf.load.time",
   "check_id": "perf.load.time",
   "severity": "medium",
-  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 9 s da se do kraja učita. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 9 s da se do kraja učita.",
   "tech": "load_ms=9000, reached=load"
  },
  {
   "slucaj": "nivo2/perf.page.weight",
   "check_id": "perf.page.weight",
   "severity": "critical",
-  "client": "Početna strana prenosi 25 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 42,7 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 25 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 42,7 s.",
   "tech": "bytes_at_load=25000000, bez videa 25.0 MB, video 0.0 MB, zahteva=30, nemereno=0, reached=load; sa onim posle load 25000000 B i 30 zahteva (informativno)"
  },
  {
@@ -549,28 +549,28 @@
   "slucaj": "nivo2/seo.h1.missing",
   "check_id": "seo.h1.missing",
   "severity": "high",
-  "client": "Stranica nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
+  "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
   "slucaj": "nivo2/seo.h1.multiple",
   "check_id": "seo.h1.multiple",
   "severity": "low",
-  "client": "Stranica ima 5 glavnih naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
+  "client": "Početna strana ima 5 glavnih naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 5 > 3"
  },
  {
   "slucaj": "posebno/video",
   "check_id": "perf.page.weight",
   "severity": "critical",
-  "client": "Početna strana prenosi 22 MB (video dodatno 8 MB). Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 37,7 s, a mnogi posetioci ne čekaju toliko.",
+  "client": "Početna strana prenosi 22 MB (video dodatno 8 MB). Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 37,7 s.",
   "tech": "bytes_at_load=30000000, bez videa 22.0 MB, video 8.0 MB, zahteva=30, nemereno=0, reached=load; sa onim posle load 30000000 B i 30 zahteva (informativno)"
  },
  {
   "slucaj": "posebno/prekid-ucitavanja",
   "check_id": "perf.load.time",
   "severity": "high",
-  "client": "Na simuliranoj vezi od 4,8 Mb/s početna strana se ni za 25 s nije do kraja učitala. Mnogi posetioci ne čekaju toliko, naročito na telefonu.",
+  "client": "Na simuliranoj vezi od 4,8 Mb/s početna strana se ni za 25 s nije do kraja učitala.",
   "tech": "load_ms=None, reached=timeout"
  },
  {
@@ -584,21 +584,21 @@
   "slucaj": "posebno/h1-4",
   "check_id": "seo.h1.multiple",
   "severity": "low",
-  "client": "Stranica ima 4 glavna naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
+  "client": "Početna strana ima 4 glavna naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 4 > 3"
  },
  {
   "slucaj": "posebno/h1-5",
   "check_id": "seo.h1.multiple",
   "severity": "low",
-  "client": "Stranica ima 5 glavnih naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
+  "client": "Početna strana ima 5 glavnih naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 5 > 3"
  },
  {
   "slucaj": "posebno/h1-21",
   "check_id": "seo.h1.multiple",
   "severity": "low",
-  "client": "Stranica ima 21 glavni naslov (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
+  "client": "Početna strana ima 21 glavni naslov (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 21 > 3"
  },
  {
@@ -647,28 +647,28 @@
   "slucaj": "posebno/naslov-3",
   "check_id": "seo.title.duplicate",
   "severity": "high",
-  "client": "Različite stranice sajta imaju isti naslov („Ista vrednost na više stranica”). U Google rezultatima izgledaju kao 3 kopije iste stranice, pa Google teže bira koju da prikaže.",
+  "client": "Različite stranice sajta imaju isti naslov („Ista vrednost na više stranica”), njih 3. Naslov tako ni Google-u ni posetiocu ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan <title> na 3 stranica iz 3 grupa putanja"
  },
  {
   "slucaj": "posebno/opis-3",
   "check_id": "seo.description.duplicate",
   "severity": "medium",
-  "client": "Različite stranice sajta imaju isti opis u Google rezultatima. Posetilac iz pretrage zato ne vidi razliku između 3 stranice.",
+  "client": "Različite stranice sajta imaju isti kratak opis za Google, njih 3. Opis tako ni Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan meta opis na 3 stranica iz 3 grupa putanja"
  },
  {
   "slucaj": "posebno/naslov-5",
   "check_id": "seo.title.duplicate",
   "severity": "high",
-  "client": "Različite stranice sajta imaju isti naslov („Ista vrednost na više stranica”). U Google rezultatima izgledaju kao 5 kopija iste stranice, pa Google teže bira koju da prikaže.",
+  "client": "Različite stranice sajta imaju isti naslov („Ista vrednost na više stranica”), njih 5. Naslov tako ni Google-u ni posetiocu ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan <title> na 5 stranica iz 5 grupa putanja"
  },
  {
   "slucaj": "posebno/opis-5",
   "check_id": "seo.description.duplicate",
   "severity": "medium",
-  "client": "Različite stranice sajta imaju isti opis u Google rezultatima. Posetilac iz pretrage zato ne vidi razliku između 5 stranica.",
+  "client": "Različite stranice sajta imaju isti kratak opis za Google, njih 5. Opis tako ni Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan meta opis na 5 stranica iz 5 grupa putanja"
  }
 ]
