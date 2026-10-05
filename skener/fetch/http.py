@@ -17,7 +17,7 @@ import socket
 import ssl
 import time
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -423,16 +423,20 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
         snapshot.budget = budget.snapshot()
         return snapshot
 
-    home = page_builder.build(
-        entry_outcome.url,
-        final_url=entry_outcome.final_url,
-        status=entry_outcome.status,
-        headers=entry_outcome.headers,
-        body=entry_outcome.body,
-        elapsed_ms=entry_outcome.elapsed_ms,
-        redirect_hops=max(len(entry_outcome.redirect_chain) - 1, 0),
-        keep_raw_html=True,
-    )
+    home = _home(entry_outcome)
+    if (cilj := page_builder.redirect_stub(home)) and entry_outcome.status == 200:
+        sledeci = await fetcher.request(cilj, budget, verify=verify)
+        if sledeci.ok and sledeci.status == 200:
+            # Strana koja samo preusmerava skriptom ili meta refresh-om je skok, kao HTTP
+            # preusmerenje: ocenjuje se strana na koju vodi (BUG-022).
+            entry_outcome = replace(
+                sledeci,
+                url=entry_outcome.url,
+                redirect_chain=entry_outcome.redirect_chain + sledeci.redirect_chain,
+                elapsed_ms=entry_outcome.elapsed_ms + sledeci.elapsed_ms,
+            )
+            snapshot.entry = _entry_from(entry_outcome, tls_error)
+            home = _home(entry_outcome)
     snapshot.pages.append(home)
     base_url = home.final_url or home.url
     # Sve dalje adrese idu sa *konačnog* porekla: ako je domen preusmerio na www
@@ -473,6 +477,19 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
 
     snapshot.budget = budget.snapshot()
     return snapshot
+
+
+def _home(outcome: Outcome) -> PageSnapshot:
+    return page_builder.build(
+        outcome.url,
+        final_url=outcome.final_url,
+        status=outcome.status,
+        headers=outcome.headers,
+        body=outcome.body,
+        elapsed_ms=outcome.elapsed_ms,
+        redirect_hops=max(len(outcome.redirect_chain) - 1, 0),
+        keep_raw_html=True,
+    )
 
 
 def _origin_of(url: str) -> str:

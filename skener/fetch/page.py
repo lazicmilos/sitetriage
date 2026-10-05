@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from urllib.parse import urljoin
 
 from selectolax.lexbor import LexborHTMLParser
 
@@ -18,6 +19,13 @@ RELEVANT_HEADERS = ("content-encoding", "content-type", "content-length", "cache
 TEXT_SAMPLE_CHARS = 4000
 LINKS_KEPT = 200  # toliko internih veza ide u snapshot; za poređenje duplikata trebaju tri (Z-21)
 OG_KEYS = {"og:title": "title", "og:description": "description", "og:image": "image", "og:url": "url"}
+
+# Strana sa ovoliko vidljivog teksta ili manje, koja samo preusmerava, je „stub" (BUG-022).
+STUB_MAX_TEXT = 100
+_REFRESH = re.compile(r"""^\s*[\d.]*\s*[;,]\s*(?:url\s*=\s*)?['"]?([^'"\s]+)""", re.I)
+_JS_LOCATION = re.compile(
+    r"""\blocation(?:\.href)?\s*=\s*['"]([^'"]+)['"]|\blocation\.(?:replace|assign)\(\s*['"]([^'"]+)['"]"""
+)
 
 _CHARSET_HEADER = re.compile(r"charset=([\w-]+)", re.I)
 _CHARSET_META = re.compile(rb"""charset=["']?([\w-]+)""", re.I)
@@ -68,6 +76,31 @@ def build(
     page.text_sample = text[:TEXT_SAMPLE_CHARS]
     page.text_length = len(text)
     return page
+
+
+def redirect_stub(page: PageSnapshot) -> str | None:
+    """Adresa na istom sajtu na koju strana bez teksta preusmerava meta refresh-om ili JavaScript-om.
+
+    Browser i Google tu stranu preskaču kao HTTP preusmerenje; nivo 1 je ocenjivao nju (BUG-022).
+    Samo strana bez teksta: ista naredba na pravoj strani je uslovna ili na klik.
+    """
+    if not page.raw_html or (page.text_length or 0) > STUB_MAX_TEXT:
+        return None
+    tree = LexborHTMLParser(page.raw_html)
+    ciljevi = [
+        m.group(1)
+        for meta in tree.css("meta[http-equiv]")
+        if (meta.attributes.get("http-equiv") or "").lower() == "refresh"
+        and (m := _REFRESH.match(meta.attributes.get("content") or ""))
+    ]
+    for script in tree.css("script"):
+        ciljevi += [a or b for a, b in _JS_LOCATION.findall(script.text() or "")]
+    base = page.final_url or page.url
+    for cilj in ciljevi:
+        adresa = urljoin(base, cilj.strip())
+        if normalize(adresa) and same_site(adresa, base) and normalize(adresa) != normalize(base):
+            return adresa
+    return None
 
 
 def internal_links(html: str | None, base_url: str) -> list[str]:

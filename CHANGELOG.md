@@ -111,6 +111,12 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- Početna bez teksta koja samo preusmerava na isti sajt, JavaScript-om (`location = …`,
+  `location.replace(…)`) ili meta refresh-om, ocenjivana je kao početna: na listi B strana od 95 B
+  koja vodi na „uskoro" dobila je nalaze za naslov, opis i canonical koje prava strana ima. Nivo 1
+  sada takav skok prati kao HTTP preusmerenje: skok je u lancu, a ocenjuje se strana na koju vodi
+  (i na nivou 2). Stub je strana sa najviše 100 znakova vidljivog teksta; preusmerenje na drugi
+  sajt se ne prati (BUG-022).
 - `perf.img.oversized` je brojao i SVG slike i `data:` čuvare mesta za lenje učitavanje, a nalaz je
   padao na broj slika i kad prenos nije izmeren, pa je rečenica govorila „oko 0 kB nepotrebnog
   prenosa". Na listi B 5 od 47 nalaza bilo je samo od takvih slika, a kod još 15 broj slika je bio

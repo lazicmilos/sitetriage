@@ -69,6 +69,20 @@ def test_pun_prolaz_sklapa_snapshot():
     assert all(p.status == 404 for p in snapshot.soft404.probes)
 
 
+def test_pocetna_koja_preusmerava_skriptom_je_skok_kao_http_preusmerenje():
+    """BUG-022: stub od 95 B koji JavaScript-om vodi na /uskoro/ ocenjivan je kao početna."""
+    stub = b"<html><head><script>location.replace('/uskoro/')</script></head><body></body></html>"
+    uskoro = Response(html("Uskoro", body="<h1>Uskoro</h1>"))
+    with FakeSite(extra={"/": Response(stub), "/uskoro/": uskoro}) as site:
+        snapshot = scan(site)
+
+    assert snapshot.home.title == "Uskoro"
+    assert snapshot.home.final_url == f"{site.base_url}/uskoro/"
+    assert snapshot.entry.redirect_chain == [f"{site.base_url}/", f"{site.base_url}/uskoro/"]
+    assert snapshot.home.redirect_hops == 1
+    assert run_level(1, snapshot)["seo.title.missing"].status == "ok"
+
+
 def test_cist_lokalni_sajt_daje_malo_nalaza():
     """Kontrola protiv lažnih pozitiva nad sajtom koji je namerno uredan (U4)."""
     with FakeSite() as site:

@@ -7,7 +7,7 @@ import gzip
 import pytest
 
 from skener.fetch import robots, sitemap
-from skener.fetch.page import build, internal_links
+from skener.fetch.page import STUB_MAX_TEXT, build, internal_links, redirect_stub
 
 # --------------------------------------------------------------------------- #
 # robots.txt (§4.3)
@@ -200,3 +200,50 @@ def test_dekodira_windows_1250_iz_meta_oznake():
 
 def test_interni_linkovi_bez_fragmenata_i_stranih_hostova():
     assert internal_links(HTML, "https://d.rs/") == ["https://d.rs/o-nama"]
+
+
+# --------------------------------------------------------------------------- #
+# BUG-022: strana bez teksta koja samo preusmerava je skok, kao HTTP preusmerenje
+# --------------------------------------------------------------------------- #
+def _stub(telo: str, tekst: str = "") -> object:
+    html = f"<html><head>{telo}</head><body>{tekst}</body></html>"
+    body = html.encode()
+    return build("https://d.rs/", final_url="https://d.rs/", status=200, body=body, keep_raw_html=True)
+
+
+@pytest.mark.parametrize(
+    "telo, ocekivano",
+    [
+        pytest.param(
+            "<script>location.replace('/uskoro/')</script>", "https://d.rs/uskoro/", id="tab-js-replace"
+        ),
+        pytest.param('<script>window.location.href = "https://www.d.rs/novo"</script>', "https://www.d.rs/novo",
+                     id="tab-js-href-www"),
+        pytest.param(
+            """<meta http-equiv="Refresh" content="0; URL='/sr/'">""",
+            "https://d.rs/sr/",
+            id="tab-meta-refresh",
+        ),
+        pytest.param("<script>location.href = 'https://drugi.rs/'</script>", None, id="tab-tudji-sajt"),
+        pytest.param('<meta http-equiv="refresh" content="30">', None, id="tab-refresh-bez-adrese"),
+        pytest.param("<script>location.href = '/'</script>", None, id="tab-ista-strana"),
+        pytest.param("<script>if (location.href == '/x') go()</script>", None, id="tab-poredjenje-nije-skok"),
+        pytest.param("<script>location.assign(adresa)</script>", None, id="tab-promenljiva"),
+    ],
+)
+def test_strana_koja_samo_preusmerava(telo, ocekivano):
+    assert redirect_stub(_stub(telo)) == ocekivano
+
+
+@pytest.mark.parametrize(
+    "znakova, ocekivano",
+    [
+        pytest.param(STUB_MAX_TEXT, "https://d.rs/uskoro/", id="gv-tekst-na-granici"),
+        pytest.param(STUB_MAX_TEXT + 1, None, id="gv-tekst-preko-granice"),
+    ],
+)
+def test_strana_sa_tekstom_nije_stub(znakova, ocekivano):
+    """Ista naredba na pravoj strani je uslovna ili na klik."""
+    page = _stub("<script>location.replace('/uskoro/')</script>", "x" * znakova)
+    assert page.text_length == znakova
+    assert redirect_stub(page) == ocekivano
