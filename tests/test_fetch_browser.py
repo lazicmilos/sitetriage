@@ -286,6 +286,16 @@ def test_browser_se_predstavlja_svojim_user_agentom_uz_identitet_operatera():
         ua = snimi(site).dom.text_sample
     assert ua.startswith("Mozilla/5.0 ") and "Chrome/" in ua, ua
     assert ua.endswith(" " + user_agent(load_config())), ua
+    # BUG-021: zaštite od botova odbijaju „HeadlessChrome” sa 403.
+    assert "Headless" not in ua, ua
+
+
+def test_strana_greske_na_nivou_2_je_neuspelo_snimanje():
+    """BUG-021: 403 strana zaštite od botova merena je kao početna (1 zahtev, 358 B)."""
+    with FakeSite(extra={"/": Response(b"<h1>Forbidden</h1>", status=403)}) as site:
+        snimljeno = snimi(site)
+    assert snimljeno.status == "failed"
+    assert [(e.stage, e.kind) for e in snimljeno.errors] == [("http_status", "403")]
 
 
 def test_browser_belezi_interne_veze_iz_renderovanog_doma():

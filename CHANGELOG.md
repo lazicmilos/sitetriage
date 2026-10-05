@@ -107,6 +107,10 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- Nivo 2 nije gledao HTTP status početne, pa je strana greške merena kao početna. Na listi B jedan
+  server je UA sa „HeadlessChrome" odbio sa 403, a alat je izmerio stranu greške od 358 B umesto
+  prave od oko 2 MB. Status ≥ 400 je sada neuspelo snimanje (`http_status`), pa su provere nivoa 2
+  `unknown`. Browser se predstavlja kao „Chrome/…", a identitet operatera ostaje na kraju (BUG-021).
 - Nivo 2 se predstavljao samo identitetom operatera (`MlazicSiteScanner/…`), a ne kao browser.
   Servisi koje sajt učitava biraju sadržaj po User-Agent-u: reklamne mreže su pokretale dodatne
   aukcije, a Google Fonts je slao veći format fonta. Na sajtu sa reklamama alat je izmerio 2,7 MB i

@@ -320,8 +320,14 @@ async def capture(
 
         reached = "error"
         try:
-            await page.goto(url, wait_until="load", timeout=timeout_ms)
+            response = await page.goto(url, wait_until="load", timeout=timeout_ms)
             reached = "load"
+            # Strana greške (npr. 403 zaštite od botova) nije početna; meriti nju daje lažnu
+            # težinu i lažne nalaze (BUG-021).
+            if response is not None and response.status >= 400:
+                snapshot.errors.append(SnapshotError("http_status", str(response.status), response.url))
+                snapshot.status = "failed"
+                return snapshot
         except PlaywrightError as exc:
             if "Timeout" not in type(exc).__name__ and "imeout" not in str(exc):
                 snapshot.errors.append(SnapshotError("goto", type(exc).__name__, str(exc)[:300]))
@@ -545,11 +551,13 @@ async def _browser_ua(browser: Any, config: dict) -> str:
 
     Servisi koje sajt učitava biraju sadržaj po UA: na UA koji nije browser reklame pokreću
     dodatne aukcije, a Google Fonts šalje veći format, pa su težina, zahtevi i vreme bili do dva
-    puta veći nego kod posetioca u Chrome-u (BUG-019).
+    puta veći nego kod posetioca u Chrome-u (BUG-019). „HeadlessChrome” deo zaštita od botova
+    odbija sa 403, pa ide „Chrome”; identitet operatera ostaje (BUG-021).
     """
     cdp = await browser.new_browser_cdp_session()
     try:
-        return f"{(await cdp.send('Browser.getVersion'))['userAgent']} {user_agent(config)}"
+        ua = (await cdp.send("Browser.getVersion"))["userAgent"].replace("HeadlessChrome/", "Chrome/")
+        return f"{ua} {user_agent(config)}"
     finally:
         await cdp.detach()
 
