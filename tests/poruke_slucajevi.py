@@ -141,7 +141,7 @@ def razlozi() -> Iterator[tuple[str, str, Any]]:
         "prazan-snapshot": SiteSnapshot(domain="cist.rs"),
         "bez-odgovora": site(bez_odgovora),
         "tls-preko-http": site(tls_preko_http),
-        "sitemap-403": site(lambda s: setattr(s.sitemap, "status", 403)),
+        "sitemap-403": site(lambda s: (setattr(s.sitemap, "status", 403), s.sitemap.urls.clear())),
         "robots-403": site(lambda s: setattr(s.robots, "status", 403)),
         "sonde-403": site(sonde_403),
         "malo-teksta": site(lambda s: setattr(s.home, "text_length", 100)),

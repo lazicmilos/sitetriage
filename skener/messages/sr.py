@@ -413,6 +413,10 @@ REASONS: dict[str, str] = {
         "nepostojeću adresu"
     ),
     "tls_no_connection": "veza nije uspostavljena ({vrsta}), sertifikat nije proveren",
+    "tls_incomplete_chain": (
+        "server ne šalje ceo lanac sertifikata; browser ume sam da dopuni lanac, pa se ne zna da li "
+        "posetilac vidi upozorenje"
+    ),
     "tls_over_http": (
         "https nije uspeo ({vrsta}: {detalj}); sajt je dohvaćen preko http-a, sertifikat nije proveren"
     ),
@@ -420,6 +424,10 @@ REASONS: dict[str, str] = {
     "load_incomplete": "učitavanje prekinuto pre kraja, izmereno je nepotpuno",
     "load_not_measured": "vreme učitavanja nije izmereno",
     "images_unmeasured": "{nemereno} od {ukupno:n:slike|slike|slika} nije izmereno",
+    "oversized_unmeasured": (
+        "{broj:n:prevelika slika nema|prevelike slike nemaju|prevelikih slika nema} izmeren prenos, "
+        "pa višak nije poznat"
+    ),
     "h1_timeout": "stranica nije dovršila učitavanje, h1 može da stigne kasnije",
     "images_timeout": "stranica nije dovršila učitavanje, slike nisu prebrojane",
     "text_too_short": "premalo teksta u sirovom HTML-u ({duzina} < {prag} znakova)",

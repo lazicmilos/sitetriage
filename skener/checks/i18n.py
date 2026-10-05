@@ -9,6 +9,11 @@ from skener.models import SiteSnapshot
 
 BCP47 = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$")
 NEODREDJEN_KOD = {"zxx", "und", "xx"}
+# `detect_language` vidi samo ćirilicu i č/ć/š/ž/đ, pa ne razlikuje srpski od ovih jezika.
+SLICNI_SRPSKOM = frozenset(
+    {"sr", "sh", "cnr", "hr", "bs", "sl", "cs", "sk", "pl", "lt", "lv", "et", "vi",
+     "ru", "uk", "be", "bg", "mk", "kk", "ky", "mn", "tg", "tt", "ba"}
+)
 DIJAKRITICI = frozenset("čćšžđČĆŠŽĐ")
 
 
@@ -119,7 +124,7 @@ def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
     description="Sadržaj je pouzdano srpski, a lang oznaka govori drugo.",
     threshold=(
         "sadržaj prepoznat kao sr (ćirilica > 30 % ili dijakritici > 0,5 %) "
-        "uz lang koji ne počinje sa sr"
+        "uz lang jezika koji se ne piše ćirilicom ni sa č/ć/š/ž/đ (nije sr, hr, bs, ru, mk, bg…)"
     ),
 )
 def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
@@ -138,7 +143,7 @@ def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
     cyr_ratio = ctx.th("thresholds.i18n.cyrillic_ratio")
     dia_ratio = ctx.th("thresholds.i18n.diacritic_ratio")
     detected = detect_language(tekst, cyr_ratio, dia_ratio)
-    if detected != "sr" or lang.lower().startswith("sr"):
+    if detected != "sr" or lang.strip().lower().split("-")[0] in SLICNI_SRPSKOM:
         return ok(lang_mismatch.spec)
 
     cyr = sum(1 for ch in tekst if _is_cyrillic(ch))

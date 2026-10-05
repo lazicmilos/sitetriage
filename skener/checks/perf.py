@@ -6,6 +6,8 @@ ozbiljnošću koja važi — ne tri nalaza za istu stranicu (§7.3).
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from skener.checks.registry import Context, check, finding, ok, unknown
 from skener.models import SiteSnapshot
 
@@ -19,6 +21,10 @@ def _tier(value: float, tiers: dict[str, float]) -> str | None:
         if severity in tiers and value > tiers[severity]:
             return severity
     return None
+
+
+def _vektor_ili_ugradjena(src: str) -> bool:
+    return src.startswith("data:") or urlsplit(src).path.lower().endswith(".svg")
 
 
 def _mb_per_s(ctx: Context) -> float:
@@ -251,11 +257,17 @@ def load_time(snapshot, ctx: Context):
     base_severity="medium",
     requires=["browser"],
     description="Slike se šalju znatno veće nego što se prikazuju.",
-    threshold="≥ 3 slike sa odnosom > 2,5 ili procenjen višak > 700 kB",
+    threshold=(
+        "≥ 3 slike sa odnosom > 2,5 i izmerenim viškom, ili procenjen višak > 700 kB; "
+        "SVG i data: slike se ne broje"
+    ),
 )
 def img_oversized(snapshot, ctx: Context):
     dom = snapshot.dom
-    oversized = dom.oversized_images
+    # SVG nema „pravu" veličinu, a data: čuvar mesta za lenje učitavanje nema prenos.
+    rasterske = [img for img in dom.oversized_images if not _vektor_ili_ugradjena(img.src)]
+    # Bez izmerenog prenosa višak je 0, a rečenica bi rekla „oko 0 kB" (BUG-023).
+    oversized = [img for img in rasterske if img.est_waste_kb > 0]
     waste_kb = round(sum(img.est_waste_kb for img in oversized))
     min_count = ctx.th("thresholds.perf.oversized_min_count")
     max_waste = ctx.th("thresholds.perf.oversized_waste_kb")
@@ -273,6 +285,8 @@ def img_oversized(snapshot, ctx: Context):
             },
             urls=[img.src for img in oversized[:5]],
         )
+    if len(rasterske) >= min_count:
+        return unknown(img_oversized.spec, "oversized_unmeasured", broj=len(rasterske) - len(oversized))
     # Bez ovoga ne znaš da li je „0 predimenzioniranih slika" nalaz ili neuspelo merenje (§3.3).
     if dom.images_unmeasured and dom.images_unmeasured >= dom.images_total / 2:
         return unknown(

@@ -205,6 +205,43 @@ def test_cirilica_pravi_mismatch():
     assert run_level(1, site)["i18n.lang.mismatch"].status == "finding"
 
 
+@pytest.mark.parametrize(
+    "lang, tekst",
+    [
+        pytest.param("ru", "Добро пожаловать на сайт. Мы предлагаем услуги. ", id="ke-ruski-cirilica"),
+        pytest.param("mk-MK", "Добредојдовте на сајтот. Нудиме услуги. ", id="ke-makedonski"),
+        pytest.param("hr", "Dobrodošli na stranicu. Nudimo usluge i proizvode, čišćenje. ", id="ke-hrvatski"),
+        pytest.param(" sr-Latn ", "Dobrodošli na sajt. Nudimo usluge, čišćenje. ", id="ke-sr-razmaci"),
+    ],
+)
+def test_jezik_istog_pisma_nije_mismatch(lang, tekst):
+    """Detektor vidi samo ćirilicu i č/ć/š/ž/đ: ruski sa lang="ru" nije „sadržaj na srpskom"."""
+    site = clean_site()
+    site.home.lang = lang
+    site.home.text_sample = tekst * 20
+    site.home.text_length = len(site.home.text_sample)
+    assert run_level(1, site)["i18n.lang.mismatch"].status == "ok"
+
+
+def test_nepotpun_lanac_sertifikata_je_unknown():
+    """Browser sam dopuni međusertifikat, pa „posetilac vidi upozorenje" nije dokazano."""
+    site = clean_site()
+    site.entry.tls = Tls(
+        valid=False,
+        error="[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer "
+        "certificate (_ssl.c:1000)",
+    )
+    rezultat = run_level(1, site)["infra.tls.invalid"]
+    assert rezultat.status == "unknown"
+    assert "lanac" in reason(rezultat.reason)
+
+
+def test_istekao_sertifikat_ostaje_nalaz():
+    site = clean_site()
+    site.entry.tls = Tls(valid=False, error="certificate verify failed: certificate has expired")
+    assert run_level(1, site)["infra.tls.invalid"].status == "finding"
+
+
 def test_jedna_sonda_200_druga_404_nije_nalaz():
     """§5.2: jedna sonda može slučajno da pogodi postojeću adresu."""
     site = clean_site()
@@ -300,6 +337,14 @@ def test_sitemap_status_odredjuje_ishod(status, ocekivano):
     assert rezultat.status == ocekivano
     if ocekivano == NE_ZNA_SE:
         assert str(status) in reason(rezultat.reason)
+
+
+def test_mrtva_prva_mapa_uz_drugu_koja_radi_nije_nalaz():
+    """`status` je status prve `Sitemap:` iz robots.txt; adrese iz druge znače da mapa postoji."""
+    site = clean_site()
+    site.sitemap.status = 404
+    assert site.sitemap.urls
+    assert run_level(1, site)["infra.sitemap.missing"].status == "ok"
 
 
 def test_sitemap_200_bez_ijednog_url_a_je_nalaz():

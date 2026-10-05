@@ -400,6 +400,10 @@ REASONS: dict[str, str] = {
         "address"
     ),
     "tls_no_connection": "no connection was established ({vrsta}), the certificate was not checked",
+    "tls_incomplete_chain": (
+        "the server does not send the full certificate chain; a browser can complete the chain on its "
+        "own, so it is unknown whether visitors see a warning"
+    ),
     "tls_over_http": (
         "https failed ({vrsta}: {detalj}); the site was fetched over http, the certificate was not checked"
     ),
@@ -407,6 +411,9 @@ REASONS: dict[str, str] = {
     "load_incomplete": "loading was cut off before the end, the measurement is incomplete",
     "load_not_measured": "the loading time was not measured",
     "images_unmeasured": "{nemereno} of {ukupno} images were not measured",
+    "oversized_unmeasured": (
+        "{broj:n:oversized image has|oversized images have} no measured transfer, so the waste is unknown"
+    ),
     "h1_timeout": "the page did not finish loading, the h1 may arrive later",
     "images_timeout": "the page did not finish loading, the images were not counted",
     "text_too_short": "too little text in the raw HTML ({duzina} < {prag} characters)",

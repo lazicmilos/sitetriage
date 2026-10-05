@@ -25,11 +25,12 @@ NEPROVERENA = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
     base_severity="medium",
     requires=["sitemap"],
     description="Nema sitemap.xml, ili postoji ali je prazan.",
-    threshold="status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi → unknown",
+    threshold="status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi → unknown; ima URL-ova → ok",
 )
 def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
     info = snapshot.sitemap
-    if info.status == 200 and info.urls:
+    # `status` je status prve mape; mrtva prva `Sitemap:` uz drugu koja radi nije „nema mape".
+    if info.urls:
         return ok(sitemap_missing.spec)
     if info.status != 200 and info.status not in NE_POSTOJI:
         return unknown(sitemap_missing.spec, "sitemap_status", status=info.status)
@@ -107,7 +108,7 @@ def soft404(snapshot: SiteSnapshot, ctx: Context):
     base_severity="high",
     requires=["entry"],
     description="Sertifikat je nevalidan ili istekao.",
-    threshold="TLS provera odbila sertifikat",
+    threshold="TLS provera odbila sertifikat; nepotpun lanac (nema međusertifikata) → unknown",
 )
 def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
     entry = snapshot.entry
@@ -122,6 +123,10 @@ def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
         if https is not None and entry.requested_url.startswith("http://"):
             return unknown(tls_invalid.spec, "tls_over_http", vrsta=https.kind, detalj=https.detail[:120])
         return ok(tls_invalid.spec)
+    # Server ne šalje međusertifikat: Python odbija, a browser ga ume dopuniti sam, pa
+    # „posetilac vidi upozorenje" nije dokazano.
+    if "unable to get local issuer certificate" in (tls.error or ""):
+        return unknown(tls_invalid.spec, "tls_incomplete_chain")
     return finding(
         tls_invalid.spec,
         ctx,

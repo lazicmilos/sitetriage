@@ -307,6 +307,40 @@ def test_nula_predimenzioniranih_uz_nemerene_slike_je_unknown():
     assert "nije izmereno" in reason(result.reason)
 
 
+def _slika(src: str, visak_kb: float) -> OversizedImage:
+    return OversizedImage(src=src, natural=[900, 900], client=[255, 280], ratio=3.53, est_waste_kb=visak_kb)
+
+
+def test_svg_i_data_slike_nisu_prevelike():
+    """BUG-023: SVG čuvar mesta za lenje učitavanje (data:, viewBox 0 0 0 0) davao je „oko 0 kB"."""
+    browser = clean_browser()
+    browser.dom.oversized_images = [
+        _slika("data:image/svg+xml,%3Csvg%20viewBox='0%200%200%200'%3E%3C/svg%3E", 0),
+        _slika("data:image/png;base64,iVBORw0KGgo=", 0),
+        _slika("https://cist.rs/logo.svg?v=2", 4),
+        _slika("https://cist.rs/ikona.SVG", 3),
+    ]
+    assert run_level(2, browser)["perf.img.oversized"].status == "ok"
+
+
+def test_prevelike_slike_bez_izmerenog_prenosa_su_unknown_a_ne_0_kb():
+    """BUG-023: bez izmerenog prenosa višak je 0, a rečenica je govorila „oko 0 kB"."""
+    browser = clean_browser()
+    browser.dom.oversized_images = [_slika(f"https://cist.rs/s{i}.webp", 0) for i in range(3)]
+    result = run_level(2, browser)["perf.img.oversized"]
+    assert result.status == "unknown"
+    assert reason(result.reason) == "3 prevelike slike nemaju izmeren prenos, pa višak nije poznat"
+
+
+def test_nalaz_broji_samo_slike_sa_izmerenim_viskom():
+    browser = clean_browser()
+    browser.dom.oversized_images = [_slika(f"https://cist.rs/s{i}.jpg", 100) for i in range(3)]
+    browser.dom.oversized_images.append(_slika("https://cist.rs/nemerena.jpg", 0))
+    nalaz = run_level(2, browser)["perf.img.oversized"].findings[0]
+    assert (nalaz.evidence["broj_slika"], nalaz.evidence["kb"]) == (3, 300)
+    assert "nemerena" not in " ".join(nalaz.evidence_urls)
+
+
 def test_veliki_visak_bajtova_pali_nalaz_i_ispod_tri_slike():
     """Prag je ≥ 3 slike **ili** višak > 700 kB (§7.3)."""
     browser = clean_browser()

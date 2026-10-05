@@ -107,6 +107,19 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Ispravljeno
 
+- `perf.img.oversized` je brojao i SVG slike i `data:` čuvare mesta za lenje učitavanje, a nalaz je
+  padao na broj slika i kad prenos nije izmeren, pa je rečenica govorila „oko 0 kB nepotrebnog
+  prenosa". Na listi B 5 od 47 nalaza bilo je samo od takvih slika, a kod još 15 broj slika je bio
+  preveliki. Sada se broje samo rasterske slike sa izmerenim viškom; kad bar 3 prevelike slike nemaju
+  izmeren prenos, provera je `unknown` (`oversized_unmeasured`) (BUG-023).
+- `infra.tls.invalid`: nepotpun lanac sertifikata („unable to get local issuer certificate") Python
+  odbija, a browser ume sam da dopuni, pa je to sada `unknown` (`tls_incomplete_chain`), ne nalaz da
+  posetilac vidi upozorenje (BUG-024).
+- `i18n.lang.mismatch` je svaki tekst sa ćirilicom ili č/ć/š/ž/đ čitao kao srpski, pa bi sajt na
+  ruskom sa `lang="ru"` dobio „Sadržaj sajta je na srpskom". Jezici koji se pišu tim slovima (hr,
+  bs, ru, mk, bg, sl, cs…) više nisu nalaz, a `lang` sa razmacima se poredi bez njih (BUG-025).
+- `infra.sitemap.missing` je gledao samo status prve `Sitemap:` iz robots.txt: mrtva prva uz drugu
+  koja radi davala je „Sajt nema mapu stranica". Ako je mapa dala adrese, provera je `ok` (BUG-026).
 - Recenzija kataloga poruka: rečenice više ne tvrde ništa što dokaz ne pokriva. h1, alt i lang se
   mere samo na početnoj, pa to i piše („Početna strana nema glavni naslov"). Lažni 404 kaže da sajt
   „odgovara kao da stranica postoji", a ne da vraća običnu stranicu. Ponovljen naslov i opis više
