@@ -3,6 +3,34 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-10-05 — ponovljen nivo 2 nad listom B: „delimično" i trajanje laganog nivoa 2
+
+Nivo 1 je iz prolaza od 3. 10. (ispravke ga ne diraju). Nivo 2 je ponovljen 5. 10. sa BUG-019 i
+BUG-020, preko mobilnog hotspota: Z-33 je izmerio 18,6 Mb/s. Pun nivo 2 je trajao 498 s za 60
+sajtova, a lagani 168 s za 40 sajtova, sa tri konteksta odjednom. U logu nema WARNING ni ERROR.
+
+- **Zapažanje:** `partial` je porastao sa 21 na 54 domena. Kod 29 od njih jedini uzrok je vreme
+  učitavanja na laganom nivou 2.
+- **Uzrok:** lagani nivo 2 vreme namerno ne meri, a alat je to beležio kao `unknown`
+  (`requires.level2_full`). Svaki `unknown` čini domen `partial`.
+- **Odluka (vlasnik):** vreme na laganom nivou 2 „ne primenjuje se" (`not_applicable`, isti
+  razlog), pa domen zbog toga ostaje `scanned`. Provera kojoj preduslov nije ispunjen ne ulazi u
+  imenilac udela `unknown`, jer nije ni pokrenuta.
+
+- **Zapažanje:** formula iz prethodnog unosa daje premalu procenu za 200 domena. Pun nivo 2 ostaje
+  na `max_level2` (60), pa na 200 domena lagani nivo 2 dobija oko 140 sajtova, a ne 2 × 40.
+  Ispravno: 200 / n × nivo 1 + pun nivo 2 + (200 − punih) × vreme po laganom sajtu. Sa nivoom 1 sa
+  brze veze (145 s) i ovim merenjem to je 290 + 498 + 140 × 4,2 ≈ 1376 s, oko 23 min, a granica je
+  15 min.
+- **Uzrok:** lagani nivo 2 radi sa istim brojem konteksta kao pun (`browser.concurrency` = 3). Pun
+  nivo 2 svakako učitava jedan po jedan, a laganom brzinu određuje baš broj konteksta.
+- **Odluka (vlasnik):** alat treba da radi na svakoj mašini, a da na jačoj bude brži. Lagani nivo 2
+  bira broj konteksta po mašini: jedan na svaki slobodan GB memorije, najviše dva po jezgru i
+  najviše 8 (`browser.light_concurrency = 0`; broj ≥ 1 ga fiksira). Granica od 15 min za 200
+  domena (Z-32) važi za preporučenu mašinu: 16 GB RAM-a i veza od bar 50 Mb/s. Na slabijoj mašini
+  prolaz traje duže. Procena za preporučenu mašinu još nije izmerena. Potvrđuje se prvim prolazom
+  na takvoj mašini.
+
 ## 2026-10-04 — ručna provera liste B (Z-52): User-Agent nivoa 2 i strane bez nivoa 2
 
 Ulaz je prolaz nad B od 3. 10. (veza 136,4 Mb/s) i merenje van alata 4. 10.: svoj Chromium sa
