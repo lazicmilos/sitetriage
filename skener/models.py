@@ -305,6 +305,11 @@ class DomStats:
     lang: str | None = None
     text_sample: str = ""
     text_length: int | None = None
+    # `<head>` posle JS-a; nivo 1 ih čita iz sirovog HTML-a. Za sada samo beleženje: koliko sajtova
+    # ih postavlja JavaScript-om, pa bi seo.*.missing bio lažan. `None` = nisu beleženi, "" = nema ih.
+    title: str | None = None
+    meta_description: str | None = None
+    canonical: str | None = None
 
 
 @dataclass

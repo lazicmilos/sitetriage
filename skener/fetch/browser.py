@@ -87,6 +87,9 @@ _DOM = """
     links: Array.from(document.links, (a) => a.href),
     lang: document.documentElement.getAttribute('lang'),
     text: document.body ? document.body.innerText : '',
+    title: document.title,
+    description: document.querySelector('meta[name="description" i]')?.getAttribute('content') ?? '',
+    canonical: document.querySelector('link[rel~="canonical" i]')?.getAttribute('href') ?? '',
   };
 }
 """
@@ -436,6 +439,9 @@ async def _read_dom(
         lang=raw["lang"],
         text_sample=text[:TEXT_SAMPLE_CHARS],
         text_length=len(text),
+        title=raw["title"],
+        meta_description=raw["description"],
+        canonical=raw["canonical"],
     )
 
 

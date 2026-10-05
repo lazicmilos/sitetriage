@@ -275,6 +275,24 @@ def test_browser_belezi_tekst_i_lang_posle_javascript_a():
     assert snimljeno.dom.text_length == len(snimljeno.dom.text_sample)
 
 
+def test_browser_belezi_naslov_opis_i_canonical_posle_javascript_a():
+    """Nivo 1 ih čita iz sirovog HTML-a; SPA ih postavlja JavaScript-om, a Google izvršava JS."""
+    strana = (
+        b"<!doctype html><html><head></head><body><script>"
+        b"document.title = 'Iz JS-a';"
+        b"document.head.insertAdjacentHTML('beforeend', '<meta name=\"Description\" content=\"Opis iz JS-a\">"
+        b"<link rel=\"canonical\" href=\"/zvanicna\">');"
+        b"</script></body></html>"
+    )
+    with FakeSite(extra={"/": Response(strana)}) as site:
+        dom = snimi(site).dom
+    assert (dom.title, dom.meta_description, dom.canonical) == ("Iz JS-a", "Opis iz JS-a", "/zvanicna")
+
+    with FakeSite(extra={"/": Response(b"<!doctype html><html><body>prazno</body></html>")}) as site:
+        dom = snimi(site).dom
+    assert (dom.title, dom.meta_description, dom.canonical) == ("", "", "")
+
+
 def test_browser_se_predstavlja_svojim_user_agentom_uz_identitet_operatera():
     """BUG-019: sa UA koji nije browser reklame su pokretale dodatne aukcije, a Google Fonts je slao
     veći format, pa su težina, zahtevi i vreme bili veći nego kod posetioca u Chrome-u."""

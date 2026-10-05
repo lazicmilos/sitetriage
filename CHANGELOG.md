@@ -47,6 +47,10 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 
 ### Dodato
 
+- Nivo 2 beleži naslov, opis i canonical stranice posle JavaScript-a (`dom.title`,
+  `dom.meta_description`, `dom.canonical`). Nivo 1 ih čita iz sirovog HTML-a, a Google izvršava
+  JavaScript, pa bi kod sajta koji ih postavlja skriptom `seo.*.missing` bio lažan. Provere ih još ne
+  koriste: prvo se meri koliko je takvih sajtova.
 - Mrežni profil nivoa 2. Svaka stranica se meri na simuliranoj vezi iz `[network_profile]`
   (4,8 Mb/s dolazno, 1,5 Mb/s odlazno, 150 ms kašnjenja), pa isti sajt daje isto vreme na svakoj
   mašini. Profil je u snimku nivoa 2 (`network_profile`) i u `environment` JSON izveštaja, a
