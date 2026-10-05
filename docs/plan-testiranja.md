@@ -2,7 +2,7 @@
 
 ```
 Oznaka:    PT-SKENER-001
-Verzija:   2.1
+Verzija:   2.2
 Datum:     30.09.2026.
 Autor:     Milos Lazic
 Status:    Nacrt
@@ -13,6 +13,7 @@ Status:    Nacrt
 | 1.0 | 24.09.2026. | Milos Lazic | Ciklus ispravki posle prvog prolaza nad 100 domena (IT-SKENER-002) |
 | 2.0 | 25.09.2026. | Milos Lazic | Ciklus v2: pooštreni pragovi kvaliteta, liste A i B, podeljen kriterijum za `partial` |
 | 2.1 | 30.09.2026. | Milos Lazic | Raspored: F5 pre F4 |
+| 2.2 | 05.10.2026. | Milos Lazic | `diff` istog izveštaja prelazi u F4; imenilac za vreme; preporučena mašina za trajanje |
 
 ## 1. Uvod
 
@@ -82,17 +83,17 @@ ispravlja pre nastavka.
 | mutacioni skor | ≥ 90 % neekvivalentnih; preživeli razvrstani kao u IT-SKENER-002 §3.2 | Docker |
 | `ruff` | čist | CI |
 | katalog poruka | potpun za `sr` i `en`; recenzija vlasnika urađena | CI + vlasnik |
-| JSON | izlaz prolazi šemu; `diff` istog izveštaja je prazan | CI |
+| JSON | izlaz prolazi šemu (`diff` istog izveštaja je prazan: u F4, odluka vlasnika 05.10.2026.) | CI |
 | SSRF | svi testovi graničnih vrednosti i integracioni testovi prolaze | CI |
 | padovi | 0 | A i B |
 | WARNING i ERROR u logu | 0 neobjašnjenih | A i B |
 | `partial` zbog budžeta | < 10 % domena koji rade | B |
-| `unknown` po proveri | < 20 % za svaku proveru | B |
+| `unknown` po proveri | < 20 % za svaku proveru; za `perf.load.time` imenilac su sajtovi mereni pod profilom | B |
 | lažni nalazi | nijedan poznat | B, ručna provera |
 | sajtovi koji ne rade u rangiranju | 0 | A i B |
 | ponovljivost težine i broja zahteva do `load` | ≤ 10 % razlike kod ≥ 9 od 10 sajtova | A |
 | vreme u prolazu / vreme kad se sajt meri sam | 0,8–1,25, ako je paralelno učitavanje uključeno | A |
-| procena za 200 domena | ≤ 15 min | A i B |
+| procena za 200 domena | ≤ 15 min na preporučenoj mašini (16 GB RAM, veza ≥ 50 Mb/s); meri se na prvom prolazu sa VPS-a | A i B |
 | prvih 10 na B | 0 netačnih nalaza; ≥ 7 od 10 „poslao bih" | ručna provera |
 | poslednjih 5 na B | 0 promašenih ozbiljnih problema; svaki promašaj je defekt, a posle ispravke se meri ponovo | ručna provera |
 | otvorena zapažanja | O-5 i O-7 … O-12 zatvorena ili izričito prebačena van obima | IT-SKENER-003 |

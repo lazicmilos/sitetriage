@@ -268,7 +268,7 @@ odluka iz kalibracije. Svaka odluka je upisana i u [`docs/kalibracija.md`](docs/
 ## Testovi
 
 ```bash
-docker compose run --rm skener pytest -q               # bez mreže, sa pravim Chromium-om, oko 2 min
+docker compose run --rm skener pytest -q               # bez mreže, sa pravim Chromium-om, oko 4 min
 docker compose run --rm skener pytest -m live -v       # pravi sajtovi iz ispitnog skupa, traži mrežu
 ```
 
@@ -285,9 +285,10 @@ jednu stvar i proverava da nije probudio ostale provere. Pragovi imaju testove g
 je u imenu slučaja: `gv-` granična vrednost, `ke-` klasa ekvivalencije, `tab-` tabela odlučivanja,
 `st-` prelaz stanja, `pg-` pogađanje grešaka.
 
-CI pada ako pokrivenost linija i grana spadne ispod 95 % (sada je 97 %). Kvalitet samih testova
+CI pada ako pokrivenost linija i grana spadne ispod 95 % (sada je 98 %). Kvalitet samih testova
 meri mutaciono testiranje: mutmut namerno kvari kod, a testovi moraju da primete svaku izmenu koja
-menja ponašanje. Pokreće se kroz Docker, jer mutmut ne radi na Windows-u, i traje nekoliko minuta:
+menja ponašanje. mutmut 3.2.3 ne pravi mutante u funkcijama sa dekoratorom, pa tela provera
+(`@check`) ne mutira. Pokreće se kroz Docker, jer mutmut ne radi na Windows-u, i traje oko 20 minuta:
 
 ```bash
 docker compose run --rm skener python scripts/mutacije.py
@@ -295,7 +296,8 @@ docker compose run --rm skener python scripts/mutacije.py
 
 Kako se testira i šta je nađeno opisuju [plan testiranja](docs/plan-testiranja.md),
 [izveštaj o prvom prolazu nad 100 pravih domena](docs/izvestaj-testiranja-100.md),
-[izveštaj o ciklusu ispravki](docs/izvestaj-testiranja-2.md) i
+[izveštaj o ciklusu ispravki](docs/izvestaj-testiranja-2.md),
+[izveštaj o v2: kalibracija na listi A i provera na listi B](docs/izvestaj-testiranja-3.md) i
 [pregled kroz ISO/IEC 25010](docs/kvalitet.md).
 
 > Fixture-i u `tests/fixtures/` su ručno napisani, nisu snimljeni sa pravih sajtova. Opisuju ono što
@@ -355,6 +357,9 @@ proxy zaobišao proveru.
 - `skener diff` između dva prolaza i `skener outcomes` (koji leadovi su odgovorili i postali posao).
   Dolaze kad pretplata postane stvarna. Rečenica „sajt je od marta postao 3 MB teži" je dobar uvod
   u mejl.
+- Provera „početna skoro bez sadržaja": početna koja ni posle JavaScript-a nema skoro nikakav
+  tekst (uvodna strana sa jednim dugmetom, parkiran domen) je najjači argument za mejl, a danas nije
+  nalaz. Od 160 početnih sa listi A i B 4 imaju manje od 200 znakova; granica se kalibriše na A i B.
 - Core Web Vitals (LCP, CLS): vredni brojevi, ali traže pažljivije merenje.
 - Emulacija procesora, pa vreme učitavanja i dalje malo zavisi od mašine.
 - Provera strukturiranih podataka (`schema.org`), koja restoranima i klinikama ima stvarnu vrednost.

@@ -16,9 +16,12 @@ kolona „Dokaz" ne može da se popuni, tvrdnja ide u „Rupe".
 | ispravnost | sajt koji se ne otvara ni u drugom pokušaju ide u „Ne rade", ne u rangiranje | `test_unreachable_nije_u_rangiranju` |
 | prikladnost | delatnost menja težinu nalaza, ne ozbiljnost | `score.weigh`, `test_score.py` |
 
-**Rupe.** Pragovi težine, broja zahteva i vremena su kalibrisani nad 58 sajtova liste A (Z-50), a
-provera na novoj listi B tek predstoji. Za druge delatnosti i tržišta raspodela može biti
+**Rupe.** Pragovi težine, broja zahteva i vremena su kalibrisani nad 58 sajtova liste A (Z-50) i
+provereni na novoj listi B: u ručnoj proveri prvih 10 nijedan od 89 nalaza nije bio netačan
+([IT-SKENER-003](izvestaj-testiranja-3.md)). Za druge delatnosti i tržišta raspodela može biti
 drugačija, pa kalibraciju treba ponavljati nad listama kupaca ([`kalibracija.md`](kalibracija.md)).
+Naslov, opis i canonical se čitaju iz sirovog HTML-a; koliko sajtova ih postavlja JavaScript-om tek
+se meri.
 Sa adrese van Srbije deo sajtova izgleda kao da ne radi, jer ih hosting odbija, pa lista „Ne rade"
 važi samo za prolaz sa adrese u Srbiji (kalibracija, 28.09.).
 
@@ -34,7 +37,11 @@ važi samo za prolaz sa adrese u Srbiji (kalibracija, 28.09.).
 **Rupe.** U1 („200 domena ≤ 15 min") zavisi od veze. Na 107 Mb/s (prolaz H nad 100 domena) nivo 1
 traje 168 s, a nivo 2 500 s, pa je procena za 200 domena 13,9 min, jer nivo 1 raste linearno, a
 nivo 2 je ograničen na 60 domena. Na 17 Mb/s je procena 19,1 min. Nivo 2 učitava jedan po jedan
-pod profilom od 4,8 Mb/s, pa taj deo ne ubrzava ni najbrža veza.
+pod profilom od 4,8 Mb/s, pa taj deo ne ubrzava ni najbrža veza. Od BUG-020 ostali sajtovi dobijaju
+lagani nivo 2, pa je procena nad listom B sa 3 konteksta oko 23 min. Granica od 15 min zato važi za
+preporučenu mašinu (16 GB RAM, veza ≥ 50 Mb/s), na kojoj još nije izmerena; meri se na prvom
+prolazu sa VPS-a. VPS van Srbije nosi rizik iz funkcionalne podobnosti: deo hostinga odbija veze
+iz datacentra.
 
 ## 3. Kompatibilnost — radi li zajedno sa drugim sistemima?
 
@@ -97,7 +104,7 @@ sajta. Izuzetak je TLS nalaz. `tests/fixtures/` posle `record` sadrže javni HTM
 | ponovna upotrebljivost | nova provera = jedna funkcija sa dekoratorom | `@check(...)` u `checks/*.py` |
 | analizabilnost | `--debug-domain`, sirovi snapshoti na disku | `cli.setup_logging` |
 | izmenljivost | svi pragovi u `skener.toml`; `git diff` nad njim je istorija kalibracije | `test_config.py` |
-| testabilnost | preko 1000 testova bez mreže, lokalni server umesto pravih sajtova; pokrivenost linija i grana 98 %; mutacioni skor v2 944 od 944 neekvivalentnih mutanata (100 %) | `tests/`, CI (`--cov-fail-under=95`), `[tool.mutmut]`, `scripts/mutacije.py` |
+| testabilnost | preko 1000 testova bez mreže, lokalni server umesto pravih sajtova; pokrivenost linija i grana 98 %; mutacioni skor v2 944 od 944 neekvivalentnih mutanata (100 %), bez tela provera, jer mutmut 3.2.3 funkcije sa dekoratorom ne mutira | `tests/`, CI (`--cov-fail-under=95`), `[tool.mutmut]`, `scripts/mutacije.py` |
 
 **Rupe.** `fetch/http.py` ima 800 linija i nosi četiri odgovornosti (klijent, budžet, sklapanje
 snapshota, orkestracija). Sva četiri baga iz revizije v1 su bila tu. Kandidat za podelu posle v2.

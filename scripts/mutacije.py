@@ -10,6 +10,9 @@ kvare i koji testovi ih hvataju piše u pyproject.toml, [tool.mutmut].
 Dekorator `check(...)` u registru radi pri importu, pre nego što mutmut uključi
 mutanta, pa njegove mutante mutmut prijavljuje kao preživele iako ih testovi hvataju.
 Proverava se ručno — docs/izvestaj-testiranja-2.md.
+
+mutmut 3.2.3 ne pravi mutante u funkcijama sa dekoratorom, pa tela provera (`@check`) ne
+mutira; skor važi za pomoćne funkcije — docs/izvestaj-testiranja-3.md, §3.2.
 """
 
 from __future__ import annotations

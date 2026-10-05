@@ -1,7 +1,7 @@
 # ADR-011: `report.json` je ugovor sa šemom i verzijom
 
 ```
-Status:  Predloženo
+Status:  Prihvaćeno
 Datum:   30.09.2026.
 Autor:   Milos Lazic
 ```
