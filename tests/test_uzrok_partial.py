@@ -81,18 +81,23 @@ def test_udeo_unknown_ne_broji_domene_koji_ne_rade():
     assert po_proveri["perf.page.weight"] == 0.0
 
 
-def test_vreme_se_ne_broji_kao_unknown_na_laganom_nivou_2():
-    """BUG-020: lagani nivo 2 vreme namerno ne meri. Imenilac za vreme su sajtovi mereni pod profilom."""
+def test_lagani_nivo_2_ne_pravi_partial_i_nije_u_imeniocu_za_vreme():
+    """BUG-020: lagani nivo 2 vreme namerno ne meri. Na B je 29 sajtova bilo `partial` samo zbog toga
+    (vlasnik, 5. 10.: „ne primenjuje se"). Imenilac za vreme su sajtovi mereni pod profilom."""
     config = load_config()
     lagan = clean_browser(domain="lagan.rs", light=True, network_profile=None, link_mbps=None)
+    spor = clean_browser(domain="pun.rs", link_mbps=5.0)  # pun nivo 2 na sporoj vezi: vreme je unknown
     izvestaji = [
-        analyze(_sajt("pun.rs"), config, browser=clean_browser(domain="pun.rs")),
+        analyze(_sajt("pun.rs"), config, browser=spor),
         analyze(_sajt("lagan.rs"), config, browser=lagan),
     ]
-    vreme = [u for u in izvestaji[1].unknowns if u.check_id == "perf.load.time"]
+    lagani = izvestaji[1]
+    assert lagani.status == "scanned" and lagani.partial_causes == []
+    vreme = [n for n in lagani.not_applicable if n.check_id == "perf.load.time"]
     assert vreme, "kartica sajta kaže da vreme nije mereno"
     _, po_proveri = partial_shares(izvestaji)
-    assert po_proveri["perf.load.time"] == 0.0 and po_proveri["perf.page.weight"] == 0.0
+    assert po_proveri["perf.load.time"] == 1.0, "lagani sajt nije u imeniocu"
+    assert po_proveri["perf.page.weight"] == 0.0
 
 
 def test_provera_nivoa_2_bez_ijednog_domena_na_nivou_2_nema_udeo():

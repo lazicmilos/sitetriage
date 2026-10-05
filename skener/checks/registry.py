@@ -191,7 +191,9 @@ def run(level: int, snapshot: Any, ctx: Context) -> list[CheckResult]:
             continue
         reason = unmet(spec, snapshot)
         if reason:
-            results.append(CheckResult(check_id=spec.check_id, status="unknown", reason=reason))
+            # Lagani nivo 2 vreme namerno ne meri (BUG-020): to nije nepoznanica, pa ni `partial`.
+            status = "not_applicable" if reason.code == "requires.level2_full" else "unknown"
+            results.append(CheckResult(check_id=spec.check_id, status=status, reason=reason))
             continue
         try:
             results.append(spec.fn(snapshot, ctx))

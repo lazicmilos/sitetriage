@@ -23,8 +23,6 @@ from skener.models import (
 
 # Sajtovi koji rade: samo oni se rangiraju i samo oni ulaze u imenilac udela iz §7.
 RADE = ("scanned", "partial")
-# Razlog `unknown`-a za vreme na sajtu koji je meren lagano, van `max_level2` (BUG-020).
-LAGANO = "requires.level2_full"
 
 
 def weigh(finding: Finding, industry: str, config: dict) -> float:
@@ -106,12 +104,15 @@ def partial_shares(reports: Sequence[DomainReport]) -> tuple[float, dict[str, fl
     budzet = sum("budget" in r.partial_causes for r in rade)
     po_proveri = {}
     for spec in sorted(registry.REGISTRY.values(), key=lambda s: s.check_id):
-        # Lagani nivo 2 vreme namerno ne meri: to je sajt van limita, a ne nesigurna provera (BUG-020).
+        # Provera bez ispunjenog preduslova nije ni pokrenuta, npr. vreme na laganom nivou 2 (BUG-020).
         pokrenuta = [
             r
             for r in rade
             if (spec.level == 1 or r.level2_ran)
-            and not any(u.check_id == spec.check_id and u.reason.code == LAGANO for u in r.unknowns)
+            and not any(
+                n.check_id == spec.check_id and n.reason.code.startswith("requires.")
+                for n in r.not_applicable
+            )
         ]
         if pokrenuta:
             nepoznato = sum(any(u.check_id == spec.check_id for u in r.unknowns) for r in pokrenuta)

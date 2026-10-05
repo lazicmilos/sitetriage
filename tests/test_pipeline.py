@@ -104,9 +104,10 @@ def test_sajt_van_limita_dobija_lagani_nivo_2():
         rezultat = asyncio.run(pipeline.scan([DomainInput(site.base_url)], config))
     izvestaj = rezultat.ranked[0]
     nepoznate = {u.check_id: u.reason.code for u in izvestaj.unknowns}
+    ne_primenjuje_se = {n.check_id: n.reason.code for n in izvestaj.not_applicable}
     assert izvestaj.level2_ran
-    assert nepoznate.get("perf.load.time") == "requires.level2_full"
-    assert "perf.page.weight" not in nepoznate and "seo.h1.missing" not in nepoznate
+    assert ne_primenjuje_se.get("perf.load.time") == "requires.level2_full"
+    assert not {"perf.load.time", "perf.page.weight", "seo.h1.missing"} & set(nepoznate)
     assert set(rezultat.duration_s) == {"level1", "level2", "level2_light", "total"}
 
 
