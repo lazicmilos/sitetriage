@@ -28,6 +28,7 @@ from skener.models import (
     ConsoleStats,
     DomStats,
     Entry,
+    HostVariant,
     NetworkProfile,
     NetworkStats,
     OpenGraph,
@@ -133,6 +134,17 @@ def sajt(
             ]
         ),
         sample_source=sample_source,
+        # §12.4 ne kaže ništa o ostalim adresama, pa sve tri preusmeravaju na konačnu (Z-26).
+        host_variants=[
+            HostVariant(
+                url=url,
+                status=200,
+                final_url=f"{origin}/",
+                redirect_chain=[url, f"{origin}/"],
+                canonical=f"{origin}/",
+            )
+            for url in (f"https://www.{domain}/", f"http://{domain}/", f"http://www.{domain}/")
+        ],
     )
 
 
