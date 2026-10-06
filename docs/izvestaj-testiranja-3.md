@@ -3,8 +3,8 @@
 ```
 Naziv dokumenta:  Izveštaj o testiranju — skener v2 (F0–F3, F5)
 Oznaka:           IT-SKENER-003
-Verzija:          1.0
-Datum:            05.10.2026.
+Verzija:          1.1
+Datum:            06.10.2026.
 Autor:            Milos Lazic
 Status:           Nacrt
 ```
@@ -12,21 +12,22 @@ Status:           Nacrt
 | Verzija | Datum | Autor | Opis izmene |
 |---|---|---|---|
 | 1.0 | 05.10.2026. | Milos Lazic | v2 bez F4: kalibracija na listi A, validacija na listi B, ručna provera, recenzija kataloga, BUG-017 do BUG-026 |
+| 1.1 | 06.10.2026. | Milos Lazic | Novi pun prolaz nad B posle BUG-021 do BUG-026 i treći krug ručne provere; CI; odluka o O-19; O-20 i O-21 |
 
 ## 1. Predmet i obim
 
-- **Predmet:** skener na grani `main` (`fc8ed88` i ispravke od 05.10.), verzija `2.0.0.dev0`,
+- **Predmet:** skener na grani `main` (`fc8ed88`, ispravke od 05.10. i `d0e13a7`), verzija `2.0.0.dev0`,
   Docker slika sa Playwright 1.56.0 (Chromium 141) i Python 3.12. Plan:
   [`plan-testiranja.md`](plan-testiranja.md) (PT-SKENER-001, v2.2). Zahtevi: specifikacija v2 (SP-SKENER-002), faze F0–F3 i F5.
 - **Šta je rađeno:** implementacija F0–F3 (Z-01 do Z-33) sa testovima i regresijom posle svake
   izmene; merenje pokrivenosti; mutaciono testiranje v2 koda; statičko testiranje kataloga poruka;
   kalibracija pragova na listi A (Z-50); sistemski test na listi B (Z-51), ponovljen posle ispravki;
-  prijemni test, ručna provera prvih 10 i poslednjih 5 na listi B (Z-52), u dva kruga.
+  prijemni test, ručna provera prvih 10 i poslednjih 5 na listi B (Z-52), u tri kruga.
 - **Šta nije rađeno:** F4 (`skener diff` i `skener outcomes`), koji je vlasnik 27.09. pomerio posle
   ručne prodaje izveštaja. Nije izmereno ni trajanje za 200 domena na preporučenoj mašini (Z-32), a
   nisu ponovljeni ni mutaciono testiranje nad kodom posle 30.09. i provera pragova nad listom A
-  posle BUG-019. Ispravke BUG-021 do BUG-026 (05.10.) potvrđene su testovima i `recheck`-om
-  snimaka, a novi prolaz nad B, koji Z-51 traži posle ispravke defekta nađenog na B, još nije rađen.
+  posle BUG-019. Ispravke BUG-021 do BUG-026 (05.10.) potvrđene su testovima, `recheck`-om
+  snimaka i novim punim prolazom nad B (06.10.), koji Z-51 traži posle ispravke defekta nađenog na B.
 - **Test podaci:** lista A je istih 100 domena kao u IT-SKENER-001 i IT-SKENER-002, i na njoj su
   kalibrisani pragovi. Lista B je 100 novih domena istog tipa (male firme i udruženja iz Srbije, sa
   dodeljenom delatnošću), bez ijednog zajedničkog domena sa A. Liste, rezultati po domenu i
@@ -43,13 +44,16 @@ prolazi idu kroz istu sliku, a Z-33 pre nivoa 2 meri stvarnu vezu:
 | lista A, GitHub Actions (28.09.) | datacentar van Srbije, 763 Mb/s |
 | lista B, prvi prolaz (03.10.) | brza veza na drugom računaru, 136,4 Mb/s |
 | lista B, nivo 2 ponovljen (05.10.) | mobilni hotspot, 18,6 Mb/s; nivo 1 je iz prolaza od 03.10. |
+| lista B, ceo prolaz ponovljen (06.10.) | mobilni hotspot, 12,8–15,7 Mb/s pre prolaza i 9,7 Mb/s pred nivo 2; nivo 1 sa 4 domena odjednom |
 
 Nivo 1: 16 domena odjednom, jedan zahtev odjednom ka istom sajtu (`www.x.rs` i `x.rs` su isti
 sajt), pauza 0,5–1 s, budžet 19 zahteva i 40 s po domenu. Pun nivo 2: mrežni profil 4,8 / 1,5 Mb/s
 i 150 ms, učitavanje do `load` jedan po jedan, 3 konteksta, rok 25 s, tvrd limit 60 s po domenu,
 najviše 60 domena. Vreme učitavanja se meri samo kad je stvarna veza bar 9,6 Mb/s. Od BUG-020
 ostali sajtovi sa početnom koja radi dobijaju lagani nivo 2: posle punog, bez profila i bez reda za
-učitavanje. U ponovljenom prolazu nad B lagani nivo 2 je radio sa 3 konteksta.
+učitavanje. U ponovljenom nivou 2 nad B (05.10.) lagani nivo 2 je radio sa 3 konteksta, a u prolazu od 06.10. sa 2
+(broj se bira po slobodnoj memoriji). Prolaz od 06.10. je išao sa `--concurrency 4`: na hotspotu je
+sa 16 domena odjednom budžet ranije pucao (prolaz G, 20,5 %).
 
 ## 3. Rezultati
 
@@ -206,17 +210,17 @@ je 13 domena, a u H 7, pa taj prolaz ne važi za Z-51 (O-14).
 
 ### 3.5 Sistemski test na listi B (Z-51)
 
-| | A, prolaz H | B, 03.10. | B, nivo 2 ponovljen 05.10. |
-|---|---|---|---|
-| nivo 1 / nivo 2 | 168 / 500 s | 145 / 460 s | 145 s (iz 03.10.) / 498 s, lagani 168 s |
-| kandidata za nivo 2 / mereno | 81 / 60 | 91 / 60 | 91 / 60 punim i 40 laganim |
-| rangiranih bez nivoa 2 | 30 | 40 | 0 |
-| `scanned` / `partial` / `failed` / `unreachable` | 69 / 21 / 3 / 7 | 79 / 21 / 0 / 0 | 75 / 25 / 0 / 0 |
-| `partial` zbog budžeta, među domenima koji rade | 7,8 % | 9,0 % | 9,0 % |
-| `unknown` po proveri, najviše | 11,7 % | 5,0 % | 5,0 % |
-| nalaza | 388 | 473 | 547 |
-| padovi; WARNING i ERROR u logu | 0; 0 | 0; 0 | 0; 0 |
-| procena za 200 domena | 13,9 min | 12,5 min | oko 23 min (lagani nivo 2 sa 3 konteksta) |
+| | A, prolaz H | B, 03.10. | B, nivo 2 ponovljen 05.10. | B, ceo prolaz 06.10. |
+|---|---|---|---|---|
+| nivo 1 / nivo 2 | 168 / 500 s | 145 / 460 s | 145 s (iz 03.10.) / 498 s, lagani 168 s | 567 / 533 s, lagani 139 s |
+| kandidata za nivo 2 / mereno | 81 / 60 | 91 / 60 | 91 / 60 punim i 40 laganim | 91 / 60 punim i 39 laganim |
+| rangiranih bez nivoa 2 | 30 | 40 | 0 | 0 |
+| `scanned` / `partial` / `failed` / `unreachable` | 69 / 21 / 3 / 7 | 79 / 21 / 0 / 0 | 75 / 25 / 0 / 0 | 76 / 23 / 1 / 0 |
+| `partial` zbog budžeta, među domenima koji rade | 7,8 % | 9,0 % | 9,0 % | 9,1 % |
+| `unknown` po proveri, najviše | 11,7 % | 5,0 % | 5,0 % | 5,1 % |
+| nalaza | 388 | 473 | 547 | 540 |
+| padovi; WARNING i ERROR u logu | 0; 0 | 0; 0 | 0; 0 | 0; 0 |
+| procena za 200 domena | 13,9 min | 12,5 min | oko 23 min (lagani nivo 2 sa 3 konteksta) | 36,1 min; ne važi (hotspot, 4 domena odjednom) |
 
 Prolaz H i prvi prolaz nad B rađeni su pre BUG-019 i BUG-020. Ponovljen nivo 2 je rađen sa
 ispravkama, a izveštaj je napravljen `recheck`-om sa kodom od 05.10. Skripta za ponovljen nivo 2
@@ -224,6 +228,12 @@ meri vezu i posle punog nivoa 2 i odbacuje merenje ako je veza pala ispod 9,6 Mb
 odbačeno. U logu ponovljenog nivoa 2 ima 211 redova, svi INFO. Među njima je 7 redova o
 zahtevima koje je nivo 2 odbio: 6 ka hostovima bez DNS zapisa i 1 ka `localhost`-u, koji SSRF
 zaštita ne otvara.
+
+Prolaz od 06.10. je ponovljen ceo, jer BUG-022 menja nivo 1. Jedini `failed` domen je na ulazu
+vratio 403, što je poznata klasa „Nije skenirano” (zaštita od botova); u ranijim prolazima je bio
+skeniran. Veza od 9,7 Mb/s je tik iznad granice od 9,6, ali usko grlo je i dalje bio profil: do
+`load` su sajtovi preuzimali 3,8 Mb/s (medijana, p90 4,3), kao i 05.10. na 18,6 Mb/s, a medijana
+odnosa vremena učitavanja istih 56 sajtova je 1,03. Posle prolaza veza je bila 16,5–17,0 Mb/s.
 
 **Potvrdno testiranje na pravim sajtovima:**
 
@@ -239,17 +249,27 @@ zaštita ne otvara.
   nivo 2 vreme učitavanja beležio kao `unknown`. Kod 29 domena to je bio jedini uzrok. Posle
   izmene (vreme na laganom nivou 2 „ne primenjuje se”) `partial` je 25, a rangiranje i `findings.csv`
   su isti kao pre izmene.
+- BUG-021 (06.10.): nijedna strana na nivou 2 nije vratila status ≥ 400, pa je taj deo potvrđen
+  samo testom. Bez „Headless” u User-Agent-u sajt sa reklamama ima 115 zahteva, a Chrome je izmerio
+  144; sa „HeadlessChrome/” (05.10.) bilo ih je 66.
+- BUG-022 (06.10.): početna se promenila na tačno jednom sajtu, strani „uskoro” iza preusmerenja
+  skriptom, i njegovi nalazi o naslovu, opisu, canonical-u, og oznakama i jeziku više ne postoje.
+  Nijedna druga početna nije promenjena.
+- BUG-023 (06.10.): nad snimcima od 05.10. kod posle ispravke daje 41 nalaz o prevelikim slikama
+  umesto 47. Pet sajtova je bez nalaza, jedan je `unknown` (`oversized_unmeasured`), a novih nema.
+  U prolazu od 06.10. nalaza je 42: jedan je nestao, a dva su nova, što je razlika između dva dana
+  merenja. Kod BUG-024 do BUG-026 broj nalaza tih provera na B se nije promenio.
 
 ### 3.6 Prijemni test: ručna provera (Z-52)
 
-| | Prvi krug (04.10.) | Drugi krug (05.10.) |
-|---|---|---|
-| izveštaj | prolaz od 03.10. | nivo 1 od 03.10., nivo 2 od 05.10. |
-| nalaza u prvih 10 | 98 | 89 |
-| tačnih / netačnih | 96 / 2 | 89 / 0 |
-| provereno urllib-om / skriptom u browseru | 62 / 36 | 54 / 35 |
-| „poslao bih”: da / možda / ne | nije popunjeno | 7 / 2 / 1 |
-| promašen ozbiljan problem u poslednjih 5 | 2 | 0 |
+| | Prvi krug (04.10.) | Drugi krug (05.10.) | Treći krug (06.10.) |
+|---|---|---|---|
+| izveštaj | prolaz od 03.10. | nivo 1 od 03.10., nivo 2 od 05.10. | prolaz od 06.10. |
+| nalaza u prvih 10 | 98 | 89 | 96 |
+| tačnih / netačnih | 96 / 2 | 89 / 0 | 96 / 0 |
+| provereno urllib-om / skriptom u browseru | 62 / 36 | 54 / 35 | 59 / 37 |
+| „poslao bih”: da / možda / ne | nije popunjeno | 7 / 2 / 1 | 7 / 2 / 1 |
+| promašen ozbiljan problem u poslednjih 5 | 2 | 0 | 0 |
 
 Nalaz je proveren van alata: sirovi HTML i zaglavlja preko urllib-a, a težina, zahtevi, vreme do
 `load`, h1, alt i prevelike slike skriptom u browseru, pod istim profilom. Kod nalaza o jeziku
@@ -262,6 +282,11 @@ nije bez nivoa 2, i nijedan nema ozbiljan problem. Skripta je izmerila najtežu 
 najduže učitavanje od 5,0 s, a svih 5 radi na https-u. Odluke o
 mejlu predložio je Claude posle pregleda snimaka ekrana sa telefona, a vlasnik ih je potvrdio
 05.10. Poslednjih 5 je pregledano na istim snimcima i skriptom u browseru.
+
+U trećem krugu 9 od prvih 10 su isti sajtovi kao u drugom, sa istim vrstama nalaza, pa su odluke o
+mejlu prenete. Za novi sajt odluku je predložio Claude posle snimka telefona, a vlasnik ju je
+potvrdio 06.10. Sajt koji je ispao iz prvih 10 imao je težinu tik uz prag (O-21). Poslednjih 5 su
+isti sajtovi kao u drugom krugu: najteža početna 1,9 MB, najduže učitavanje 5,5 s, svih 5 na https-u.
 
 **Pouzdanost pomoćnih skripti.** Skripta za merenje u browseru testirana je pre upotrebe kao
 poseban proizvod (izveštaj ostaje u `rad/`): 139 slučajeva po istim tehnikama, pokrivenost grana
@@ -276,7 +301,7 @@ je, provera je ponovljena i nema nijednog neslaganja. Nijedan od ovih defekata n
 
 | Kriterijum | Granica | Rezultat | Ispunjen |
 |---|---|---|---|
-| automatizovani testovi | 100 % prolazi, u Docker slici i u CI-ju | 1072 / 1072 u Docker slici, 1 `xfail` po ADR-006; CI posle poslednjeg push-a ovde nije proveren | ✅ Docker, CI otvoreno |
+| automatizovani testovi | 100 % prolazi, u Docker slici i u CI-ju | 1072 / 1072 u Docker slici, 1 `xfail` po ADR-006; CI zelen za `d0e13a7` | ✅ |
 | pokrivenost linija i grana | ≥ 95 %; nijedan modul ne pada; novi moduli ≥ 95 % | 98 %; nijedan modul nije pao; novi moduli 100 % | ✅ |
 | mutacioni skor | ≥ 90 % neekvivalentnih; preživeli razvrstani | 100 % (strogo 99,8 %), kod od 30.09.; tela provera nisu mutirana (§3.2) | ✅ |
 | `ruff` | čist | čist | ✅ |
@@ -285,15 +310,15 @@ je, provera je ponovljena i nema nijednog neslaganja. Nijedan od ovih defekata n
 | SSRF | svi `gv-` i integracioni testovi prolaze | prolaze; jedno ograničenje po ADR-006 (`xfail`) | ✅ |
 | padovi | 0 | 0 u svim prolazima nad A i B | ✅ |
 | WARNING i ERROR u logu | 0 neobjašnjenih | 0 | ✅ |
-| `partial` zbog budžeta | < 10 % domena koji rade | 9,0 % | ✅ |
-| `unknown` po proveri | < 20 %; za vreme imenilac su sajtovi mereni pod profilom | najviše 5,0 % | ✅ |
-| lažni nalazi | nijedan poznat | prvi krug 2 (BUG-019); drugi krug 0 od 89 u prvih 10. Van prvih 10: BUG-022 i BUG-023 (5 od 47 nalaza o slikama), ispravljeni 05.10. | ✅ u kodu; potvrda novim prolazom nad B |
+| `partial` zbog budžeta | < 10 % domena koji rade | 9,0 % (03.10.), 9,1 % (06.10.) | ✅ |
+| `unknown` po proveri | < 20 %; za vreme imenilac su sajtovi mereni pod profilom | najviše 5,0 % (03.10.), 5,1 % (06.10.) | ✅ |
+| lažni nalazi | nijedan poznat | prvi krug 2 (BUG-019); drugi krug 0 od 89 u prvih 10. Van prvih 10: BUG-022 i BUG-023 (5 od 47 nalaza o slikama), ispravljeni 05.10. i potvrđeni prolazom od 06.10.; treći krug 0 od 96 | ✅ |
 | sajtovi koji ne rade u rangiranju | 0 | 0; na A 7 u „Ne rade”, potvrđeno DNS-om i `curl`-om; na B nijedan domen nije u „Ne rade” | ✅ |
 | ponovljivost težine i broja zahteva do `load` | ≤ 10 % kod ≥ 9 od 10 sajtova | 10 od 10, najviše 5,7 % | ✅ |
 | vreme u prolazu / vreme kad se sajt meri sam | 0,8–1,25, ako je paralelno učitavanje uključeno | ne primenjuje se: `serial_load = true`; uporedo 19 od 20 u opsegu | — |
 | procena za 200 domena | ≤ 15 min | A 13,9 min i B 12,5 min bez laganog nivoa 2; sa njim oko 23 min na 3 konteksta; preporučena mašina nije merena | otvoreno |
-| prvih 10 na B | 0 netačnih; ≥ 7 od 10 „poslao bih” | 0 od 89; 7 od 10 | ✅ |
-| poslednjih 5 na B | 0 promašenih; posle ispravke se meri ponovo | prvi krug 2 (BUG-020); posle ispravke 0 | ✅ |
+| prvih 10 na B | 0 netačnih; ≥ 7 od 10 „poslao bih” | drugi krug 0 od 89 i 7 od 10; treći krug 0 od 96 i 7 od 10 | ✅ |
+| poslednjih 5 na B | 0 promašenih; posle ispravke se meri ponovo | prvi krug 2 (BUG-020); posle ispravki 0 u drugom i trećem krugu | ✅ |
 | otvorena zapažanja | O-5 i O-7 do O-12 zatvoreni ili prebačeni u §9 specifikacije | svi zatvoreni ili prebačeni (§6.1) | ✅ |
 
 ## 5. Defekti
@@ -400,20 +425,32 @@ STATUS      Ispravljen 05.10. (greška `http_status`, provere nivoa 2 `unknown`;
   Google izvršava JavaScript, pa bi kod takvog sajta `seo.title.missing`, `seo.description.missing` i
   `seo.canonical.missing` bili lažni. Koliko je takvih sajtova nije poznato. Odluka vlasnika (05.10.):
   nivo 2 ih za sada samo beleži (`dom.title`, `dom.meta_description`, `dom.canonical`), a o
-  proverama se odlučuje posle sledećeg prolaza nad B.
+  proverama se odlučuje posle sledećeg prolaza nad B. U prolazu od 06.10. nijedan od 99 sajtova ih
+  ne postavlja samo JavaScript-om: svih 13 nalaza `seo.description.missing` i 23
+  `seo.canonical.missing` stoje i posle JS-a. Odluka vlasnika (06.10.): provere i dalje čitaju
+  sirovi HTML, a polja ostaju u snimku.
+- **O-20: početna bez `<meta name="viewport">`.** Na telefonu se prikazuje kao smanjena desktop
+  strana sa tekstom koji se ne može čitati. Alat to ne proverava, a u trećem krugu je to bio jedan od
+  razloga za „poslao bih”. Proverava se iz sirovog HTML-a. Kandidat za novu proveru posle v2, uz O-15.
+- **O-21: težina na laganom i punom nivou 2.** Sajt sa težinom tik uz prag od 7 MB je 05.10. imao
+  lagani nivo 2 (bez profila: 8,6 MB do `load`), a 06.10. pun (6,8 MB); Chrome pod profilom je
+  izmerio 7,2 MB. Od 3 sajta koji su promenili način merenja jedan je na laganom imao 26 % više, a
+  dva isto; kod 38 sajtova merenih lagano oba dana i 56 merenih punim medijana odnosa je 1,00.
+  Uzrok nije utvrđen, 3 slučaja su premalo. Ostaje zapažanje za sledeći ciklus; pravilo od 80 %
+  iz ručne provere ovaj slučaj pokriva.
 
 ### 6.3 Odluke vlasnika od 05.10.2026.
 
 | # | Odluka | Status |
 |---|---|---|
-| 1 | BUG-021: glavni dokument nivoa 2 sa statusom ≥ 400 je neuspelo snimanje, pa su provere nivoa 2 `unknown`. UA gubi „Headless”, a identitet operatera ostaje | ispravljeno; potvrda na B čeka prolaz |
-| 2 | BUG-022: nivo 1 prati preusmerenje samo JavaScript-om ili meta-refresh-om na isti sajt kao HTTP preusmerenje. Strana „u pripremi” i parkiran domen bez preusmerenja ostaju zapažanje (O-16) | ispravljeno; potvrda na B čeka prolaz |
+| 1 | BUG-021: glavni dokument nivoa 2 sa statusom ≥ 400 je neuspelo snimanje, pa su provere nivoa 2 `unknown`. UA gubi „Headless”, a identitet operatera ostaje | ispravljeno; UA potvrđen na B (06.10.), status ≥ 400 samo testom |
+| 2 | BUG-022: nivo 1 prati preusmerenje samo JavaScript-om ili meta-refresh-om na isti sajt kao HTTP preusmerenje. Strana „u pripremi” i parkiran domen bez preusmerenja ostaju zapažanje (O-16) | ispravljeno; potvrđeno na B (06.10.) |
 | 3 | Nova provera „početna skoro bez sadržaja” (O-15), kalibrisana na A i B | u README-u, „Planirano, nije u v2” |
 | 4 | [ADR-011](adr/ADR-011-json-sema.md) (`report.json` kao ugovor sa šemom i verzijom) postaje „Prihvaćeno” | urađeno |
 | 5 | Kriterijum „`diff` istog izveštaja je prazan” prelazi u F4, pa izdanje v2.0.0 ne čeka na njega | urađeno (plan testiranja v2.2) |
 | 6 | Z-32 na preporučenoj mašini meri se pri prvom prolazu na VPS-u, pre prvog plaćenog izveštaja | otvoreno |
 | 7 | Recenzija kataloga: 15 ispravki; rečenice o ponašanju ljudi bez izvora se izbacuju; BUG-023 do BUG-026 se ispravljaju odmah | urađeno |
-| 8 | Naslov, opis i canonical posle JavaScript-a nivo 2 samo beleži (O-19) | urađeno; odluka posle prolaza nad B |
+| 8 | Naslov, opis i canonical posle JavaScript-a nivo 2 samo beleži (O-19) | urađeno; na B 0 od 99 sajtova, provere ostaju na sirovom HTML-u (vlasnik, 06.10.) |
 | 9 | Mutaciono testiranje tela provera (§3.2) | sledeći ciklus; ne blokira v2 |
 
 ## 7. Zaključak i preporuka
@@ -421,7 +458,8 @@ STATUS      Ispravljen 05.10. (greška `http_status`, provere nivoa 2 `unknown`;
 Alat je stabilan i na novoj listi. Nijedan prolaz nad A i B nije pao, a u logu nema nijednog
 WARNING-a ni ERROR-a. Na B su ispunjeni svi merljivi kriterijumi tačnosti: `partial` zbog budžeta
 9,0 %, `unknown` po proveri najviše 5,0 %, a u drugom krugu ručne provere 0 netačnih od 89 nalaza
-u prvih 10, 7 od 10 „poslao bih” i nijedan promašaj u poslednjih 5.
+u prvih 10, 7 od 10 „poslao bih” i nijedan promašaj u poslednjih 5. Novi pun prolaz od 06.10.,
+posle svih ispravki, to je potvrdio: 9,1 %, 5,1 %, 0 netačnih od 96, 7 od 10 i nijedan promašaj.
 
 Do toga se došlo tek posle ispravki. Prvi krug je našao 2 netačna nalaza i 2 promašaja. Uzrok
 nije bio u pragovima, nego u nivou 2: u tome kako se alat predstavlja sajtu (BUG-019) i u tome koji
@@ -432,14 +470,11 @@ gde rečenica ne važi (BUG-023 do BUG-026). Ispravljene su odmah, kao i BUG-021
 
 Otvoreno je:
 
-- novi prolaz nad B, koji potvrđuje BUG-021 i BUG-022 na pravim sajtovima i ponovo meri kriterijume,
-  kako Z-51 traži;
 - trajanje za 200 domena na preporučenoj mašini (Z-32), koje se meri na prvom prolazu sa VPS-a, pre
-  prvog plaćenog izveštaja, pa izdanje v2.0.0 ne čeka na njega;
-- stanje CI-ja posle poslednjeg push-a, koje ovde nije provereno.
+  prvog plaćenog izveštaja, pa izdanje v2.0.0 ne čeka na njega.
 
-**Preporuka: izdanje v2.0.0 je opravdano kad novi prolaz nad B ispuni kriterijume iz §4 i CI bude
-zelen.** Mutaciono testiranje tela provera (§3.2) nije uslov iz §4 i ide u sledeći ciklus.
+**Preporuka: izdanje v2.0.0 je opravdano.** Novi prolaz nad B ispunio je kriterijume iz §4, a CI je
+zelen. Mutaciono testiranje tela provera (§3.2) nije uslov iz §4 i ide u sledeći ciklus.
 
 ## 8. Naučene lekcije
 

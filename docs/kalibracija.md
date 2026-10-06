@@ -3,6 +3,61 @@
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
 Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
 
+## 2026-10-06 — novi pun prolaz nad listom B posle BUG-021 do BUG-026
+
+BUG-022 menja nivo 1, pa je ponovljen ceo prolaz, sa kodom `d0e13a7`. Brze veze nije bilo, pa je
+prolaz išao preko mobilnog hotspota, sa DNS-om 1.1.1.1 i `--concurrency 4` (nivo 1 sa 4 domena
+odjednom umesto 16). Pre prolaza veza je bila 12,8–15,7 Mb/s, a Z-33 je pred nivo 2 izmerio
+9,7 Mb/s. Nivo 1 je trajao 567 s. Pun nivo 2 je trajao 533 s za 60 sajtova, a lagani 139 s za 39,
+sa dva konteksta. U logu nema WARNING ni ERROR.
+
+- **Zapažanje:** 9,7 Mb/s je tik iznad granice od 9,6 (2 × profil). Ipak su sajtovi do `load`
+  preuzimali brzinom od 3,8 Mb/s (medijana; p90 4,3), isto kao 5. 10. na 18,6 Mb/s. Medijana
+  odnosa vremena učitavanja istih 56 sajtova je 1,03, a težine 1,00.
+- **Uzrok:** usko grlo je i dalje bio profil od 4,8 Mb/s, a ne veza.
+- **Odluka:** merenja vremena važe. Granica 2 × profil ostaje.
+
+- **Kriterijumi iz §7 na B:**
+  - nema padova;
+  - `partial` zbog budžeta je 9,1 %;
+  - `unknown` po proveri je najviše 5,1 %;
+  - nijedan sajt koji ne radi nije u rangiranju;
+  - statusi `scanned` / `partial` / `failed` / `unreachable` su 76 / 23 / 1 / 0.
+
+  Jedan domen je `failed`, jer je na ulazu vratio 403 (zaštita od botova, poznata klasa „Nije
+  skenirano"). Procena za 200 domena (36 min) ne važi za ovu vezu i 4 domena odjednom. Z-32 se meri
+  na preporučenoj mašini.
+- **BUG-022 na pravim sajtovima:** početna se promenila na tačno jednom sajtu: strani „uskoro", do
+  koje se stiže preusmerenjem skriptom. Kod tog sajta su nestali nalazi o naslovu, opisu,
+  canonical-u, og oznakama i jeziku. Nijedna druga početna se nije promenila.
+- **BUG-021:** u ovom prolazu se nije pojavio. Nijedna strana na nivou 2 nije vratila status ≥ 400.
+  Sa User-Agent-om „Chrome/" broj zahteva na sajtu sa reklamama je 115, a Chrome je izmerio 144.
+  Sa „HeadlessChrome/" (5. 10.) bilo ih je 66.
+- **Naslov, opis i canonical posle JavaScript-a (O-19):** nijedan od 99 sajtova ih ne postavlja
+  samo JavaScript-om. Svih 13 nalaza `seo.description.missing` i svih 23 `seo.canonical.missing`
+  ostaju i posle JS-a.
+  - **Odluka (vlasnik):** `seo.*.missing` i dalje čita sirovi HTML. Polja `dom.*` ostaju u snimku.
+
+- **Zapažanje:** sajt kome je težina tik uz prag od 7 MB pao je u rangiranju sa 4. na 35. mesto. Dana
+  5. 10. dobio je lagani nivo 2: bez profila je do `load` preuzeo 8,6 MB i 116 zahteva. Sada je
+  dobio pun nivo 2 i preuzeo 6,8 MB i 84 zahteva. Chrome pod profilom je 5. 10. izmerio 7,2 MB.
+  Između 5. i 6. 10. način merenja su promenila 3 sajta. Na jednom je lagani nivo dao 26 % više, a
+  na dva isto. Kod 38 sajtova koji su oba dana mereni lagano i 56 merenih punim nivoom medijana
+  odnosa je 1,00.
+- **Uzrok:** nije utvrđen. Za zaključak su 3 slučaja premalo.
+- **Odluka:** ostaje zapažanje za sledeći ciklus. Pravilo od 80 % iz Z-52 ovaj slučaj pokriva.
+
+- **Z-52, treći krug:**
+  - u prvih 10 je 96 od 96 nalaza tačno: 59 provereno urllib-om, 37 skriptom u browseru;
+  - „poslao bih": 7 od 10;
+  - u poslednjih 5 nema promašenog ozbiljnog problema: najteža početna ima 1,9 MB, najduže
+    učitavanje traje 5,5 s, i svih 5 radi na https-u.
+
+  U prvih 10 je 9 istih sajtova kao 5. 10.
+- **Zapažanje:** početna bez `<meta name="viewport">` se na telefonu prikazuje kao smanjena desktop
+  strana, sa tekstom koji se ne može čitati. Alat to ne proverava. Kandidat je za novu proveru, uz
+  „početnu skoro bez sadržaja".
+
 ## 2026-10-05 — ponovljen nivo 2 nad listom B: „delimično" i trajanje laganog nivoa 2
 
 Nivo 1 je iz prolaza od 3. 10. (ispravke ga ne diraju). Nivo 2 je ponovljen 5. 10. sa BUG-019 i
