@@ -291,7 +291,10 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("domains", metavar="DOMAINS.csv", help="CSV sa kolonama domain,industry,note")
     scan.add_argument("--level", choices=["1", "2", "auto"], default="auto", help="podrazumevano: auto")
     scan.add_argument(
-        "--concurrency", type=_ceo_broj(1), metavar="N", help="globalni semafor (podrazumevano 8)"
+        "--concurrency",
+        type=_ceo_broj(1),
+        metavar="N",
+        help="globalni semafor i domena odjednom (podrazumevano iz skener.toml)",
     )
     scan.add_argument("--max-level2", type=_ceo_broj(0), metavar="N", help="gornji limit za nivo 2 (60)")
     scan.add_argument(
