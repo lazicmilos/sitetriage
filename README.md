@@ -2,7 +2,7 @@
 
 Skener prolazi kroz listu domena, obično stotinak do dvesta, i pravi rangiranu listu sajtova koji
 zaslužuju pun ručni audit. Uz svaki sajt ide nekoliko rečenica na srpskom ili engleskom koje se mogu
-prekopirati u mejl. Audit ne zamenjuje. Kaže ti gde da potrošiš vreme.
+iskoristiti u poruci, pozivu ili kontakt formi. Audit ne zamenjuje. Kaže ti gde da potrošiš vreme.
 
 ![Izveštaj](docs/izvestaj.png)
 
@@ -88,7 +88,7 @@ po domenu), `report.json` (ceo prolaz, za programe) i `snapshots/` sa sirovim po
 domena. `--format` bira koje od prva četiri se pišu; snapshoti se pišu uvek.
 
 Rangiraju se samo sajtovi koji rade. Sajt koji se ne otvori ni u drugom pokušaju, najranije 60 s
-posle prvog (`http.second_attempt_after_s`), ide u odeljak „Ne rade", sa posebnim nacrtom mejla.
+posle prvog (`http.second_attempt_after_s`), ide u odeljak „Ne rade", sa posebnim predlogom teksta.
 To važi samo kad je stanje sigurno: ime ne postoji u DNS-u ili nema adresu, ili server ne prihvata
 vezu ni preko https ni preko http. Domen koji iz drugog razloga nema početnu (DNS privremeno nedostupan, prekinuto
 TLS rukovanje, bilo kakav HTTP odgovor, adresa koja nije javna) ide u „Nije skenirano", sa razlogom,

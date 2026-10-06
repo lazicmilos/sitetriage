@@ -224,7 +224,7 @@ def test_nacrt_mejla_za_cist_sajt_ne_izmislja_probleme():
 
 def test_izvestaj_na_engleskom_nema_srpskih_oznaka():
     page = html_out.render([_izvestaj()], load_config(), lang="en")
-    assert '<html lang="en">' in page and "▲ CRITICAL" in page and "Copy email draft" in page
+    assert '<html lang="en">' in page and "▲ CRITICAL" in page and "Copy suggested text" in page
     assert "5 of the 7 checked pages on the site" in page
     assert "I reviewed the site d.rs" in page
     for srpski in ("KRITIČNO", "Kopiraj", "Rangirani", "Poštovani", "Prolaz od"):

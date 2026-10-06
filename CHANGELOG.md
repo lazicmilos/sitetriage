@@ -3,6 +3,13 @@
 Ovde su izmene koje primeti onaj ko koristi alat ili čita njegov izlaz. Verzije prate semver:
 izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) podiže prvi broj.
 
+## Neobjavljeno
+
+### Promenjeno
+
+- Tekst uz svaki sajt je u izveštaju „predlog teksta”, a ne „nacrt mejla”: može da posluži za
+  poruku, poziv ili kontakt formu. Sam tekst je isti.
+
 ## 2.0.0 — 2026-10-06
 
 Izlazni kriterijumi v2 iz [plana testiranja](docs/plan-testiranja.md) su ispunjeni

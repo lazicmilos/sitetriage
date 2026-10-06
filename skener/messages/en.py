@@ -328,8 +328,8 @@ TEXT: dict[str, str] = {
     "by_domain": "By domain",
     "unreachable": "Not working",
     "unreachable_note": (
-        "Sites that did not open on the second attempt either. They are not ranked, and their email\n"
-        "draft is a separate one."
+        "Sites that did not open on the second attempt either. They are not ranked, and their suggested\n"
+        "text is a separate one."
     ),
     "not_scanned": "Not scanned",
     "not_scanned_note": (
@@ -354,7 +354,7 @@ TEXT: dict[str, str] = {
         "does not open pages that <code>robots.txt</code> disallows."
     ),
     "summary_meta": "{industry} · score {score} ·\nworst {worst} · {findings:n:finding|findings}",
-    "copy_draft": "Copy email draft",
+    "copy_draft": "Copy suggested text",
     "copied": "Copied ✓",
     "no_findings": "No findings — the site is in order on the checked points.",
     "unknowns": "Could not be checked ({count})",

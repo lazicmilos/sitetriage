@@ -342,8 +342,8 @@ TEXT: dict[str, str] = {
     "by_domain": "Po domenu",
     "unreachable": "Ne rade",
     "unreachable_note": (
-        "Sajtovi koji se nisu otvorili ni u drugom pokušaju. Nisu u rangiranju, a nacrt mejla za\n"
-        "njih je poseban."
+        "Sajtovi koji se nisu otvorili ni u drugom pokušaju. Nisu u rangiranju, a predlog teksta\n"
+        "za njih je poseban."
     ),
     "not_scanned": "Nije skenirano",
     "not_scanned_note": (
@@ -370,7 +370,7 @@ TEXT: dict[str, str] = {
     "summary_meta": (
         "{industry} · skor {score} ·\nnajteži {worst} · {findings:n:nalaz|nalaza|nalaza}"
     ),
-    "copy_draft": "Kopiraj nacrt mejla",
+    "copy_draft": "Kopiraj predlog teksta",
     "copied": "Kopirano ✓",
     "no_findings": "Nijedan nalaz — sajt je na proverenim tačkama uredan.",
     "unknowns": "Nije moglo da se proveri ({count})",
