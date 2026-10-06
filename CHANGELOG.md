@@ -3,10 +3,11 @@
 Ovde su izmene koje primeti onaj ko koristi alat ili čita njegov izlaz. Verzije prate semver:
 izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) podiže prvi broj.
 
-## 2.0.0 — u izradi
+## 2.0.0 — 2026-10-06
 
-Tokom rada verzija je `2.0.0.dev0`. Postaje `2.0.0`, uz tag `v2.0.0`, kad su ispunjeni izlazni
-kriterijumi v2 iz [plana testiranja](docs/plan-testiranja.md).
+Izlazni kriterijumi v2 iz [plana testiranja](docs/plan-testiranja.md) su ispunjeni
+([IT-SKENER-003](docs/izvestaj-testiranja-3.md)). Komande `skener diff` i `skener outcomes` (F4)
+nisu u ovom izdanju.
 
 ### Izmene koje lome kompatibilnost
 
@@ -29,7 +30,8 @@ Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
 - `CheckSpec` više nema šablone `message_template` i `tech_template`, a `check()` ne prima
   `message` ni `tech`. Modul `skener.checks.srpski` je prešao u `skener.messages.sr`.
 - `infra.dns.unresolved` je obrisan. Sajt koji se ne otvori ni u drugom pokušaju dobija nalaz
-  `infra.unreachable` i status `unreachable`, i ide u listu „Ne rade" umesto u rangiranje.
+  `infra.unreachable` i status `unreachable`, i ide u listu „Ne rade" umesto u rangiranje. Izuzet
+  domen ima nov status `excluded`.
   `rank()` rangira samo `scanned` i `partial`, a ostali domeni imaju `rank` 0. JSON ima liste
   `unreachable` i `not_scanned`, a izveštaj domena polje `reason` (zašto je `failed`).
 - Provera ima i četvrto stanje, `not_applicable`, sa obaveznim razlogom. Izveštaj domena ima listu
