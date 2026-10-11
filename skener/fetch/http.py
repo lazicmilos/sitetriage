@@ -29,7 +29,7 @@ from skener.config import get, user_agent
 from skener.fetch import page as page_builder
 from skener.fetch import robots as robots_parser
 from skener.fetch import sitemap as sitemap_parser
-from skener.fetch.urls import host_of, normalize
+from skener.fetch.urls import host_of, normalize, same_site
 from skener.models import (
     Budget,
     DomainInput,
@@ -637,8 +637,11 @@ async def _collect_sitemap(
     max_files = get(cfg, "sitemap.max_files")
     max_urls = get(cfg, "sitemap.max_urls")
 
-    # `Sitemap:` iz robots.txt ima prednost nad pogađanjem (§4.3).
-    start = list(rules.sitemaps) or [f"{origin}/sitemap.xml"]
+    # `Sitemap:` iz robots.txt ima prednost nad pogađanjem (§4.3). Kad robots.txt navodi i mape
+    # drugih domena (jedan robots.txt za ceo lanac sajtova), one bi potrošile `max_files` pre
+    # podmapa ovog sajta. Tuđa mapa se čita samo kad je jedina navedena (mapa na CDN-u).
+    svoje = [url for url in rules.sitemaps if same_site(url, origin)]
+    start = svoje or list(rules.sitemaps) or [f"{origin}/sitemap.xml"]
     info = SitemapInfo(url=start[0])
     queue: list[tuple[str, int]] = [(url, 0) for url in start]
     seen: set[str] = set()

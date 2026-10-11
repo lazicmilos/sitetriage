@@ -99,6 +99,18 @@ def test_rekurzija_kroz_sitemapindex():
     assert any(url.endswith("/usluge") for url in snapshot.sitemap.urls)
 
 
+def test_mape_drugih_domena_iz_robots_a_ne_trose_limit_fajlova():
+    """robots.txt jednog lanca navodi mape svih sajtova lanca; ovaj sajt ima indeks sa podmapom."""
+    tudje = "".join(f"Sitemap: https://lanac-{i}.test/sitemap.xml\n" for i in range(3))
+
+    def robots():
+        return Response(f"User-agent: *\nSitemap: {site.base_url}/sitemap.xml\n{tudje}".encode())
+
+    with FakeSite(extra={"/robots.txt": robots}) as site:
+        snapshot = scan(site)
+    assert any(url.endswith("/usluge") for url in snapshot.sitemap.urls)
+
+
 def test_robots_disallow_se_postuje():
     """Sitemap nudi /tajno/nesto; alat koji ga ipak traži je nekonzistentan (§4.3)."""
     with FakeSite() as site:
