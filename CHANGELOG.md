@@ -18,6 +18,9 @@ izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) 
   domenima kojih nema na spisku. Tuđa mapa se i dalje čita kad je jedina navedena (BUG-027).
 - Mapa sajta sa praznim redom pre `<?xml` (čest kvar WordPress dodataka) više se ne odbacuje kao
   neispravan XML, pa sajt sa takvom mapom ne dobija `infra.sitemap.missing` (BUG-028).
+- Duplirani naslov, opis i canonical broje stranicu jednom i kad do nje vode dve adrese iz uzorka
+  (npr. jezička adresa koja preusmerava na početnu). Broj stranica u rečenici je bio veći od
+  stvarnog (BUG-029).
 
 ## 2.0.0 — 2026-10-06
 

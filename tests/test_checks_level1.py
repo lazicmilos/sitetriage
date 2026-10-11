@@ -290,6 +290,14 @@ def test_duplikat_trazi_razlicite_grupe_putanja():
     assert run_level(1, site)["seo.title.duplicate"].status == "ok"
 
 
+def test_duplikat_broji_stranicu_jednom_iako_do_nje_vode_dve_adrese():
+    """Jezička adresa koja vodi nazad na početnu nije još jedna stranica sa istim naslovom (BUG-029)."""
+    site = clean_site()
+    _sve_stranice(site, title="Dobrodošli")
+    site.pages[1].final_url = site.home.final_url
+    assert run_level(1, site)["seo.title.duplicate"].findings[0].evidence["stranica"] == 4
+
+
 def test_kompresija_se_ne_prijavljuje_za_mali_html():
     """Prag od 50 kB postoji da sitne strane ne prave šum (§5)."""
     site = clean_site()

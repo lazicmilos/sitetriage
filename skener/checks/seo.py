@@ -58,9 +58,13 @@ def _duplicates(
     stranica.
     """
     buckets: dict[str, list[PageSnapshot]] = defaultdict(list)
+    # Adresa koja preusmerava na već viđenu stranicu nije još jedna stranica (BUG-029).
+    vidjene: set[str | None] = set()
     for page in snapshot.pages:
-        if page.status != 200:
+        adresa = normalize(page.final_url or page.url)
+        if page.status != 200 or adresa in vidjene:
             continue
+        vidjene.add(adresa)
         value = value_of(page)
         if value:
             buckets[value].append(page)
