@@ -92,6 +92,11 @@ def test_podrzava_gzip():
     assert sitemap.parse(gzip.compress(URLSET))[1] == ["https://d.rs/a", "https://d.rs/b"]
 
 
+def test_prazan_red_pre_xml_deklaracije_se_trpi():
+    """WordPress dodatak koji ispiše prazan red pre `<?xml` ne briše mapu sajta (BUG-028)."""
+    assert sitemap.parse(b'\n<?xml version="1.0" encoding="UTF-8"?>' + INDEX)[0] == "index"
+
+
 @pytest.mark.parametrize("data", [None, b"", b"<html>404</html>", b"{ nije xml }", b"\x1f\x8b pokvaren gzip"])
 def test_smece_ne_ruši_parser(data):
     kind, urls = sitemap.parse(data)

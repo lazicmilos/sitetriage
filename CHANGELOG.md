@@ -10,6 +10,15 @@ izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) 
 - Tekst uz svaki sajt je u izveštaju „predlog teksta”, a ne „nacrt mejla”: može da posluži za
   poruku, poziv ili kontakt formu. Sam tekst je isti.
 
+### Ispravljeno
+
+- Kad robots.txt navodi i mape sajta drugih domena (jedan robots.txt za ceo lanac sajtova),
+  čitaju se samo mape ovog sajta. Tuđe su trošile ograničenje od 4 fajla pre podmapa ovog sajta,
+  pa je sajt sa ispravnom mapom dobijao nalaz `infra.sitemap.missing`, a skener je slao zahteve
+  domenima kojih nema na spisku. Tuđa mapa se i dalje čita kad je jedina navedena (BUG-027).
+- Mapa sajta sa praznim redom pre `<?xml` (čest kvar WordPress dodataka) više se ne odbacuje kao
+  neispravan XML, pa sajt sa takvom mapom ne dobija `infra.sitemap.missing` (BUG-028).
+
 ## 2.0.0 — 2026-10-06
 
 Izlazni kriterijumi v2 iz [plana testiranja](docs/plan-testiranja.md) su ispunjeni

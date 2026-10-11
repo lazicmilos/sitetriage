@@ -34,6 +34,8 @@ def parse(data: bytes | None) -> tuple[SitemapKind, list[str]]:
             return "unknown", []
     if len(data) > MAX_PARSE_BYTES:
         return "unknown", []
+    # Prazan red pre `<?xml` (čest WordPress kvar) je za XML greška, ali mapa sajta postoji (BUG-028).
+    data = data.lstrip()
 
     try:
         root = ElementTree.fromstring(data)
