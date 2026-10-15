@@ -21,6 +21,10 @@ izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) 
 - Duplirani naslov, opis i canonical broje stranicu jednom i kad do nje vode dve adrese iz uzorka
   (npr. jezička adresa koja preusmerava na početnu). Broj stranica u rečenici je bio veći od
   stvarnog (BUG-029).
+- Prevelike slike broje istu sliku jednom i kad se na strani ponavlja (klonirani slajdovi u
+  slajderu), sa najvećim procenjenim viškom. Broj slika i višak u kB bili su preveliki, a višak
+  ponekad veći od cele strane: na jednom sajtu 7.011 kB umesto 2.923 kB. Na pravom prolazu od 249
+  domena 5 od 91 nalaza `perf.img.oversized` više ne prelazi prag (BUG-030).
 
 ## 2.0.0 — 2026-10-06
 

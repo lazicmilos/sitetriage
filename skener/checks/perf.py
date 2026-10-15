@@ -9,7 +9,7 @@ from __future__ import annotations
 from urllib.parse import urlsplit
 
 from skener.checks.registry import Context, check, finding, ok, unknown
-from skener.models import SiteSnapshot
+from skener.models import OversizedImage, SiteSnapshot
 
 COMPRESSED = {"gzip", "br", "zstd", "deflate"}
 BYTES_PER_MB = 1_000_000  # decimalni MB — 14 903 221 B = 14,9 MB, kako se i piše u mejlu
@@ -265,7 +265,15 @@ def load_time(snapshot, ctx: Context):
 def img_oversized(snapshot, ctx: Context):
     dom = snapshot.dom
     # SVG nema „pravu" veličinu, a data: čuvar mesta za lenje učitavanje nema prenos.
-    rasterske = [img for img in dom.oversized_images if not _vektor_ili_ugradjena(img.src)]
+    # Ista slika više puta na strani (klonirani slajdovi) preuzeta je jednom (BUG-030).
+    po_src: dict[str, OversizedImage] = {}
+    for img in dom.oversized_images:
+        if _vektor_ili_ugradjena(img.src):
+            continue
+        ranija = po_src.get(img.src)
+        if ranija is None or img.est_waste_kb > ranija.est_waste_kb:
+            po_src[img.src] = img
+    rasterske = sorted(po_src.values(), key=lambda img: -img.est_waste_kb)
     # Bez izmerenog prenosa višak je 0, a rečenica bi rekla „oko 0 kB" (BUG-023).
     oversized = [img for img in rasterske if img.est_waste_kb > 0]
     waste_kb = round(sum(img.est_waste_kb for img in oversized))

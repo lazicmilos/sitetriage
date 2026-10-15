@@ -341,6 +341,51 @@ def test_nalaz_broji_samo_slike_sa_izmerenim_viskom():
     assert "nemerena" not in " ".join(nalaz.evidence_urls)
 
 
+def test_ista_slika_vise_puta_na_strani_broji_se_jednom_sa_najvecim_viskom():
+    """BUG-030: klonirani slajdovi su istu sliku, preuzetu jednom, brojali kao više slika."""
+    browser = clean_browser()
+    browser.dom.oversized_images = [
+        _slika("https://cist.rs/slajd.jpg", 300),
+        _slika("https://cist.rs/slajd.jpg", 300),
+        _slika("https://cist.rs/slajd.jpg", 120),
+        _slika("https://cist.rs/logo.png", 50),
+        _slika("https://cist.rs/baner.jpg", 80),
+    ]
+    nalaz = run_level(2, browser)["perf.img.oversized"].findings[0]
+    assert (nalaz.evidence["broj_slika"], nalaz.evidence["kb"], nalaz.evidence["najgora"]) == (
+        3, 430, "https://cist.rs/slajd.jpg"
+    )
+    assert nalaz.evidence_urls == ["https://cist.rs/slajd.jpg", "https://cist.rs/baner.jpg", "https://cist.rs/logo.png"]
+
+
+@pytest.mark.parametrize(
+    "slike, ocekivano",
+    [
+        pytest.param([("a.jpg", 100)] * 3, "ok", id="gv-1-slika-3-puta"),
+        pytest.param([("a.jpg", 100), ("a.jpg", 100), ("b.jpg", 100)], "ok", id="gv-2-slike-minus"),
+        pytest.param([("a.jpg", 100), ("a.jpg", 100), ("b.jpg", 100), ("c.jpg", 100)], "finding",
+                     id="gv-3-slike"),
+        pytest.param([("a.jpg", 350)] * 3, "ok", id="gv-700kB-zbir-duplikata-1050"),
+        pytest.param([("a.jpg", 400), ("b.jpg", 300)] * 2, "ok", id="gv-700kB-bez-duplikata"),
+        pytest.param([("a.jpg", 401), ("b.jpg", 300)] * 2, "finding", id="gv-700kB-plus"),
+        pytest.param([("a.jpg", 0)] * 3, "ok", id="nemerena-ista-3-puta-nije-unknown"),
+    ],
+)
+def test_prevelike_slike_prag_posle_uklanjanja_duplikata(slike, ocekivano):
+    """BUG-030: prag (≥ 3 slike ili > 700 kB) se meri nad različitim slikama."""
+    browser = clean_browser()
+    browser.dom.oversized_images = [_slika(f"https://cist.rs/{ime}", kb) for ime, kb in slike]
+    assert run_level(2, browser)["perf.img.oversized"].status == ocekivano
+
+
+def test_ponovljene_svg_i_data_slike_i_dalje_ne_ulaze():
+    browser = clean_browser()
+    browser.dom.oversized_images = [_slika("https://cist.rs/a.svg", 400)] * 3 + [
+        _slika("data:image/png;base64,AAA=", 400)
+    ] * 3 + [_slika("https://cist.rs/b.jpg", 100)]
+    assert run_level(2, browser)["perf.img.oversized"].status == "ok"
+
+
 def test_veliki_visak_bajtova_pali_nalaz_i_ispod_tri_slike():
     """Prag je ≥ 3 slike **ili** višak > 700 kB (§7.3)."""
     browser = clean_browser()

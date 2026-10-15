@@ -410,7 +410,12 @@ def test_predimenzionirane_slike_sa_procenjenim_viskom(snimak):
     assert najgora.ratio > 2.5
     assert najgora.natural[0] in (800, 900) and najgora.client[0] == 100
     assert najgora.est_waste_kb > 0
-    assert run_level(2, snimak)["perf.img.oversized"].status == "finding"
+
+
+def test_ista_slika_ponovljena_na_strani_je_jedna_slika(snimak):
+    """BUG-030: deset puta /velika.png i jednom /lenja.png su dve slike, ispod praga od tri."""
+    assert len({image.src for image in snimak.dom.oversized_images}) == 2
+    assert run_level(2, snimak)["perf.img.oversized"].status == "ok"
 
 
 def test_console_greske_se_broje(snimak):
