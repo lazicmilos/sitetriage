@@ -1,14 +1,15 @@
 """English catalog. Each sentence claims exactly what the Serbian one claims, no more and no less.
 
-Pregleda ga vlasnik po tri pravila iz IT-SKENER-002 §3.3: tvrdnja mora da se proveri, svaki
-broj mora da potiče iz dokaza, a broj i imenica moraju da se slažu.
+The owner reviews it by the three rules of the client sentence review in the second test
+report: the claim can be verified, every number comes from the evidence, and number and noun
+agree.
 """
 
 from __future__ import annotations
 
 
 def decimal(number: float) -> str:
-    """„14.9", „22", „0.1" — no trailing „.0"."""
+    """"14.9", "22", "0.1": no trailing ".0"."""
     return f"{number:.1f}".removesuffix(".0")
 
 
@@ -462,7 +463,7 @@ REASONS: dict[str, str] = {
         "the home page returned no response ({kind}, attempts: {attempts}); that does not show that the "
         "site is down"
     ),
-    # duplicate checks when the sample has fewer pages than the threshold (Z-21)
+    # duplicate checks when the sample has fewer pages than the threshold (ADR-015)
     "pages_budget": (
         "the sample has fewer than {threshold:n:page|pages}, because the budget ran out before the end"
     ),
@@ -478,7 +479,7 @@ REASONS: dict[str, str] = {
         "the site has {address_count:n:internal address|internal addresses}, and a comparison "
         "needs at least {threshold}"
     ),
-    # host variants: http/https × www/without www (Z-26)
+    # host variants: http/https × www/without www (ADR-014)
     "requires.host_variants": (
         "the address variants (http/https, with and without www) were not fetched in this snapshot"
     ),
@@ -487,11 +488,11 @@ REASONS: dict[str, str] = {
         "the site was measured lightly, without the network profile, because it was not among the sites "
         "chosen for full level 2, so the load time was not measured"
     ),
-    # network profile of level 2 (Z-30)
+    # network profile of level 2 (ADR-010)
     "requires.network_profile": (
         "the snapshot predates the network profile, so the load time was measured on the real connection"
     ),
-    # real connection before level 2 (Z-33)
+    # real connection measured before level 2 (ADR-018)
     "requires.link": (
         "the real connection was not measured before level 2, so it is unknown whether the time was measured "
         "under the profile"
@@ -505,7 +506,7 @@ REASONS: dict[str, str] = {
         "the site"
     ),
     "no_https": "https on {url} does not return a page, so there is nothing to redirect to",
-    # why a domain was not scanned (the „Not scanned" list)
+    # why a domain was not scanned (the "Not scanned" list)
     "entry_missing": "the snapshot has no home page (fetching crashed, see the log)",
     "entry_status": "the home page returned status {status}",
     "entry_error": "{kind}: {detail}",
