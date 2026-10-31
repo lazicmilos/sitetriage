@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from skener import addresses
-from skener.config import ConfigError, _validate, load_config
+from sitetriage import addresses
+from sitetriage.config import ConfigError, _validate, load_config
 
 
 # --------------------------------------------------------------------------- #

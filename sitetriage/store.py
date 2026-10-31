@@ -14,7 +14,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from skener.models import BrowserSnapshot, SiteSnapshot, from_dict, to_jsonable
+from sitetriage.models import BrowserSnapshot, SiteSnapshot, from_dict, to_jsonable
 
 SITE_NAME = "site.json"
 BROWSER_NAME = "browser.json"

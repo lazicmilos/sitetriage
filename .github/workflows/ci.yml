@@ -29,24 +29,24 @@ jobs:
         run: pip install -e '.[dev]'
 
       - name: Lint
-        run: ruff check skener/ tests/ scripts/
+        run: ruff check sitetriage/ tests/ scripts/
 
       - name: Instaliraj Chromium
         run: playwright install --with-deps chromium
 
       - name: Testovi
         # Izlazni kriterijum iz plana testiranja: pokrivenost linija i grana ne pada ispod 95 %.
-        run: pytest -q --cov=skener --cov-branch --cov-report=term --cov-fail-under=95
+        run: pytest -q --cov=sitetriage --cov-branch --cov-report=term --cov-fail-under=95
 
       - name: Tabela provera se ne razilazi sa README-om
         # The registry does not depend on the Python version, so one run is enough.
         if: matrix.python-version == '3.11'
         run: |
-          skener explain --all --markdown > /tmp/registar.md
+          sitetriage explain --all --markdown > /tmp/registar.md
           while IFS= read -r red; do
             check_id=$(printf '%s' "$red" | cut -d'`' -f2)
             grep -qF "\`$check_id\`" README.md || {
-              echo "::error::$check_id nije u tabeli u README-u (pokreni: skener explain --all --markdown)"
+              echo "::error::$check_id nije u tabeli u README-u (pokreni: sitetriage explain --all --markdown)"
               exit 1
             }
           done < <(tail -n +3 /tmp/registar.md)
@@ -63,4 +63,4 @@ jobs:
         run: docker compose build
 
       - name: Testovi u kontejneru
-        run: docker compose run --rm --user "$(id -u):$(id -g)" skener pytest -q
+        run: docker compose run --rm --user "$(id -u):$(id -g)" sitetriage pytest -q

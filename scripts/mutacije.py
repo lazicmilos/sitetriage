@@ -2,7 +2,7 @@
 
 mutmut radi samo na Linux-u, pa se pokreće kroz Docker:
 
-    docker compose run --rm skener python scripts/mutacije.py
+    docker compose run --rm sitetriage python scripts/mutacije.py
 
 Kod u slici je samo za čitanje, pa mutmut radi nad kopijom u /tmp. Koji moduli se
 kvare i koji testovi ih hvataju piše u pyproject.toml, [tool.mutmut].

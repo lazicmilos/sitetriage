@@ -24,13 +24,13 @@ from pathlib import Path
 import httpcore
 import httpx
 
-from skener import __version__, addresses, store
-from skener.config import get, user_agent
-from skener.fetch import page as page_builder
-from skener.fetch import robots as robots_parser
-from skener.fetch import sitemap as sitemap_parser
-from skener.fetch.urls import host_of, normalize, same_site
-from skener.models import (
+from sitetriage import __version__, addresses, store
+from sitetriage.config import get, user_agent
+from sitetriage.fetch import page as page_builder
+from sitetriage.fetch import robots as robots_parser
+from sitetriage.fetch import sitemap as sitemap_parser
+from sitetriage.fetch.urls import host_of, normalize, same_site
+from sitetriage.models import (
     Budget,
     DomainInput,
     Entry,
@@ -45,7 +45,7 @@ from skener.models import (
     Tls,
 )
 
-log = logging.getLogger("skener.fetch")
+log = logging.getLogger("sitetriage.fetch")
 
 # Statusi na koje se odustaje od domena za ovaj prolaz (§8.3) — ne pokušava se ponovo.
 ODUSTANI_STATUSI = {429, 503}

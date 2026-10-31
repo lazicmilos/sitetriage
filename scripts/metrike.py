@@ -13,9 +13,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from skener import store
-from skener.config import load_config
-from skener.score import analyze
+from sitetriage import store
+from sitetriage.config import load_config
+from sitetriage.score import analyze
 
 
 def main(directory: str) -> int:

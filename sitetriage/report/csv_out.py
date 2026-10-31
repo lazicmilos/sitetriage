@@ -7,8 +7,8 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from skener.messages import render
-from skener.models import DomainReport
+from sitetriage.messages import render
+from sitetriage.models import DomainReport
 
 FINDINGS_HEADER = [
     "domain",

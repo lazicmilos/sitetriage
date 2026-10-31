@@ -10,9 +10,9 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from skener.checks import registry
-from skener.config import load_config
-from skener.models import (
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.models import (
     BrowserSnapshot,
     ConsoleStats,
     DomStats,

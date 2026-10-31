@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-SKENER = Path(__file__).parent.parent / "skener"
+SKENER = Path(__file__).parent.parent / "sitetriage"
 
 
 def uvozi(path: Path) -> set[str]:
@@ -26,8 +26,8 @@ def pod(ime: str, modul: str) -> bool:
 
 
 def test_cli_ne_orkestrira_sam():
-    """Redosled faza živi samo u `skener.pipeline`; inače bi ga web worker kopirao."""
-    zabranjeno = ("skener.fetch.http", "skener.fetch.browser", "skener.score")
+    """Redosled faza živi samo u `sitetriage.pipeline`; inače bi ga web worker kopirao."""
+    zabranjeno = ("sitetriage.fetch.http", "sitetriage.fetch.browser", "sitetriage.score")
     losi = {ime for ime in uvozi(SKENER / "cli.py") if any(pod(ime, m) for m in zabranjeno)}
     assert not losi, f"cli.py uvozi {sorted(losi)}; to pripada pipeline-u"
 
@@ -36,11 +36,12 @@ def test_cli_ne_orkestrira_sam():
 def test_provere_ne_diraju_mrezu(path):
     """Provera dobija snapshot i vraća nalaze. Ako joj treba nešto sa mreže, snapshotu fali polje."""
     zabranjeno = (
-        "httpx", "playwright", "skener.fetch", "skener.pipeline", "skener.messages", "skener.report"
+        "httpx", "playwright", "sitetriage.fetch", "sitetriage.pipeline", "sitetriage.messages",
+        "sitetriage.report",
     )
     losi = {
         ime
         for ime in uvozi(path)
-        if any(pod(ime, m) for m in zabranjeno) and not pod(ime, "skener.fetch.urls")
+        if any(pod(ime, m) for m in zabranjeno) and not pod(ime, "sitetriage.fetch.urls")
     }
     assert not losi, f"{path.name} uvozi {sorted(losi)}"

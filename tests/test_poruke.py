@@ -3,7 +3,7 @@
 Rečenica ide pravo u mejl, pa mora biti tačna i pravilna, na oba jezika. Pravila:
 svaki broj potiče iz dokaza (BUG-013), ispravljene netačne tvrdnje se ne vraćaju,
 broj i imenica se slažu (BUG-014), a decimalni separator je onaj iz jezika (BUG-015).
-Rečenice žive u katalogu (`skener.messages`), a nalaz nosi samo dokaz.
+Rečenice žive u katalogu (`sitetriage.messages`), a nalaz nosi samo dokaz.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ import pytest
 from factories import clean_browser, clean_site, run_level
 from poruke_slucajevi import GOLDEN, slucajevi
 
-from skener.checks import registry
-from skener.messages import LANGS, catalog, reason, render
-from skener.messages.en import plural as en_oblik
-from skener.messages.sr import sa_brojem
+from sitetriage.checks import registry
+from sitetriage.messages import LANGS, catalog, reason, render
+from sitetriage.messages.en import plural as en_oblik
+from sitetriage.messages.sr import sa_brojem
 
 registry.load_all()
 SPECS = sorted(registry.REGISTRY.values(), key=lambda s: s.check_id)

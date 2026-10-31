@@ -11,9 +11,9 @@ import re
 
 import pytest
 
-from skener.config import load_config
-from skener.models import DomainReport, Finding, Reason, Unknown
-from skener.report import html_out
+from sitetriage.config import load_config
+from sitetriage.models import DomainReport, Finding, Reason, Unknown
+from sitetriage.report import html_out
 
 # Decimalni broj, a ne verzija („2.0.0") ni IP adresa: bez tačke ili cifre sa strane.
 DECIMALNI = re.compile(r"(?<![\d.])\d+\.\d+(?![\d.])")

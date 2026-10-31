@@ -6,9 +6,9 @@ import re
 from collections import defaultdict
 from collections.abc import Callable
 
-from skener.checks.registry import CheckSpec, Context, check, finding, not_applicable, ok, unknown
-from skener.fetch.urls import collapse_ws, normalize, path_group, same_site
-from skener.models import CheckResult, PageSnapshot, SiteSnapshot
+from sitetriage.checks.registry import CheckSpec, Context, check, finding, not_applicable, ok, unknown
+from sitetriage.fetch.urls import collapse_ws, normalize, path_group, same_site
+from sitetriage.models import CheckResult, PageSnapshot, SiteSnapshot
 
 _SEMA_I_WWW = re.compile(r"^https?://(www\.)?")
 

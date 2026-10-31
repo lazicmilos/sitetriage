@@ -14,13 +14,13 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from skener import __version__
-from skener.config import get
-from skener.messages import number, text
-from skener.messages import reason as razlog
-from skener.messages import render as poruka
-from skener.models import DomainReport
-from skener.score import RADE, partial_shares
+from sitetriage import __version__
+from sitetriage.config import get
+from sitetriage.messages import number, text
+from sitetriage.messages import reason as razlog
+from sitetriage.messages import render as poruka
+from sitetriage.models import DomainReport
+from sitetriage.score import RADE, partial_shares
 
 # Znak i boje po ozbiljnosti; oznaka („KRITIČNO") dolazi iz kataloga jezika.
 OZBILJNOST = {

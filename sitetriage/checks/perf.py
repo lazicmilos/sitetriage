@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
-from skener.checks.registry import Context, check, finding, ok, unknown
-from skener.models import OversizedImage, SiteSnapshot
+from sitetriage.checks.registry import Context, check, finding, ok, unknown
+from sitetriage.models import OversizedImage, SiteSnapshot
 
 COMPRESSED = {"gzip", "br", "zstd", "deflate"}
 BYTES_PER_MB = 1_000_000  # decimalni MB — 14 903 221 B = 14,9 MB, kako se i piše u mejlu

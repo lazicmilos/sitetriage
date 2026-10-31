@@ -8,7 +8,7 @@ pokvaren, i to pošalješ u mejlu (§15, zamka 1).
 
 from __future__ import annotations
 
-from skener.checks.registry import Context, check, finding, ok, unknown
+from sitetriage.checks.registry import Context, check, finding, ok, unknown
 
 # Zakonska izloženost po pristupačnosti je veća, pa je prag ozbiljnosti niži.
 IZLOZENE_DELATNOSTI = {"zdravstvo", "institucija"}

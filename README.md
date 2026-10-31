@@ -24,11 +24,11 @@ Najlakše je preko Docker-a. U slici je Chromium tačno za verziju Playwright-a 
 pa se merenje u browseru ponaša isto na svakoj mašini.
 
 ```bash
-git clone https://github.com/lazicmilos/skener.git
-cd skener
+git clone https://github.com/lazicmilos/sitetriage.git
+cd sitetriage
 mkdir rad
 docker compose build
-docker compose run --rm skener pytest -q        # svi testovi moraju da prođu
+docker compose run --rm sitetriage pytest -q        # svi testovi moraju da prođu
 ```
 
 Pre prvog skeniranja upiši ko skenira. Administrator svakog sajta u logu servera vidi User-Agent, i iz
@@ -46,7 +46,7 @@ prosleđuje u kontejner. Ime sme da bude i ćirilicom ili sa „š" i „đ". Al
 latinicu bez kvačica, jer HTTP zaglavlje prima samo ASCII.
 
 ```bash
-docker compose run --rm skener skener scan /rad/leads.csv --config /rad/moj.toml --out /rad/izvestaj
+docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --config /rad/moj.toml --out /rad/izvestaj
 ```
 
 Na Linux-u pre toga postavi `SKENER_UID=$(id -u)` i `SKENER_GID=$(id -g)`, da izveštaji u `rad/`
@@ -96,8 +96,8 @@ jer sajt možda radi, samo ga alat nije video. Tu je i broj izuzetih domena.
 
 ### JSON izveštaj
 
-`report.json` je ugovor za web aplikaciju, `skener diff`, CRM i kupca koda. Oblik opisuje šema
-[`skener/schema/report-2.json`](skener/schema/report-2.json), a verzija šeme je prvo polje
+`report.json` je ugovor za web aplikaciju, `sitetriage diff`, CRM i kupca koda. Oblik opisuje šema
+[`sitetriage/schema/report-2.json`](sitetriage/schema/report-2.json), a verzija šeme je prvo polje
 dokumenta (`schema_version`). Uz nju idu verzija alata, vreme prolaza u UTC-u, trajanje po nivou,
 otisak konfiguracije (`config_digest`: sha256 pragova, množilaca i bodova, bez identiteta i
 paralelizma), okruženje (OS, Python, Chromium) i zbir po statusu. Domeni su u tri liste:
@@ -125,13 +125,13 @@ prolazi šemu.
 ### Ostale komande
 
 ```bash
-skener recheck izvestaj/snapshots/ --out novi/                  # ponovo boduje sačuvano, bez mreže
-skener recheck izvestaj/snapshots/ --config probni-pragovi.toml --out novi/
-skener recheck izvestaj/snapshots/ --lang en --out english/     # isti prolaz, izveštaj na engleskom
-skener record moji-domeni.csv --out snimci/
-skener explain seo.canonical.duplicate
-skener explain --all --markdown                                 # odavde je tabela provera ispod
-skener scan domains.csv --level 1 --concurrency 4 --only institucija.example --debug-domain institucija.example
+sitetriage recheck izvestaj/snapshots/ --out novi/                  # ponovo boduje sačuvano, bez mreže
+sitetriage recheck izvestaj/snapshots/ --config probni-pragovi.toml --out novi/
+sitetriage recheck izvestaj/snapshots/ --lang en --out english/     # isti prolaz, izveštaj na engleskom
+sitetriage record moji-domeni.csv --out snimci/
+sitetriage explain seo.canonical.duplicate
+sitetriage explain --all --markdown                                 # odavde je tabela provera ispod
+sitetriage scan domains.csv --level 1 --concurrency 4 --only institucija.example --debug-domain institucija.example
 ```
 
 `recheck` je glavni alat za kalibraciju. Promeniš prag, pustiš ga nad sačuvanim snapshotima i za
@@ -179,7 +179,7 @@ ne kopira ([ADR-008](docs/adr/ADR-008-pipeline.md)). Oba pravila proverava `test
 
 ## Provere
 
-Tabela je generisana iz registra (`skener explain --all --markdown`). Kad se promeni prag, tabela se
+Tabela je generisana iz registra (`sitetriage explain --all --markdown`). Kad se promeni prag, tabela se
 generiše ponovo; CI proverava samo da u njoj nije izostala nijedna provera iz registra.
 
 | `check_id` | Nivo | Kategorija | Ozbiljnost | Prag |
@@ -233,9 +233,9 @@ dokaza. Oba pravila čuvaju testovi u `tests/test_poruke.py`, uz slaganje broja 
 naslova", „5 glavnih naslova", „4 main headings").
 
 Nalaz nosi samo dokaz: brojeve, URL-ove i tehničke kodove. Rečenicu pravi katalog u
-`skener/messages/` tek pri prikazu, na jeziku koji bira `--lang sr|en`
+`sitetriage/messages/` tek pri prikazu, na jeziku koji bira `--lang sr|en`
 ([ADR-009](docs/adr/ADR-009-katalog-poruka.md)). Zato isti prolaz može da se prikaže na oba
-jezika. Engleska rečenica tvrdi tačno isto što i srpska, ni više ni manje, a `skener explain`
+jezika. Engleska rečenica tvrdi tačno isto što i srpska, ni više ni manje, a `sitetriage explain`
 ispisuje obe. Isto važi za razloge zašto nešto nije provereno i zašto je domen poslat na nivo 2.
 
 ## Zašto su pragovi baš takvi
@@ -268,8 +268,8 @@ odluka iz kalibracije. Svaka odluka je upisana i u [`docs/kalibracija.md`](docs/
 ## Testovi
 
 ```bash
-docker compose run --rm skener pytest -q               # bez mreže, sa pravim Chromium-om, oko 4 min
-docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv skener pytest -m live -v   # pravi sajtovi sa tvoje liste, traži mrežu
+docker compose run --rm sitetriage pytest -q               # bez mreže, sa pravim Chromium-om, oko 4 min
+docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v   # pravi sajtovi sa tvoje liste, traži mrežu
 ```
 
 Prvi sloj ne zavisi od mreže i vrti se u CI-ju na svaki push. Tu su sve provere nad snapshotima,
@@ -291,7 +291,7 @@ menja ponašanje. mutmut 3.2.3 ne pravi mutante u funkcijama sa dekoratorom, pa 
 (`@check`) ne mutira. Pokreće se kroz Docker, jer mutmut ne radi na Windows-u, i traje oko 20 minuta:
 
 ```bash
-docker compose run --rm skener python scripts/mutacije.py
+docker compose run --rm sitetriage python scripts/mutacije.py
 ```
 
 Kako se testira i šta je nađeno opisuju [plan testiranja](docs/plan-testiranja.md),
@@ -362,7 +362,7 @@ Kako se postavlja okruženje, pokreću testovi i dodaje nova provera piše u
 
 ## Planirano, nije u v2
 
-- `skener diff` između dva prolaza i `skener outcomes` (koji leadovi su odgovorili i postali posao).
+- `sitetriage diff` između dva prolaza i `sitetriage outcomes` (koji leadovi su odgovorili i postali posao).
   Dolaze kad pretplata postane stvarna. Rečenica „sajt je od marta postao 3 MB teži" je dobar uvod
   u mejl.
 - Provera „početna skoro bez sadržaja": početna koja ni posle JavaScript-a nema skoro nikakav

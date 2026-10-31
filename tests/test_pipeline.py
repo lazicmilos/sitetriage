@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 from localserver import FakeSite, Response, html
 
-from skener import pipeline
-from skener.config import load_config
-from skener.inputs import InputError
-from skener.models import DomainInput
+from sitetriage import pipeline
+from sitetriage.config import load_config
+from sitetriage.inputs import InputError
+from sitetriage.models import DomainInput
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -176,7 +176,7 @@ def test_izuzet_domen_ne_dobija_nijedan_zahtev(monkeypatch):
     """Lokalni serveri dele host 127.0.0.1, pa je drugi domen u listi ime bez DNS zapisa."""
     import socket
 
-    from skener.fetch import http
+    from sitetriage.fetch import http
 
     async def nema_zapisa(host, port):
         raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")

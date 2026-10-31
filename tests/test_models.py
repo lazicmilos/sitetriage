@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from skener.models import (
+from sitetriage.models import (
     CheckResult,
     Entry,
     Finding,

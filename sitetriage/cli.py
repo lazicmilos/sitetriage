@@ -1,6 +1,6 @@
 """Komandna linija (§11): argumenti, ulazni CSV, logovanje i izveštaji.
 
-Prolaz vodi `skener.pipeline`; CLI ne dodiruje ni mrežu ni logiku.
+Prolaz vodi `sitetriage.pipeline`; CLI ne dodiruje ni mrežu ni logiku.
 """
 
 from __future__ import annotations
@@ -14,24 +14,24 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-from skener import __version__, pipeline
-from skener.checks import registry
-from skener.config import ConfigError, get, load_config
-from skener.inputs import InputError, read_domain_list, read_exclusions
-from skener.messages import LANGS, catalog, templates
-from skener.models import DomainInput, Event, ScanResult
-from skener.report import csv_out, html_out, json_out
+from sitetriage import __version__, pipeline
+from sitetriage.checks import registry
+from sitetriage.config import ConfigError, get, load_config
+from sitetriage.inputs import InputError, read_domain_list, read_exclusions
+from sitetriage.messages import LANGS, catalog, templates
+from sitetriage.models import DomainInput, Event, ScanResult
+from sitetriage.report import csv_out, html_out, json_out
 
-log = logging.getLogger("skener")
+log = logging.getLogger("sitetriage")
 
 PRIMER = """
 primeri:
-  skener scan domains.example.csv --out izvestaj/
-  skener scan domains.csv --level 1 --concurrency 4 --only institucija.example
-  skener recheck snapshots/ --out izvestaj/        # bez mreže, za kalibraciju pragova
-  skener record moji-domeni.csv --out snimci/
-  skener explain seo.canonical.duplicate
-  skener explain --all --markdown > provere.md
+  sitetriage scan domains.example.csv --out izvestaj/
+  sitetriage scan domains.csv --level 1 --concurrency 4 --only institucija.example
+  sitetriage recheck snapshots/ --out izvestaj/        # bez mreže, za kalibraciju pragova
+  sitetriage record moji-domeni.csv --out snimci/
+  sitetriage explain seo.canonical.duplicate
+  sitetriage explain --all --markdown > provere.md
 """
 
 
@@ -84,7 +84,7 @@ def setup_logging(debug_domain: str | None) -> None:
     handler.setFormatter(JsonLines())
     if debug_domain:
         handler.addFilter(OnlyDomain(debug_domain))
-    root = logging.getLogger("skener")
+    root = logging.getLogger("sitetriage")
     root.handlers[:] = [handler]
     root.setLevel(logging.DEBUG if debug_domain else logging.INFO)
 
@@ -108,7 +108,7 @@ def _ceo_broj(najmanje: int):
 
 
 def read_domains(path: Path, only: Sequence[str] = ()) -> list[DomainInput]:
-    """Lista iz fajla (`skener.inputs`); upozorenja idu u log, a `--only` sužava listu."""
+    """Lista iz fajla (`sitetriage.inputs`); upozorenja idu u log, a `--only` sužava listu."""
     rows, warnings = read_domain_list(Path(path).read_bytes(), str(path))
     for warning in warnings:
         red = f"red {warning.row}: " if warning.row else ""
@@ -243,7 +243,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
         blizu = [s.check_id for s in specs if args.check_id in s.check_id]
         raise SystemExit(
             f"nepoznata provera: {args.check_id}"
-            + (f"\nda li si mislio: {', '.join(blizu)}" if blizu else "\nsve: skener explain --all")
+            + (f"\nda li si mislio: {', '.join(blizu)}" if blizu else "\nsve: sitetriage explain --all")
         )
 
     print(f"{spec.check_id}\n{'=' * len(spec.check_id)}")
@@ -267,12 +267,12 @@ def cmd_explain(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- #
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="skener",
+        prog="sitetriage",
         description="Rangira domene po tome koji zaslužuju pun ručni audit. Čita, nikad ne piše.",
         epilog=PRIMER,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--version", action="version", version=f"skener {__version__}")
+    parser.add_argument("--version", action="version", version=f"sitetriage {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     def add_common(sub: argparse.ArgumentParser) -> None:

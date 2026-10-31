@@ -16,10 +16,10 @@ import pytest
 from factories import run_level
 from localserver import FakeSite, Response
 
-from skener import addresses, pipeline
-from skener.config import load_config, user_agent
-from skener.fetch.browser import est_waste_kb
-from skener.models import (
+from sitetriage import addresses, pipeline
+from sitetriage.config import load_config, user_agent
+from sitetriage.fetch.browser import est_waste_kb
+from sitetriage.models import (
     BrowserSnapshot,
     Entry,
     NetworkProfile,
@@ -80,7 +80,7 @@ def teski_sajt() -> FakeSite:
 
 
 def snimi(site: FakeSite, config: dict | None = None):
-    from skener.fetch.browser import capture_all
+    from sitetriage.fetch.browser import capture_all
 
     fake = SiteSnapshot(
         domain=site.base_url,
@@ -151,7 +151,7 @@ def test_profil_usporava_ucitavanje():
 def test_profil_vazi_i_za_iframe_sa_drugog_porekla(monkeypatch):
     """Pun Chromium, kao sistemski, učitava iframe sa drugog sajta u poseban proces (OOPIF), a
     profil postavljen na stranicu taj proces ne usporava. `localhost` i `127.0.0.1` su dva sajta."""
-    from skener.fetch import browser
+    from sitetriage.fetch import browser
 
     pokretanje = browser._launch_options
     monkeypatch.setattr(browser, "_launch_options", lambda cfg: {**pokretanje(cfg), "channel": "chromium"})
@@ -167,7 +167,7 @@ def test_profil_vazi_i_za_iframe_sa_drugog_porekla(monkeypatch):
 
 def test_lagano_merenje_je_bez_profila_i_bez_merenja_veze(monkeypatch):
     """BUG-020: sajt van limita meri težinu, zahteve i DOM bez profila; vreme ostaje za pun nivo 2."""
-    from skener.fetch import browser as modul
+    from sitetriage.fetch import browser as modul
 
     async def ne_sme(_config):
         raise AssertionError("lagano merenje ne meri vezu")
@@ -197,7 +197,7 @@ def test_lagano_merenje_je_bez_profila_i_bez_merenja_veze(monkeypatch):
 )
 def test_lagani_nivo_2_bira_broj_konteksta_po_masini(monkeypatch, slobodno_gb, jezgara, zadato, ocekivano):
     """Z-32: lagani nivo 2 ne meri vreme, pa ide brzinom mašine; pun ostaje na `browser.concurrency`."""
-    from skener.fetch import browser as modul
+    from sitetriage.fetch import browser as modul
 
     config = load_config()
     config["browser"]["light_concurrency"] = zadato
@@ -209,7 +209,7 @@ def test_lagani_nivo_2_bira_broj_konteksta_po_masini(monkeypatch, slobodno_gb, j
 
 
 def test_slobodna_memorija_se_cita_iz_proc_meminfo():
-    from skener.fetch import browser as modul
+    from sitetriage.fetch import browser as modul
 
     kb = modul._slobodno_kb()
     assert kb is None if not Path("/proc/meminfo").exists() else kb > 0
@@ -225,7 +225,7 @@ def test_profil_je_u_snapshotu_i_jsonu(snimak):
 
 def test_spora_veza_je_u_snapshotu_i_upozorava_jednom(monkeypatch, caplog):
     """Z-33: veza se meri jednom po prolazu, pre nivoa 2."""
-    from skener.fetch import browser
+    from sitetriage.fetch import browser
 
     async def spora(config: dict) -> float:
         return 3.2
@@ -510,7 +510,7 @@ def dva_ucitavanja(serial_load: bool) -> tuple[dict[str, float], dict[str, float
     """Trenuci kad su dva sajta tražila HTML i sliku; slika kasni 1 s i drži `load`."""
     import time
 
-    from skener.fetch.browser import capture_all
+    from sitetriage.fetch.browser import capture_all
 
     trenuci: dict[str, dict[str, float]] = {}
 
@@ -592,7 +592,7 @@ def test_prekid_posle_tvrdog_limita_ne_ostavlja_gresku_u_logu(caplog):
 def test_rukovalac_izuzetaka_se_vraca_posle_nivoa_2():
     """Nivo 2 utišava greške zatvorenih konteksta samo dok traje. Web worker živi dugo,
     pa njegova petlja posle nivoa 2 mora imati svoj rukovalac, a ne naš."""
-    from skener.fetch.browser import capture_all
+    from sitetriage.fetch.browser import capture_all
 
     def nas(loop, context):
         loop.default_exception_handler(context)
@@ -613,7 +613,7 @@ def test_rukovalac_izuzetaka_se_vraca_posle_nivoa_2():
 
 def test_rukovalac_utisava_samo_zatvoren_kontekst():
     """Sve osim greške zatvorenog konteksta ide rukovaocu koji je bio pre nivoa 2."""
-    from skener.fetch.browser import _tiho_za_zatvoren_kontekst
+    from sitetriage.fetch.browser import _tiho_za_zatvoren_kontekst
 
     class TargetClosedError(Exception):
         pass
@@ -627,7 +627,7 @@ def test_rukovalac_utisava_samo_zatvoren_kontekst():
 
 def test_stranica_koja_se_ne_otvara_je_failed_sa_razlogom():
     """Greška pri otvaranju koja nije istek (odbijena veza) → `failed`, ne pad."""
-    from skener.fetch.browser import capture_all
+    from sitetriage.fetch.browser import capture_all
 
     mrtav = SiteSnapshot(
         domain="http://127.0.0.1:1",
@@ -643,7 +643,7 @@ def test_stranica_koja_se_ne_otvara_je_failed_sa_razlogom():
 
 
 def test_sistemski_chromium_iz_konfiguracije_i_okruzenja(monkeypatch):
-    from skener.fetch.browser import _launch_options
+    from sitetriage.fetch.browser import _launch_options
 
     cfg = load_config()
     monkeypatch.delenv("SKENER_CHROMIUM", raising=False)

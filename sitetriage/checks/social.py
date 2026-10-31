@@ -7,8 +7,8 @@ a na b2b 0,7 (§9.2).
 
 from __future__ import annotations
 
-from skener.checks.registry import Context, check, finding, ok
-from skener.models import SiteSnapshot
+from sitetriage.checks.registry import Context, check, finding, ok
+from sitetriage.models import SiteSnapshot
 
 
 def _og_count(snapshot: SiteSnapshot) -> int:

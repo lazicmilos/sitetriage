@@ -10,15 +10,15 @@ import jsonschema
 import pytest
 from factories import clean_browser
 
-from skener import pipeline
-from skener.checks import registry
-from skener.config import load_config
-from skener.messages import reason
-from skener.models import BrowserSnapshot, from_dict, to_jsonable
-from skener.report import json_out
+from sitetriage import pipeline
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.messages import reason
+from sitetriage.models import BrowserSnapshot, from_dict, to_jsonable
+from sitetriage.report import json_out
 
 FIXTURES = Path(__file__).parent / "fixtures"
-SEMA = json.loads(files("skener").joinpath("schema/report-2.json").read_text(encoding="utf-8"))
+SEMA = json.loads(files("sitetriage").joinpath("schema/report-2.json").read_text(encoding="utf-8"))
 
 
 def test_json_izvestaj_prolazi_semu(tmp_path):

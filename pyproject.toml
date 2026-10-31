@@ -3,9 +3,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "skener"
+name = "sitetriage"
 dynamic = ["version"]
-description = "Skener sajtova — rangira domene po tome koji zaslužuju pun ručni audit"
+description = "Scan a list of domains politely and rank the sites that deserve a full manual audit"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Milos Lazic", email = "miloslazic458@gmail.com" }]
@@ -36,23 +36,23 @@ browser = ["playwright>=1.44"]
 dev = ["pytest>=8", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18", "pre-commit>=3.5"]
 
 [project.urls]
-Homepage = "https://github.com/lazicmilos/skener"
-Repository = "https://github.com/lazicmilos/skener"
-Issues = "https://github.com/lazicmilos/skener/issues"
-Changelog = "https://github.com/lazicmilos/skener/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/lazicmilos/sitetriage"
+Repository = "https://github.com/lazicmilos/sitetriage"
+Issues = "https://github.com/lazicmilos/sitetriage/issues"
+Changelog = "https://github.com/lazicmilos/sitetriage/blob/main/CHANGELOG.md"
 
 [project.scripts]
-skener = "skener.cli:main"
+sitetriage = "sitetriage.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["skener*"]
+include = ["sitetriage*"]
 
 # Šema JSON izveštaja ide uz paket: integracije i web aplikacija validiraju po njoj.
 [tool.setuptools.package-data]
-skener = ["schema/*.json"]
+sitetriage = ["schema/*.json"]
 
 [tool.setuptools.dynamic]
-version = { attr = "skener.__version__" }
+version = { attr = "sitetriage.__version__" }
 
 
 [tool.pytest.ini_options]
@@ -64,18 +64,18 @@ markers = [
 ]
 
 # Mutaciono testiranje (docs/plan-testiranja.md): moduli sa logikom.
-# Nov modul pod skener/ je obuhvaćen sam, osim ako je u do_not_mutate. Zato čisti
+# Nov modul pod sitetriage/ je obuhvaćen sam, osim ako je u do_not_mutate. Zato čisti
 # moduli (poruke, diff, ishodi, klasifikacija adresa) ne idu u fetch/* ni report/*.
 # mutmut 3.2.3 pokreće ceo skup testova; izbor testova iz podešavanja ne čita.
 # Radi samo na Linux-u, pa kroz Docker:
-#   docker compose run --rm skener python scripts/mutacije.py
+#   docker compose run --rm sitetriage python scripts/mutacije.py
 [tool.mutmut]
-paths_to_mutate = ["skener/"]
+paths_to_mutate = ["sitetriage/"]
 do_not_mutate = [
-    "skener/__init__.py", "skener/cli.py", "skener/pipeline.py", "skener/models.py", "skener/store.py",
-    "skener/fetch/*", "skener/report/*",
+    "sitetriage/__init__.py", "sitetriage/cli.py", "sitetriage/pipeline.py", "sitetriage/models.py", "sitetriage/store.py",
+    "sitetriage/fetch/*", "sitetriage/report/*",
 ]
-also_copy = ["skener.toml", "skener/schema/"]
+also_copy = ["skener.toml", "sitetriage/schema/"]
 
 [tool.ruff]
 line-length = 110

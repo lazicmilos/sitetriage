@@ -2,7 +2,7 @@
 
 Provere se **ne pozivaju iz if-else lanca**. Svaka se registruje sa svojim
 metapodacima, a motor samo prođe kroz registar — pa su lista provera, tabela u
-README-u i `skener explain` jedan isti podatak, a ne tri koja se razilaze.
+README-u i `sitetriage explain` jedan isti podatak, a ne tri koja se razilaze.
 
 Pravilo koje se ne krši (§2.3): ovaj paket ne uvozi `httpx`, `playwright`, ni
 `fetch.*` osim `fetch.urls`. Ako ti zatreba nešto sa mreže — fali ti polje u
@@ -15,8 +15,8 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from skener.config import get
-from skener.models import BrowserSnapshot, CheckResult, Finding, Reason
+from sitetriage.config import get
+from sitetriage.models import BrowserSnapshot, CheckResult, Finding, Reason
 
 CheckFn = Callable[[Any, "Context"], CheckResult]
 
@@ -90,7 +90,7 @@ def ok(spec: CheckSpec) -> CheckResult:
 def unknown(spec: CheckSpec, reason: str, **evidence: Any) -> CheckResult:
     """`unknown` bez razloga je bug (§3.4) — potpis to i ne dozvoljava.
 
-    Razlog je kod iz kataloga (`skener.messages`) i podaci za rečenicu, kao kod nalaza.
+    Razlog je kod iz kataloga (`sitetriage.messages`) i podaci za rečenicu, kao kod nalaza.
     """
     return CheckResult(check_id=spec.check_id, status="unknown", reason=Reason(reason, evidence))
 
@@ -109,7 +109,7 @@ def finding(
     severity: str | None = None,
     variant: str | None = None,
 ) -> CheckResult:
-    """Nalaz nosi dokaz, a rečenicu iz njega pravi `skener.messages` pri prikazu.
+    """Nalaz nosi dokaz, a rečenicu iz njega pravi `sitetriage.messages` pri prikazu.
 
     To nije stil nego tvrdnja: ako rečenica za klijenta sadrži broj, taj broj
     nužno postoji u `evidence`. „Sajt je spor" tako ne može da prođe (§3.5).
@@ -204,4 +204,4 @@ def run(level: int, snapshot: Any, ctx: Context) -> list[CheckResult]:
 
 def load_all() -> None:
     """Uvozi module sa proverama da bi se dekoratori izvršili."""
-    from skener.checks import a11y, i18n, infra, perf, seo, social  # noqa: F401
+    from sitetriage.checks import a11y, i18n, infra, perf, seo, social  # noqa: F401

@@ -2,7 +2,7 @@
 
 import pytest
 
-from skener.fetch.urls import collapse_ws, normalize, path_group, same_site
+from sitetriage.fetch.urls import collapse_ws, normalize, path_group, same_site
 
 # (ulaz, base, očekivano)
 CASES = [

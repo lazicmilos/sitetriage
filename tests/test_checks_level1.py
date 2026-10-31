@@ -11,9 +11,9 @@ import copy
 import pytest
 from factories import clean_site, findings, run_level, statuses
 
-from skener.checks import registry
-from skener.messages import LANGS, reason, render
-from skener.models import Entry, HostVariant, Soft404, Soft404Probe, Tls
+from sitetriage.checks import registry
+from sitetriage.messages import LANGS, reason, render
+from sitetriage.models import Entry, HostVariant, Soft404, Soft404Probe, Tls
 
 LEVEL1_IDS = sorted(s.check_id for s in registry.REGISTRY.values() if s.level == 1)
 
@@ -426,7 +426,7 @@ def test_mismatch_poruka_ne_tvrdi_nista_o_pretrazivacima():
 # nije proveren, pa „ok" ne sme da stoji
 # --------------------------------------------------------------------------- #
 def test_tls_je_unknown_kad_je_https_pao_a_sajt_dohvacen_preko_http():
-    from skener.models import SnapshotError
+    from sitetriage.models import SnapshotError
 
     site = clean_site()
     site.entry.requested_url = "http://cist.rs/"

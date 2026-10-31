@@ -12,12 +12,12 @@ import pytest
 from factories import clean_browser, clean_site, run_level
 from localserver import FakeSite, Response
 
-from skener.config import load_config
-from skener.fetch.http import Fetcher, fetch_site
-from skener.messages import reason
-from skener.models import CheckResult, DomainInput
-from skener.report import html_out
-from skener.score import analyze
+from sitetriage.config import load_config
+from sitetriage.fetch.http import Fetcher, fetch_site
+from sitetriage.messages import reason
+from sitetriage.models import CheckResult, DomainInput
+from sitetriage.report import html_out
+from sitetriage.score import analyze
 
 DUPLIKATI = ("seo.canonical.duplicate", "seo.description.duplicate", "seo.title.duplicate")
 

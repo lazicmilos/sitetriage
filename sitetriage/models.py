@@ -13,7 +13,7 @@ import typing
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from skener import __version__
+from sitetriage import __version__
 
 Severity = Literal["critical", "high", "medium", "low"]
 Category = Literal["seo", "social", "i18n", "infra", "perf", "a11y", "qa"]
@@ -363,7 +363,7 @@ class Finding:
     category: str
     severity: str
     # Samo podaci: brojevi, logičke vrednosti, URL-ovi, tehnički kodovi, sirove greške i
-    # tekst sa sajta. Rečenicu pravi `skener.messages` pri prikazu, na jeziku izveštaja.
+    # tekst sa sajta. Rečenicu pravi `sitetriage.messages` pri prikazu, na jeziku izveštaja.
     evidence: dict[str, Any] = field(default_factory=dict)
     evidence_urls: list[str] = field(default_factory=list)
     weight: float = 0.0
@@ -375,7 +375,7 @@ class Finding:
 class Reason:
     """Zašto nešto nije provereno ili zašto domen ide na nivo 2: kod i podaci, bez rečenice.
 
-    Rečenicu pravi `skener.messages.reason` na jeziku izveštaja, isto kao za nalaz.
+    Rečenicu pravi `sitetriage.messages.reason` na jeziku izveštaja, isto kao za nalaz.
     """
 
     code: str
@@ -437,7 +437,7 @@ class DomainReport:
 
 
 # --------------------------------------------------------------------------- #
-# Prolaz kao celina: rezultat i događaji napretka (skener.pipeline)
+# Prolaz kao celina: rezultat i događaji napretka (sitetriage.pipeline)
 # --------------------------------------------------------------------------- #
 @dataclass
 class Event:
@@ -456,7 +456,7 @@ class ScanResult:
     """Ceo prolaz: metapodaci, zbir po statusu i rangirani izveštaji.
 
     Serijalizovan je to JSON izveštaj, pa redosled polja određuje i redosled ključeva, a
-    šema je u `skener/schema/report-2.json`.
+    šema je u `sitetriage/schema/report-2.json`.
     """
 
     schema_version: str = SCHEMA_VERSION
