@@ -9,7 +9,8 @@ jobs:
   offline:
     # Samo offline sloj: `live` testovi bi padali kad nekom sajtu istekne
     # sertifikat, a to nije greška u alatu (§12.1).
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
     strategy:
       # A failure on one version does not cancel the others, so it shows whether it is version-specific.
       fail-fast: false
@@ -53,7 +54,8 @@ jobs:
   docker:
     # Isto okruženje u kome se pušta pravi prolaz. Bez ovog posla Dockerfile se tiho
     # pokvari prvi put kad se promeni verzija Playwright-a u pyproject.toml.
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
