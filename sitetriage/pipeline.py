@@ -21,7 +21,7 @@ from pathlib import Path
 from sitetriage import store
 from sitetriage.checks import registry
 from sitetriage.config import digest, user_agent
-from sitetriage.fetch.browser import capture_all
+from sitetriage.fetch.browser import BrowserLaunchError, capture_all
 from sitetriage.fetch.http import scan_domains
 from sitetriage.inputs import InputError, is_excluded
 from sitetriage.models import (
@@ -114,11 +114,24 @@ async def scan(
     t1 = time.monotonic()
 
     reasons, chosen, rest = _escalate(sites, config, level)
-    browsers = await _level2(chosen, config, snapshot_dir, on_event)
-    t2 = time.monotonic()
-    # After full level 2, so the light measurement does not share the link with time measurement (BUG-006).
-    browsers |= await _level2(rest, config, snapshot_dir, on_event, light=True)
+    browsers: dict[str, BrowserSnapshot] = {}
+    t2 = None
+    try:
+        browsers = await _level2(chosen, config, snapshot_dir, on_event)
+        t2 = time.monotonic()
+        # After full level 2, so the light measurement does not share the link with time
+        # measurement (BUG-006).
+        browsers |= await _level2(rest, config, snapshot_dir, on_event, light=True)
+    except BrowserLaunchError as exc:
+        # Like a missing Playwright: level 1 stays, level 2 is skipped and the reports are written (BUG-01).
+        log.error(
+            "Chromium could not be started; skipping level 2 and light level 2 "
+            "(run 'playwright install chromium', or point SITETRIAGE_CHROMIUM or "
+            "[browser] executable_path at a Chromium): %s",
+            exc,
+        )
     t3 = time.monotonic()
+    t2 = t2 or t3
 
     reports = [
         analyze(site, config, browser=browsers.get(site.domain), escalation=reasons.get(site.domain, []))
@@ -191,15 +204,16 @@ async def _level2(
     if not chosen or not _playwright_installed("skipping level 2"):
         return {}
     progress = _Progress(on_event, "level2_light" if light else "level2", len(chosen))
-    browsers = await capture_all(
-        chosen,
-        config,
-        snapshot_dir=snapshot_dir,
-        on_done=lambda snapshot: progress.domain(snapshot.domain, snapshot.status),
-        light=light,
-    )
-    progress.finish()
-    return browsers
+    try:
+        return await capture_all(
+            chosen,
+            config,
+            snapshot_dir=snapshot_dir,
+            on_done=lambda snapshot: progress.domain(snapshot.domain, snapshot.status),
+            light=light,
+        )
+    finally:
+        progress.finish()
 
 
 def _playwright_installed(consequence: str) -> bool:
