@@ -77,7 +77,7 @@ def test_positive_finding(check_id):
     "total_bytes, expected",
     [
         # Boundary values (three points) for the thresholds calibrated on list A (ADR-020):
-        # p50 2.2 MB, p75 3.6 MB, p90 7.3 MB transferred until `load` without video (docs/kalibracija.md).
+        # p50 2.2 MB, p75 3.6 MB, p90 7.3 MB transferred until `load` without video (docs/sr/kalibracija.md).
         pytest.param(1_000_000, None, id="ke-light"),
         pytest.param(1_999_999, None, id="gv-2MB-minus"),
         pytest.param(2_000_000, None, id="gv-2MB"),

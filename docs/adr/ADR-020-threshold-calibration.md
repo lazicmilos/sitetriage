@@ -36,7 +36,7 @@ are calibrated on it. List B is 100 new domains of the same type with no overlap
 criteria are measured on it. After calibration on A the thresholds are frozen until the measurement
 on B is complete, "because tuning towards B would make it a new A". A defect found on B goes through
 the bug procedure, and after the fix the criteria are measured again on B (Z-51). The lists and
-per-domain results stay out of the repository (`rad/`).
+per-domain results stay out of the repository (`work/`).
 
 ### Z-50: percentiles of list A (owner decision, 2026-09-28)
 

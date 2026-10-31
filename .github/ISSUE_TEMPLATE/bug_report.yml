@@ -30,7 +30,7 @@ body:
       label: Steps to reproduce
       description: The exact command, and the input (an anonymized CSV row or a snapshot) if it matters.
       placeholder: |
-        1. docker compose run --rm sitetriage sitetriage scan /rad/list.csv --out /rad/out
+        1. docker compose run --rm sitetriage sitetriage scan /work/list.csv --out /work/out
         2. ...
     validations:
       required: true

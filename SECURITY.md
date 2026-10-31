@@ -6,8 +6,8 @@ Security fixes go into the latest release line only. Older lines do not get back
 
 | Version | Supported |
 |---|---|
-| 2.x (latest) | yes |
-| < 2.0 | no |
+| 3.x (`main`, first release pending) | yes |
+| < 3.0 | no |
 
 ## Reporting a vulnerability
 

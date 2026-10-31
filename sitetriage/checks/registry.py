@@ -7,7 +7,7 @@ that drift apart. Each check also declares its `requires`: the preconditions tha
 say why it cannot run on a given snapshot.
 
 The rule that is never broken: this package does not import `httpx`, `playwright`, or
-`fetch.*` other than `fetch.urls` (enforced by `tests/test_arhitektura.py`). If you need
+`fetch.*` other than `fetch.urls` (enforced by `tests/test_architecture.py`). If you need
 something from the network, the snapshot is missing a field: add the field.
 """
 

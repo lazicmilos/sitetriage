@@ -9,8 +9,8 @@ The repository names no real site. You provide the list, through the environment
 
     SITETRIAGE_LIVE_CSV=my-domains.csv pytest -m live
 
-The optional column `ocekivano` lists space-separated `check_id`s the tool must find on
-level 1; the value `cist` marks the control clean site (a deliberately clean site must get
+The optional column `expected` lists space-separated `check_id`s the tool must find on
+level 1; the value `clean` marks the control clean site (a deliberately clean site must get
 no findings). Without the variable the tests are skipped.
 
 This is the only test that checks that real sites are in the state you expect.
@@ -34,8 +34,8 @@ from sitetriage.score import analyze
 
 pytestmark = pytest.mark.live
 
-# The value of the `ocekivano` column that marks the control clean site (input format, unchanged).
-CLEAN_MARKER = "cist"
+# The value of the `expected` column that marks the control clean site.
+CLEAN_MARKER = "clean"
 
 
 def _domain_list() -> tuple[list[DomainInput], dict[str, set[str]]]:
@@ -46,7 +46,7 @@ def _domain_list() -> tuple[list[DomainInput], dict[str, set[str]]]:
     data = Path(path).read_bytes()
     domains, _ = read_domain_list(data, path)
     expected = {
-        (row.get("domain") or "").strip(): set((row.get("ocekivano") or "").split())
+        (row.get("domain") or "").strip(): set((row.get("expected") or "").split())
         for _, row in read_excel_csv(data, path).rows
     }
     return domains, {d.domain: expected.get(d.domain, set()) for d in domains}

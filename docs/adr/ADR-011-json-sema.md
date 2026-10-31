@@ -29,7 +29,7 @@ was no such output, so every change to the model would have quietly broken whoev
 - The shape is described by the schema `sitetriage/schema/report-2.json`, which ships with the
   package (now `report-3.json`, see the update above). The schema does not allow unknown fields, so
   a new field has to go into the schema first, and a test validates the output
-  (`test_json_izvestaj_prolazi_semu`).
+  (`test_json_report_matches_the_schema`).
 - `schema_version` is the first field. An added field raises the minor version (`2.0` → `2.1`),
   because an older reader can skip it. A removed field, a changed type or meaning of a field, and a
   renamed `check_id` raise the major version (`2.x` → `3.0`).

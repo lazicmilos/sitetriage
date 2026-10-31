@@ -30,8 +30,8 @@ docker compose run --rm sitetriage pytest -q
 
 The source is copied into the image, not mounted, so run `docker compose build` again after you
 change code. Dependencies sit in their own layer, so a rebuild after a code-only change is quick.
-`rad/` is mounted as `/rad` for input and output. On Linux, set `SITETRIAGE_UID=$(id -u)` and
-`SITETRIAGE_GID=$(id -g)` so files written to `rad/` belong to you.
+`work/` is mounted as `/work` for input and output. On Linux, set `SITETRIAGE_UID=$(id -u)` and
+`SITETRIAGE_GID=$(id -g)` so files written to `work/` belong to you.
 
 ### Without Docker
 
@@ -60,7 +60,7 @@ use Playwright's own Chromium, so treat that one as the reference.
 ### Configuration
 
 The defaults ship with the tool; your own TOML passed with `--config` overrides only what it sets.
-The defaults, with a comment on every value, are in `sitetriage.toml`. Keep trial thresholds in a
+The defaults, with a comment on every value, are in `sitetriage/sitetriage.toml`. Keep trial thresholds in a
 small file of your own instead of editing the defaults.
 
 ### Operator identity
@@ -164,7 +164,7 @@ one of them will not be merged, however useful the feature.
 2. **The order of phases lives only in `sitetriage.pipeline`**
    ([ADR-008](docs/adr/ADR-008-pipeline.md)). `cli` does not import `fetch.http`, `fetch.browser` or
    `score`. `tests/test_architecture.py` enforces both rules.
-3. **Thresholds live in `sitetriage.toml`, not in code.** Read them through the check context
+3. **Thresholds live in `sitetriage/sitetriage.toml`, not in code.** Read them through the check context
    (`ctx.th("thresholds.perf.html_size_kb")`). A threshold change comes with its reasoning: in the
    commit message, in an ADR when it is a decision users will notice, and, for user-visible
    thresholds, in the README table of thresholds.
@@ -179,7 +179,7 @@ one of them will not be merged, however useful the feature.
    ([ADR-022](docs/adr/ADR-022-client-sentence-claims.md)). Every number in a sentence comes from the
    evidence, and numbers agree with nouns in both languages. A sentence must exist in **both**
    `sitetriage/messages/sr.py` and `sitetriage/messages/en.py`, and the English one claims exactly
-   what the Serbian one claims, no more and no less. `tests/test_poruke.py` enforces this.
+   what the Serbian one claims, no more and no less. `tests/test_messages.py` enforces this.
 7. **Politeness and safety guarantees are not negotiable.** One request at a time per site, a pause
    between requests (longer if `Crawl-delay` asks for it), `robots.txt` `Disallow` respected, a hard
    budget per domain, giving up on `429`/`503`, an operator identity in every request, and no
@@ -195,7 +195,7 @@ one of them will not be merged, however useful the feature.
    `category.subject.problem`, its level, base severity, the snapshot parts it `requires`, a short
    description and the threshold in words. The registry feeds the engine, the README table and
    `sitetriage explain` from one place.
-2. **Put the threshold in `sitetriage.toml`** under `[thresholds.<category>]` and read it with
+2. **Put the threshold in `sitetriage/sitetriage.toml`** under `[thresholds.<category>]` and read it with
    `ctx.th`.
 3. **Return every state deliberately**: `finding(...)` with evidence, `ok(...)`, and `unknown(...)`
    or `not_applicable(...)` with a reason code whenever the input does not allow a verdict.

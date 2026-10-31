@@ -1,17 +1,17 @@
-# docker compose run --rm sitetriage <command>; see docs/provera-na-pravim-sajtovima.md
+# docker compose run --rm sitetriage <command>; see docs/real-site-verification.md
 services:
   sitetriage:
     build: .
     image: sitetriage:dev
     init: true          # Chromium starts subprocesses; without init they are left as zombies
     shm_size: "1gb"     # the default 64 MB of /dev/shm crashes Chromium on heavier pages
-    # Output in ./rad must belong to you, not to the user in the image. 1000 is the first account
+    # Output in ./work must belong to you, not to the user in the image. 1000 is the first account
     # on most Linux systems; if yours is different: `export SITETRIAGE_UID=$(id -u) SITETRIAGE_GID=$(id -g)`.
     # Docker Desktop (Mac, Windows) maps ownership anyway.
     user: "${SITETRIAGE_UID:-1000}:${SITETRIAGE_GID:-1000}"
-    # Who is scanning; see [operator] in sitetriage.toml. Without these two the tool refuses to scan.
+    # Who is scanning; see [operator] in sitetriage/sitetriage.toml. Without these two the tool refuses to scan.
     environment:
       - SITETRIAGE_OPERATOR_NAME
       - SITETRIAGE_OPERATOR_CONTACT
     volumes:
-      - ./rad:/rad      # input (CSV) and output (reports, snapshots); the code stays in the image
+      - ./work:/work      # input (CSV) and output (reports, snapshots); the code stays in the image

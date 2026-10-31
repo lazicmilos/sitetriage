@@ -102,9 +102,9 @@ docker compose build
 docker compose run --rm sitetriage pytest -q        # every test must pass
 ```
 
-`rad/` is mounted into the container as `/rad`: put your input there, and the reports land there
+`work/` is mounted into the container as `/work`: put your input there, and the reports land there
 too. On Linux, set `SITETRIAGE_UID=$(id -u)` and `SITETRIAGE_GID=$(id -g)` first, so the files in
-`rad/` belong to you. Docker Desktop on Windows and macOS handles that by itself.
+`work/` belong to you. Docker Desktop on Windows and macOS handles that by itself.
 
 ### pip
 
@@ -120,7 +120,7 @@ Without the `browser` extra, level 1 works and level 2 is skipped with a message
 ### Tell it who you are
 
 Before the first scan, set who is scanning. Every site's administrator sees the User-Agent in their
-server log, and it has to tell them who is visiting and how to reach them. Create `rad/my.toml`:
+server log, and it has to tell them who is visiting and how to reach them. Create `work/my.toml`:
 
 ```toml
 [operator]
@@ -134,12 +134,12 @@ letters like "š" and "đ"; the tool transliterates it to plain Latin for the he
 header accepts only ASCII.
 
 The defaults ship with the tool; your own TOML passed with `--config` overrides only what it sets.
-All defaults, with comments, are in [`sitetriage.toml`](sitetriage.toml).
+All defaults, with comments, are in [`sitetriage/sitetriage.toml`](sitetriage/sitetriage.toml).
 
 ### First scan
 
 ```bash
-docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --config /rad/my.toml --out /rad/report
+docker compose run --rm sitetriage sitetriage scan /work/leads.csv --config /work/my.toml --out /work/report
 ```
 
 or, without Docker:
@@ -307,37 +307,37 @@ The table is generated from the check registry with `sitetriage explain --all --
 threshold changes, the table is generated again; CI checks that every check in the registry appears
 in it.
 
-| `check_id` | Nivo | Kategorija | Ozbiljnost | Prag |
+| `check_id` | Level | Category | Severity | Threshold |
 |---|---|---|---|---|
-| `i18n.lang.invalid` | 1 | i18n | medium | lang ∈ {zxx, und, prazno} ili ne parsira kao BCP-47 |
-| `i18n.lang.mismatch` | 1 | i18n | medium | sadržaj prepoznat kao sr (ćirilica > 30 % ili dijakritici > 0,5 %) uz lang jezika koji se ne piše ćirilicom ni sa č/ć/š/ž/đ (nije sr, hr, bs, ru, mk, bg…) |
-| `i18n.lang.missing` | 1 | i18n | medium | atribut lang ne postoji |
-| `infra.host.duplicate` | 1 | infra | medium | varijante vraćaju 200 na oba hosta (www i bez www); low ako canonical na svima upućuje na isto poreklo; neproverena varijanta hosta koji nije viđen → unknown |
-| `infra.https.redirect.missing` | 1 | infra | medium | https na konačnom hostu vraća 200 sa ispravnim sertifikatom, a http:// istog hosta vraća 200 bez preusmerenja na https; TLS greška ili neposlat zahtev → unknown; https ne radi → ne primenjuje se |
-| `infra.robots.missing` | 1 | infra | low | status 404 ili 410; ostali statusi osim 200 → unknown |
-| `infra.sitemap.missing` | 1 | infra | medium | status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi i mapa veća od granice → unknown; ima URL-ova → ok |
-| `infra.soft404` | 1 | infra | high | obe sonde vraćaju konačni status 200; status van {200, 404, 410} → unknown |
-| `infra.tls.invalid` | 1 | infra | high | TLS provera odbila sertifikat; nepotpun lanac (nema međusertifikata) → unknown |
-| `infra.unreachable` | 1 | infra | critical | oba pokušaja, u razmaku od bar http.second_attempt_after_s (60 s): EAI_NONAME ili EAI_NODATA, ili TCP veza odbijena ili istekla i na https i na http; bilo kakav HTTP odgovor → ok |
-| `perf.compression.missing` | 1 | perf | low | content-encoding ∉ {gzip, br, zstd, deflate} i HTML > 50 kB |
+| `i18n.lang.invalid` | 1 | i18n | medium | lang ∈ {zxx, und, empty} or does not parse as BCP-47 |
+| `i18n.lang.mismatch` | 1 | i18n | medium | content detected as sr (Cyrillic > 30 % or diacritics > 0.5 %) with the lang of a language not written in Cyrillic or with č/ć/š/ž/đ (not sr, hr, bs, ru, mk, bg…) |
+| `i18n.lang.missing` | 1 | i18n | medium | the lang attribute does not exist |
+| `infra.host.duplicate` | 1 | infra | medium | the variants return 200 on both hosts (www and without www); low if the canonical on all of them points to the same origin; an unchecked variant of a host that was not seen → unknown |
+| `infra.https.redirect.missing` | 1 | infra | medium | https on the final host returns 200 with a valid certificate, and http:// of the same host returns 200 without a redirect to https; TLS error or request not sent → unknown; https not working → not applicable |
+| `infra.robots.missing` | 1 | infra | low | status 404 or 410; other statuses except 200 → unknown |
+| `infra.sitemap.missing` | 1 | infra | medium | status 404 or 410, or 200 with 0 URLs; other statuses and a sitemap larger than the limit → unknown; has URLs → ok |
+| `infra.soft404` | 1 | infra | high | both probes return a final status 200; a status outside {200, 404, 410} → unknown |
+| `infra.tls.invalid` | 1 | infra | high | TLS verification rejected the certificate; incomplete chain (no intermediate certificate) → unknown |
+| `infra.unreachable` | 1 | infra | critical | both attempts, at least http.second_attempt_after_s (60 s) apart: EAI_NONAME or EAI_NODATA, or the TCP connection refused or timed out on both https and http; any HTTP response → ok |
+| `perf.compression.missing` | 1 | perf | low | content-encoding ∉ {gzip, br, zstd, deflate} and HTML > 50 kB |
 | `perf.html.size` | 1 | perf | low | html_bytes > thresholds.perf.html_size_kb (500 kB) |
-| `perf.redirect.chain` | 1 | perf | low | broj skokova ≥ thresholds.perf.redirect_hops (3) |
-| `seo.canonical.duplicate` | 1 | seo | critical | ≥ 2 stranice sa tuđim canonical-om ka istoj adresi, iz ≥ 2 grupe putanja; udeo u uzorku ≥ 0,4 high · ≥ 0,6 critical · inače medium |
-| `seo.canonical.missing` | 1 | seo | high | nema oznake na početnoj |
-| `seo.description.duplicate` | 1 | seo | medium | ≥ 3 stranice iz ≥ 3 različite grupe putanja sa istim opisom |
-| `seo.description.missing` | 1 | seo | medium | prazan ili nepostojeći meta opis |
-| `seo.title.duplicate` | 1 | seo | high | ≥ 3 stranice iz ≥ 3 različite grupe putanja sa istim naslovom |
-| `seo.title.missing` | 1 | seo | high | prazan ili nepostojeći <title> |
-| `social.og.description.missing` | 1 | social | medium | nedostaje <meta property=og:description> |
-| `social.og.image.missing` | 1 | social | medium | nedostaje <meta property=og:image> |
-| `social.og.title.missing` | 1 | social | high | nedostaje <meta property=og:title> |
-| `a11y.img.alt.missing` | 2 | a11y | low | ≥ 5 slika i udeo bez alt atributa > 0,5; > 0,8 uz ≥ 15 slika → high; healthcare/institution → bar medium |
-| `perf.img.oversized` | 2 | perf | medium | ≥ 3 slike sa odnosom > 2,5 i izmerenim viškom, ili procenjen višak > 700 kB; SVG i data: slike se ne broje |
-| `perf.load.time` | 2 | perf | high | > 6 s medium · > 9 s high · prekid posle tvrdog limita = high |
-| `perf.page.weight` | 2 | perf | critical | preneto do load, bez videa: > 2 MB medium · > 4 MB high · > 7 MB critical |
-| `perf.request.count` | 2 | perf | high | zahtevi do load: > 60 medium · > 90 high |
+| `perf.redirect.chain` | 1 | perf | low | number of hops ≥ thresholds.perf.redirect_hops (3) |
+| `seo.canonical.duplicate` | 1 | seo | critical | ≥ 2 pages with a foreign canonical to the same URL, from ≥ 2 path groups; share of the sample ≥ 0.4 high · ≥ 0.6 critical · otherwise medium |
+| `seo.canonical.missing` | 1 | seo | high | no tag on the home page |
+| `seo.description.duplicate` | 1 | seo | medium | ≥ 3 pages from ≥ 3 different path groups with the same description |
+| `seo.description.missing` | 1 | seo | medium | empty or missing meta description |
+| `seo.title.duplicate` | 1 | seo | high | ≥ 3 pages from ≥ 3 different path groups with the same title |
+| `seo.title.missing` | 1 | seo | high | empty or missing <title> |
+| `social.og.description.missing` | 1 | social | medium | <meta property=og:description> is missing |
+| `social.og.image.missing` | 1 | social | medium | <meta property=og:image> is missing |
+| `social.og.title.missing` | 1 | social | high | <meta property=og:title> is missing |
+| `a11y.img.alt.missing` | 2 | a11y | low | ≥ 5 images and share without an alt attribute > 0.5; > 0.8 with ≥ 15 images → high; healthcare/institution → at least medium |
+| `perf.img.oversized` | 2 | perf | medium | ≥ 3 images with a ratio > 2.5 and measured waste, or estimated waste > 700 kB; SVG and data: images do not count |
+| `perf.load.time` | 2 | perf | high | > 6 s medium · > 9 s high · cut off after the hard limit = high |
+| `perf.page.weight` | 2 | perf | critical | transferred until load, without video: > 2 MB medium · > 4 MB high · > 7 MB critical |
+| `perf.request.count` | 2 | perf | high | requests until load: > 60 medium · > 90 high |
 | `qa.console.errors` | 2 | qa | low | > thresholds.qa.console_errors (3) |
-| `seo.h1.missing` | 2 | seo | high | h1_count == 0 posle učitavanja u browseru |
+| `seo.h1.missing` | 2 | seo | high | h1_count == 0 after loading in the browser |
 | `seo.h1.multiple` | 2 | seo | low | h1_count > thresholds.seo.h1_multiple (3) |
 
 ### Four states
@@ -362,7 +362,7 @@ Every check returns one of four states, and the last two always come with a reas
 ### Sentences for the site owner
 
 Client sentences claim only what can be verified, and every number in them comes from measured
-evidence ([ADR-022](docs/adr/ADR-022-client-sentence-claims.md)). Tests in `tests/test_poruke.py`
+evidence ([ADR-022](docs/adr/ADR-022-client-sentence-claims.md)). Tests in `tests/test_messages.py`
 guard both rules, along with number and noun agreement ("4 glavna naslova", "5 glavnih naslova",
 "4 main headings").
 
@@ -404,7 +404,7 @@ and few people answer a list of ten items. Points are multiplied by an industry 
 category (`[industry_multipliers.*]`); the multiplier changes the weight of a finding, never its
 severity.
 
-All thresholds live in [`sitetriage.toml`](sitetriage.toml), not in code, so `git diff` on it is a
+All thresholds live in [`sitetriage/sitetriage.toml`](sitetriage/sitetriage.toml), not in code, so `git diff` on it is a
 readable history of calibration decisions. The calibration log behind them is
 [`docs/sr/kalibracija.md`](docs/sr/kalibracija.md) (in Serbian); the decisions themselves are
 summarized in English in the [ADRs](docs/adr/README.md).
@@ -417,7 +417,7 @@ with `recheck`.
 
 ```bash
 docker compose run --rm sitetriage pytest -q               # offline, with a real Chromium, about 4 min
-docker compose run --rm -e SITETRIAGE_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v   # real sites from your own list; needs a network
+docker compose run --rm -e SITETRIAGE_LIVE_CSV=/work/live.csv sitetriage pytest -m live -v   # real sites from your own list; needs a network
 ```
 
 The first layer does not depend on the network and runs in CI on every push. It covers every check

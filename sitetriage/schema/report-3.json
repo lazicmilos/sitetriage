@@ -36,7 +36,7 @@
         "python": {"type": "string"},
         "chromium": {"type": ["string", "null"], "description": "null when level 2 did not run"},
         "network_profile": {
-          "description": "The simulated connection level 2 measures under (Z-30); null when level 2 did not run or the snapshot predates the profile",
+          "description": "The simulated connection level 2 measures under (ADR-010); null when level 2 did not run or the snapshot predates the profile",
           "type": ["object", "null"],
           "additionalProperties": false,
           "required": ["download_mbps", "upload_mbps", "latency_ms"],
@@ -47,7 +47,7 @@
           }
         },
         "link_mbps": {
-          "description": "The real connection measured before level 2, in Mb/s (Z-33); null when the measurement failed or level 2 did not run",
+          "description": "The real connection measured before level 2, in Mb/s (ADR-018); null when the measurement failed or level 2 did not run",
           "type": ["number", "null"],
           "minimum": 0
         }

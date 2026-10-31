@@ -78,7 +78,7 @@ The migration to English runs in waves:
 
 | Old | New |
 |---|---|
-| `skener.toml` (repository root, default config; `--config` is merged over it) | `sitetriage.toml`, same location and meaning, comments in English |
+| `skener.toml` (repository root, default config; `--config` is merged over it) | `sitetriage.toml`, same meaning, comments in English; shipped inside the package as `sitetriage/sitetriage.toml` (a complete `sitetriage.toml` in the working directory still replaces it) |
 
 ### Config keys
 
@@ -415,7 +415,13 @@ add it here in the same PR.
 | višak | waste, excess | `est_waste_kb` |
 | odnos | ratio | |
 | konzola | console | |
-| čuvar (mesta) | placeholder | `_cuvar` → `_placeholder` |
+| čuvar (adresa) | address guard | `_cuvar` → `_address_guard` (the level-2 route that refuses non-public addresses) |
+| razlog odbijanja | refusal reason | `_zasto_odbiti` → `_refusal_reason` |
+| broj konteksta | context count | `_konteksta` → `_context_count` |
+| slobodna memorija | available memory | `_slobodno_kb` → `_available_kb` |
+| statusi bez tela | no-body statuses | `BEZ_TELA` → `NO_BODY_STATUSES` |
+| raspakivanje | decoding, decoder | `_Raspakivanje` → `_Decoder`; `RASPAKOVANO_ODJEDNOM` → `DECOMPRESSED_PER_STEP` |
+| lanac uzroka (izuzetka) | cause chain | `_lanac` → `_cause_chain` |
 | kontekst (browsera) | context | |
 | mrežni profil | network profile | |
 | brzina | speed | |
@@ -534,7 +540,7 @@ add it here in the same PR.
 | snimi, snimiti | record | the `record` command |
 | snimljeno | recorded | |
 | fixture-i | fixtures | |
-| ispitni skup | test set | `test_ispitni_skup` → `test_test_set` (or `test_reference_set`) |
+| ispitni skup | test set | `test_ispitni_skup` → `test_reference_set` |
 | lista A, lista B | list A, list B | the calibration and validation lists |
 | kalibracija | calibration | |
 | merenje saobraćaja | traffic measurement | |
