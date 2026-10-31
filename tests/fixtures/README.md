@@ -11,7 +11,7 @@ pod rezervisanim TLD-om `.example` (RFC 2606) — nijedan ne pripada stvarnom sa
 - **Jesu** provera da lanac `snapshot → provere → bodovanje → rangiranje` daje očekivane
   `check_id`-eve i tačne brojeve iz §9.4.
 - **Nisu** provera da je ijedan pravi sajt u tom stanju. Za to služi `pytest -m live` nad
-  tvojom listom domena (`SKENER_LIVE_CSV`, vidi [`../test_live.py`](../test_live.py)).
+  tvojom listom domena (`SITETRIAGE_LIVE_CSV`, vidi [`../test_live.py`](../test_live.py)).
 
 Posle izmene generatora napravi ih ponovo:
 

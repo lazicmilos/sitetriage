@@ -1,0 +1,199 @@
+# All thresholds, multipliers and constants live here, not in code (§11.2).
+# This file is also the default configuration: `--config` is merged over it,
+# so a partial user configuration keeps all the other thresholds.
+
+[operator]
+# Who is scanning. Every administrator sees this in their server log, so it must be
+# the operator (whoever runs the tool), not the author of the tool. Without both fields
+# the tool refuses to scan. Put them in your own --config file or set
+# SITETRIAGE_OPERATOR_NAME and SITETRIAGE_OPERATOR_CONTACT.
+name = ""                       # e.g. "Web studio Primer"
+contact = ""                    # an email or a website address where the administrator can reach you
+# An administrator who writes "do not scan us" to that contact is respected from the next run.
+# A file with one domain per line; every subdomain is excluded too. `--exclude FILE` does the same.
+exclude_file = ""               # e.g. "/rad/excluded.txt"
+
+[http]
+concurrency = 16                # global semaphore (§8.1)
+per_host_concurrency = 1        # never two parallel requests to the same site (§8.1)
+domain_concurrency = 16         # domains in progress at once; a domain's budget starts only when it
+                                # gets its turn, not while it waits behind the others. Level 1 mostly
+                                # waits for pauses to the same site, so 16 instead of 8 shortens the run,
+                                # and politeness towards each site stays the same (Z-32)
+delay_ms = [500, 1000]          # pause with jitter towards the same host (§8.3)
+timeout_connect_s = 5
+timeout_read_s = 10
+timeout_total_s = 20
+max_requests_per_domain = 19    # hard budget (§4.2): home page 1 + robots 1 + host variants 3 +
+                                # probes 2 + sitemaps 4 + sample 7 = 18, and the budget is 19 (Z-26)
+max_seconds_per_domain = 40     # hard budget (§4.2); 25 s was not enough for slow shared
+                                # hosting (1–3 s per page) — docs/izvestaj-testiranja-100.md, O-4
+max_crawl_delay_s = 10          # Crawl-delay is respected up to this limit (§8.3)
+second_attempt_after_s = 60     # a site that does not respond is retried only after this long, and
+                                # only then goes to "Not working" (Z-20); the rest of the list runs meanwhile
+user_agent = "SiteTriage/{version} (+{contact}; {name})"   # filled in from [operator]
+
+[net]
+# Private and special addresses (localhost, 10.x, 192.168.x, 169.254.x…) are never opened,
+# neither after DNS nor after a redirect (SSRF, docs/adr/ADR-006-ssrf.md). Only explicitly
+# allowed `host:port` pairs go here, e.g. ["localhost:8123"] for staging.
+# There is no global switch that turns the protection off.
+allowed_private = []
+
+[sitemap]
+max_depth = 3
+max_files = 4                   # 16 = home page 1 + robots 1 + probes 2 + sitemaps 4 + sample 7 (+1 spare);
+                                # for a sample of 7 pages, 4 sitemaps are enough
+max_urls = 5000
+sample_size = 8                 # home page + 7 (§4.4)
+
+[escalation]
+max_level2 = 60
+empty_html_text_threshold = 800 # deliberately different from thresholds.i18n.min_text_length:
+                                # 400 is the reliability limit of the language heuristic,
+                                # 800 is the limit of "this looks like empty HTML"
+slow_entry_ms = 1500
+raw_html_bytes = 300_000
+
+[browser]
+concurrency = 3                 # each context is hundreds of MB of RAM (§8.1)
+light_concurrency = 0           # light level 2: 0 = per machine, one per free GB, at most
+                                # two per core and at most 8; a number ≥ 1 fixes it (Z-32)
+viewport_width = 1366
+viewport_height = 768
+timeout_s = 25
+idle_after_load_ms = 1500
+scroll_pause_ms = 1000          # without scrolling, lazy images have naturalWidth == 0 (§7.1)
+max_unmeasured_responses = 5    # above this the weight measurement is `unknown`, not `ok` (§7.2)
+drain_timeout_s = 5             # a response body that has not arrived by then is unmeasured (stream, video)
+max_seconds_per_domain = 60     # hard limit for all of level 2; the worst regular case is ~40 s
+                                # (25 loading + idle + scroll + 5 drain)
+serial_load = true              # one at a time until `load`, because sites share the real connection
+                                # (BUG-006); in parallel under the profile is accurate only on a fast
+                                # connection, and the machine's connection is not known in advance
+                                # (Z-31, docs/kalibracija.md)
+executable_path = ""            # empty = Playwright's Chromium; set it for a system Chrome or a
+                                # container with a ready-made browser. Can also be set through the
+                                # SITETRIAGE_CHROMIUM environment variable.
+
+[network_profile]               # simulated connection for level 2 (Z-30): the same number on every machine
+download_mbps = 4.8             # 0.6 MB/s, a slow 4G connection (§10.3); the only source of speed, both
+                                # for measuring and for the seconds in client sentences
+upload_mbps = 1.5               # initial value
+latency_ms = 150                # the same latency as Lighthouse uses for mobile measurement (Z-50)
+# The profile can only slow down: on a slower real connection the time would be overstated (Z-33).
+# So before level 2 a probe file is downloaded, for at most `probe_max_s` seconds.
+probe_url = "https://speed.cloudflare.com/__down?bytes=25000000"
+probe_max_s = 5
+min_link_ratio = 2.0            # real connection ≥ 2 × profile, because two more sites are scrolled
+                                # while one loads; otherwise the load time is `unknown`
+
+[thresholds.seo]
+duplicate_min_pages = 3         # ≥ 3 pages from different path groups (§5)
+canonical_foreign_min = 2       # pages with a foreign canonical to the same address, from this many path groups
+canonical_share = { high = 0.4, critical = 0.6 }   # share of those pages in the sample; below is medium.
+                                # Initial values (Z-23); list A has one real case, so they stay (Z-50)
+h1_multiple = 3
+
+[thresholds.perf]
+# Rounded p50, p75 and p90 from list A, under the network profile (Z-50, docs/kalibracija.md).
+page_weight_mb = { medium = 2.0, high = 4.0, critical = 7.0 }   # transferred until load, without video
+request_count = { medium = 60, high = 90 }
+load_ms = { medium = 6000, high = 9000 }
+image_ratio = 2.5               # 2 would declare every retina site broken (§7.5)
+oversized_min_count = 3
+oversized_waste_kb = 700
+html_size_kb = 500
+compression_min_kb = 50
+redirect_hops = 3
+
+[thresholds.i18n]
+min_text_length = 400
+cyrillic_ratio = 0.30
+diacritic_ratio = 0.005         # Serbian in Latin script has 2–5 %, English 0 % (§5.1)
+
+[thresholds.a11y]
+min_images = 5
+missing_ratio = 0.5
+high_ratio = 0.8                # share above which the finding becomes `high` (§7.4)
+high_min_images = 15
+
+[thresholds.qa]
+console_errors = 3
+
+[thresholds.soft404]
+text_similarity = 0.9           # similarity of a probe to the home page = hard evidence (§5.2)
+
+[report]
+mobile_overhead_s = 1.0         # overhead time on top of 0.6 MB/s (§10.3)
+top_findings = 3                # this many fit into an email (§9.4)
+
+[severity_points]
+critical = 40
+high = 20
+medium = 8
+low = 3
+
+# weight = severity_points[severity] × industry_multipliers[industry][category]  (§9.2)
+[industry_multipliers.hotel]
+social = 1.5
+perf = 1.3
+i18n = 1.3
+a11y = 1.0
+seo = 1.2
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.restoran]
+social = 1.5
+perf = 1.5
+i18n = 1.1
+a11y = 1.0
+seo = 1.2
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.zdravstvo]
+social = 0.9
+perf = 1.0
+i18n = 1.3
+a11y = 1.5
+seo = 1.2
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.ecommerce]
+social = 1.2
+perf = 1.5
+i18n = 1.1
+a11y = 1.2
+seo = 1.3
+infra = 1.0
+qa = 0.8
+
+[industry_multipliers.b2b]
+social = 0.7
+perf = 0.9
+i18n = 1.0
+a11y = 1.4
+seo = 1.0
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.institucija]
+social = 0.7
+perf = 0.9
+i18n = 1.0
+a11y = 1.4
+seo = 1.0
+infra = 1.0
+qa = 0.7
+
+[industry_multipliers.ostalo]
+social = 1.0
+perf = 1.0
+i18n = 1.0
+a11y = 1.0
+seo = 1.0
+infra = 1.0
+qa = 0.7

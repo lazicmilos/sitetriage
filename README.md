@@ -36,12 +36,12 @@ njega mora da zna ko ga posećuje i kako da ga kontaktira. Bez toga alat odbija 
 zahtev. Napravi `rad/moj.toml`:
 
 ```toml
-[identitet]
-naziv = "Web studio Primer"
-kontakt = "kontakt@primer.rs"
+[operator]
+name = "Web studio Primer"
+contact = "kontakt@primer.rs"
 ```
 
-Isto može i preko promenljivih okruženja `SKENER_NAZIV` i `SKENER_KONTAKT`, koje `compose.yaml`
+Isto može i preko promenljivih okruženja `SITETRIAGE_OPERATOR_NAME` i `SITETRIAGE_OPERATOR_CONTACT`, koje `compose.yaml`
 prosleđuje u kontejner. Ime sme da bude i ćirilicom ili sa „š" i „đ". Alat ga za zaglavlje prevodi u
 latinicu bez kvačica, jer HTTP zaglavlje prima samo ASCII.
 
@@ -49,7 +49,7 @@ latinicu bez kvačica, jer HTTP zaglavlje prima samo ASCII.
 docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --config /rad/moj.toml --out /rad/izvestaj
 ```
 
-Na Linux-u pre toga postavi `SKENER_UID=$(id -u)` i `SKENER_GID=$(id -g)`, da izveštaji u `rad/`
+Na Linux-u pre toga postavi `SITETRIAGE_UID=$(id -u)` i `SITETRIAGE_GID=$(id -g)`, da izveštaji u `rad/`
 pripadaju tebi. Docker Desktop na Windows-u i Mac-u to rešava sam.
 
 Preporučena mašina ima 16 GB RAM-a i vezu od bar 50 Mb/s. Za nju je cilj da lista od 200 domena
@@ -136,7 +136,7 @@ sitetriage scan domains.csv --level 1 --concurrency 4 --only institucija.example
 
 `recheck` je glavni alat za kalibraciju. Promeniš prag, pustiš ga nad sačuvanim snapshotima i za
 sekund vidiš razliku, bez ponovnog skidanja dvesta sajtova. Pragovi se probaju u posebnom fajlu, jer
-se `--config` spaja preko `skener.toml` i menja samo ono što u njemu piše.
+se `--config` spaja preko `sitetriage.toml` i menja samo ono što u njemu piše.
 
 ## Kako je podeljen
 
@@ -262,14 +262,14 @@ Rangiranje ne ide po zbiru nego po paru (najteži pojedinačni nalaz, zbir). Saj
 je bolji lead od sajta sa deset sitnica: prvi ima jedan jasan razlog da ti odgovori, a na listu od
 deset stavki se retko ko javi.
 
-Svi pragovi su u [`skener.toml`](skener.toml), ne u kodu, pa je `git diff` nad njim čitljiva istorija
+Svi pragovi su u [`sitetriage.toml`](sitetriage.toml), ne u kodu, pa je `git diff` nad njim čitljiva istorija
 odluka iz kalibracije. Svaka odluka je upisana i u [`docs/kalibracija.md`](docs/kalibracija.md).
 
 ## Testovi
 
 ```bash
 docker compose run --rm sitetriage pytest -q               # bez mreže, sa pravim Chromium-om, oko 4 min
-docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v   # pravi sajtovi sa tvoje liste, traži mrežu
+docker compose run --rm -e SITETRIAGE_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v   # pravi sajtovi sa tvoje liste, traži mrežu
 ```
 
 Prvi sloj ne zavisi od mreže i vrti se u CI-ju na svaki push. Tu su sve provere nad snapshotima,
@@ -303,7 +303,7 @@ Kako se testira i šta je nađeno opisuju [plan testiranja](docs/plan-testiranja
 > Fixture-i u `tests/fixtures/` su ručno napisani, nisu snimljeni sa pravih sajtova. Opisuju ono što
 > specifikacija tvrdi za tih osam domena i proveravaju da lanac provera radi nad tim stanjem, sa
 > pragovima iz specifikacije. Domeni su izmišljeni (`.example`). Stvarne sajtove proverava
-> `pytest -m live`, nad listom iz `SKENER_LIVE_CSV`.
+> `pytest -m live`, nad listom iz `SITETRIAGE_LIVE_CSV`.
 
 ## Etika
 
@@ -330,7 +330,7 @@ po User-Agent-u biraju šta šalju, a strana se meri onakva kakvu je dobija pose
 - Na `429` ili `503` alat odustaje od domena za taj prolaz, bez ponovnog pokušaja.
 - Administrator koji na kontakt iz User-Agent-a napiše „ne skenirajte nas" poštuje se od
   sledećeg prolaza. Njegov domen ide u fajl izuzetih (jedan po redu, `#` za komentar), a fajl se
-  navodi u `[identitet] izuzeti` ili sa `--exclude`. Izuzima se i svaki poddomen: unos `firma.rs`
+  navodi u `[operator] exclude_file` ili sa `--exclude`. Izuzima se i svaki poddomen: unos `firma.rs`
   važi i za `www.firma.rs` i za `blog.firma.rs`. Izuzet domen ne dobija nijedan zahtev, a u
   izveštaju je samo broj izuzetih, bez imena.
 

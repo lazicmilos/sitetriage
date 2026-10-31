@@ -67,6 +67,6 @@ everything a scanned site or a user-supplied domain can influence is in scope. I
   (egress) so the scanning process can only reach public addresses. Reports that show a way around
   that egress requirement, or a new gap not in the list, are in scope.
 - Deliberate configuration by the operator, such as adding hosts to `[net] allowed_private` or
-  pointing `SKENER_CHROMIUM` at a different browser.
+  pointing `SITETRIAGE_CHROMIUM` at a different browser.
 - Findings that are wrong or missed. Those are bugs, not vulnerabilities: use the "Wrong or missed
   finding" issue template.

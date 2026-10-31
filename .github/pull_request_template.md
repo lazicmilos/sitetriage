@@ -7,7 +7,7 @@
 - [ ] Bug fix
 - [ ] New check or change to an existing check
 - [ ] New feature or option
-- [ ] Threshold or calibration change (`skener.toml`)
+- [ ] Threshold or calibration change (`sitetriage.toml`)
 - [ ] Refactor or performance, no change in behaviour
 - [ ] Documentation, tests, CI or tooling
 - [ ] Breaking change (domain status, `check_id`, finding shape or `report.json`)

@@ -81,7 +81,7 @@ body:
     id: config
     attributes:
       label: Configuration changes
-      description: Thresholds or other settings you changed from the default `skener.toml`, and the `industry` of the domain.
+      description: Thresholds or other settings you changed from the default `sitetriage.toml`, and the `industry` of the domain.
       render: toml
   - type: checkboxes
     id: privacy
