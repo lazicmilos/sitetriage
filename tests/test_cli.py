@@ -286,7 +286,7 @@ def test_bom_se_pise_samo_kad_se_trazi(tmp_path):
 def test_explain_ispisuje_prag_i_recenicu(capsys):
     assert cli.main(["explain", "seo.canonical.duplicate"]) == 0
     ispis = capsys.readouterr().out
-    assert "critical" in ispis and "≥ 2 stranice" in ispis
+    assert "critical" in ispis and "≥ 2 pages" in ispis
     assert "rečenica za klijenta" in ispis
 
 
@@ -328,7 +328,7 @@ def test_argumenti_komandne_linije_menjaju_konfiguraciju(tmp_path, monkeypatch):
 def test_explain_ispisuje_opis_provere(capsys):
     # mutacija `description=None` u registru je preživela: opis se ispisivao, a niko ga nije proveravao
     assert cli.main(["explain", "seo.canonical.duplicate"]) == 0
-    assert "upućuje canonical-om na istu drugu adresu" in capsys.readouterr().out
+    assert "point their canonical to the same other URL" in capsys.readouterr().out
 
 
 def test_explain_nepoznate_provere_predlaze_slicne():

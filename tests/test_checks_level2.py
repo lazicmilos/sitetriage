@@ -1,4 +1,4 @@
-"""Provere nivoa 2 (§7.3). Isti troje: pozitivan, negativan, `unknown` (§12.3)."""
+"""Level 2 checks. The same three: positive, negative, `unknown`."""
 
 from __future__ import annotations
 
@@ -14,17 +14,17 @@ from sitetriage.models import DomStats, NetworkStats, OversizedImage, TimingStat
 LEVEL2_IDS = sorted(s.check_id for s in registry.REGISTRY.values() if s.level == 2)
 
 
-def test_cista_stranica_nema_nijedan_nalaz():
+def test_clean_page_has_no_findings():
     results = run_level(2, clean_browser())
     assert findings(results) == set()
     assert set(statuses(results).values()) == {"ok"}
 
 
-def test_pokrivene_su_sve_registrovane_provere():
+def test_all_registered_checks_are_covered():
     assert sorted(run_level(2, clean_browser())) == LEVEL2_IDS
 
 
-POZITIVNI = {
+POSITIVE_CASES = {
     "perf.page.weight": lambda b: (
         setattr(b.network, "bytes_at_load", 25_000_000),
         setattr(b.network, "total_bytes", 25_000_000),
@@ -58,11 +58,11 @@ POZITIVNI = {
 
 
 @pytest.mark.parametrize("check_id", LEVEL2_IDS)
-def test_pozitivan_nalaz(check_id):
+def test_positive_finding(check_id):
     browser = clean_browser()
-    POZITIVNI[check_id](browser)
+    POSITIVE_CASES[check_id](browser)
     result = run_level(2, browser)[check_id]
-    assert result.status == "finding", f"{check_id}: očekivan nalaz, dobijeno {result.status}"
+    assert result.status == "finding", f"{check_id}: expected a finding, got {result.status}"
     found = result.findings[0]
     assert any(isinstance(v, (int, float)) for v in found.evidence.values())
     for lang in LANGS:
@@ -71,14 +71,14 @@ def test_pozitivan_nalaz(check_id):
 
 
 # --------------------------------------------------------------------------- #
-# Stepenasti pragovi: jedan nalaz po proveri, najviša ozbiljnost koja važi (§7.3)
+# Tiered thresholds: one finding per check, at the highest severity that applies
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
     "total_bytes, expected",
     [
-        # Granične vrednosti (trotačkasto) za pragove kalibrisane na listi A (Z-50):
-        # p50 2,2 MB, p75 3,6 MB, p90 7,3 MB prenetih do `load` bez videa (docs/kalibracija.md).
-        pytest.param(1_000_000, None, id="ke-lagana"),
+        # Boundary values (three points) for the thresholds calibrated on list A (ADR-020):
+        # p50 2.2 MB, p75 3.6 MB, p90 7.3 MB transferred until `load` without video (docs/kalibracija.md).
+        pytest.param(1_000_000, None, id="ke-light"),
         pytest.param(1_999_999, None, id="gv-2MB-minus"),
         pytest.param(2_000_000, None, id="gv-2MB"),
         pytest.param(2_000_001, "medium", id="gv-2MB-plus"),
@@ -88,22 +88,22 @@ def test_pozitivan_nalaz(check_id):
         pytest.param(6_999_999, "high", id="gv-7MB-minus"),
         pytest.param(7_000_000, "high", id="gv-7MB"),
         pytest.param(7_000_001, "critical", id="gv-7MB-plus"),
-        pytest.param(22_100_000, "critical", id="ke-najteza-izmerena"),
+        pytest.param(22_100_000, "critical", id="ke-heaviest-measured"),
     ],
 )
-def test_tezina_stranice_stepenasto(total_bytes, expected):
+def test_page_weight_is_tiered(total_bytes, expected):
     browser = clean_browser()
     browser.network.bytes_at_load = total_bytes
     result = run_level(2, browser)["perf.page.weight"]
     if expected is None:
         assert result.status == "ok"
     else:
-        assert len(result.findings) == 1, "ne tri nalaza za istu stranicu (§7.3)"
+        assert len(result.findings) == 1, "not three findings for the same page"
         assert result.findings[0].severity == expected
 
 
 @pytest.mark.parametrize("count, expected", [(50, None), (75, "medium"), (175, "high")])
-def test_broj_zahteva_stepenasto(count, expected):
+def test_request_count_is_tiered(count, expected):
     browser = clean_browser()
     browser.network.requests_at_load = count
     result = run_level(2, browser)["perf.request.count"]
@@ -111,32 +111,34 @@ def test_broj_zahteva_stepenasto(count, expected):
 
 
 @pytest.mark.parametrize("load_ms, expected", [(2_000, None), (7_000, "medium"), (10_000, "high")])
-def test_vreme_ucitavanja_stepenasto(load_ms, expected):
+def test_load_time_is_tiered(load_ms, expected):
     browser = clean_browser()
     browser.timing.load_ms = load_ms
     result = run_level(2, browser)["perf.load.time"]
     assert (result.findings[0].severity if expected else result.status) == (expected or "ok")
 
 
-def test_jedan_izvor_brzine_za_recenicu_i_merenje():
-    """Z-30: brzina iz `[network_profile]` ide i u Chromium i u rečenice; drugog ključa nema."""
+def test_one_speed_source_for_sentence_and_measurement():
+    """ADR-010: the speed from `[network_profile]` goes both to Chromium and into the sentences; there is no
+    second key."""
     cfg = load_config()
     assert "mobile_speed_mbps" not in cfg["thresholds"]["perf"]
     cfg["network_profile"]["download_mbps"] = 9.6
-    profil = network_profile(cfg)
-    assert network_conditions(profil)["downloadThroughput"] == 1_200_000, "CDP prima bajtove u sekundi"
-    browser = clean_browser(network_profile=profil)
+    profile = network_profile(cfg)
+    assert network_conditions(profile)["downloadThroughput"] == 1_200_000, "CDP takes bytes per second"
+    browser = clean_browser(network_profile=profile)
     browser.network.bytes_at_load = 20_000_000
     browser.timing.load_ms = 9_000
     ctx = registry.Context(domain=browser.domain, industry="other", config=cfg)
-    nalazi = {r.check_id: r.findings[0] for r in registry.run(2, browser, ctx) if r.status == "finding"}
-    brzine = [nalazi[c].evidence["speed_mbps"] for c in ("perf.page.weight", "perf.load.time")]
-    assert brzine == [9.6, 9.6]
+    found = {r.check_id: r.findings[0] for r in registry.run(2, browser, ctx) if r.status == "finding"}
+    speeds = [found[c].evidence["speed_mbps"] for c in ("perf.page.weight", "perf.load.time")]
+    assert speeds == [9.6, 9.6]
 
 
 @pytest.mark.parametrize("reached, load_ms", [("load", 9_000), ("timeout", None)])
-def test_vreme_bez_mreznog_profila_je_unknown(reached, load_ms):
-    """Snimak bez profila meren je na stvarnoj vezi: rečenica o simuliranoj vezi ne bi bila tačna."""
+def test_load_time_without_network_profile_is_unknown(reached, load_ms):
+    """A snapshot without a profile was measured on the real connection: a sentence about the simulated
+    connection would not be true."""
     browser = clean_browser(network_profile=None)
     browser.timing = TimingStats(load_ms=load_ms, reached=reached)
     result = run_level(2, browser)["perf.load.time"]
@@ -144,44 +146,46 @@ def test_vreme_bez_mreznog_profila_je_unknown(reached, load_ms):
 
 
 @pytest.mark.parametrize("reached, load_ms", [("load", 9_000), ("timeout", None)])
-def test_vreme_na_vezi_sporijoj_od_profila_je_unknown(reached, load_ms):
-    """Z-33: profil samo usporava; na sporijoj vezi vreme je mereno njenom brzinom, pa je precenjeno."""
+def test_load_time_on_link_slower_than_profile_is_unknown(reached, load_ms):
+    """ADR-018: the profile only slows down; on a slower link the time was measured at that link's speed,
+    so it is overestimated."""
     browser = clean_browser(link_mbps=5.0)
     browser.timing = TimingStats(load_ms=load_ms, reached=reached)
     result = run_level(2, browser)["perf.load.time"]
     assert result.status == "unknown"
     assert "5" in reason(result.reason) and "9,6 Mb/s" in reason(result.reason)
-    assert run_level(2, clean_browser(link_mbps=9.6))["perf.load.time"].status == "ok", "granica je uključena"
+    assert run_level(2, clean_browser(link_mbps=9.6))["perf.load.time"].status == "ok", "limit is inclusive"
 
 
-def test_vreme_na_laganom_nivou_2_se_ne_primenjuje():
-    """BUG-020: sajt van limita meren je bez profila, pa vremena nema. To nije nepoznanica."""
+def test_load_time_on_light_level2_is_not_applicable():
+    """BUG-020: a site outside the limit was measured without a profile, so there is no time. That is not an
+    unknown."""
     result = run_level(2, clean_browser(light=True, network_profile=None, link_mbps=None))["perf.load.time"]
     assert result.status == "not_applicable" and result.reason.code == "requires.level2_full"
     assert "lagano" in reason(result.reason)
 
 
-def test_vreme_bez_izmerene_veze_je_unknown():
+def test_load_time_without_measured_link_is_unknown():
     result = run_level(2, clean_browser(link_mbps=None))["perf.load.time"]
     assert result.status == "unknown" and "nije izmerena" in reason(result.reason)
 
 
 # --------------------------------------------------------------------------- #
-# §7.4 — tri stanja alt atributa, ne dva
+# Three states of the alt attribute, not two
 # --------------------------------------------------------------------------- #
-def test_prazan_alt_nije_greska():
-    """`alt=""` je ispravan način da se označi dekorativna slika (§15, zamka 1).
+def test_empty_alt_is_not_an_error():
+    """`alt=""` is the correct way to mark a decorative image.
 
-    Alat koji ga prijavljuje kaže klijentu da je pokvareno ono što je urađeno
-    kako treba — i ti to pošalješ u mejlu.
+    A tool that reports it tells the client that something done right is broken,
+    and you send that in an email.
     """
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=20, images_without_alt_attr=0, images_empty_alt=20)
     assert run_level(2, browser)["a11y.img.alt.missing"].status == "ok"
 
 
-def test_evidence_razlikuje_nema_atributa_od_praznog():
-    """§12.4, ordinacija.example: dokaz mora da kaže 28/30 i da razlikuje stanja."""
+def test_evidence_tells_missing_attribute_from_empty():
+    """The ordinacija.example fixture: the evidence must say 28/30 and tell the states apart."""
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=30, images_without_alt_attr=28, images_empty_alt=2)
     evidence = run_level(2, browser)["a11y.img.alt.missing"].findings[0].evidence
@@ -190,7 +194,7 @@ def test_evidence_razlikuje_nema_atributa_od_praznog():
     assert evidence["empty_alt"] == 2
 
 
-def test_malo_slika_ne_pravi_nalaz():
+def test_few_images_give_no_finding():
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=4, images_without_alt_attr=4)
     assert run_level(2, browser)["a11y.img.alt.missing"].status == "ok"
@@ -200,15 +204,15 @@ def test_malo_slika_ne_pravi_nalaz():
     "industry, expected",
     [("other", "low"), ("hotel", "low"), ("healthcare", "medium"), ("institution", "medium")],
 )
-def test_ozbiljnost_alta_zavisi_od_delatnosti(industry, expected):
-    """Zdravstvo i institucije imaju zakonsku izloženost po pristupačnosti (§7.4)."""
+def test_alt_severity_depends_on_industry(industry, expected):
+    """Healthcare and institutions have legal exposure on accessibility."""
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=10, images_without_alt_attr=6)
     result = run_level(2, browser, industry=industry)["a11y.img.alt.missing"]
     assert result.findings[0].severity == expected
 
 
-def test_visok_udeo_prelazi_u_high_bez_obzira_na_delatnost():
+def test_high_share_becomes_high_regardless_of_industry():
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=30, images_without_alt_attr=28)
     result = run_level(2, browser, industry="other")["a11y.img.alt.missing"]
@@ -216,10 +220,11 @@ def test_visok_udeo_prelazi_u_high_bez_obzira_na_delatnost():
 
 
 # --------------------------------------------------------------------------- #
-# `unknown` — merenje u koje nemaš poverenja gore je od merenja kojeg nema (§7.2)
+# `unknown`: a measurement you do not trust is worse than none (ADR-016)
 # --------------------------------------------------------------------------- #
-def test_bez_load_tezina_je_unknown():
-    """Z-24: bez `load` mera „do load" je nepotpuna, pa ni težina od 20 MB nije tvrdnja."""
+def test_weight_without_load_is_unknown():
+    """ADR-016: without `load` the "until load" measure is incomplete, so even a weight of 20 MB is not a
+    claim."""
     browser = clean_browser()
     browser.timing.reached = "timeout"
     browser.network.total_bytes = browser.network.bytes_at_load = 20_000_000
@@ -227,27 +232,27 @@ def test_bez_load_tezina_je_unknown():
     assert result.status == "unknown" and result.reason.code == "load_incomplete"
 
 
-def test_tezina_i_broj_zahteva_ne_broje_ono_sto_pocne_posle_load():
-    """Posle `load` stižu analitika, chat i lenje slike: isti sajt je imao 179, pa 281 zahtev."""
+def test_weight_and_request_count_ignore_what_starts_after_load():
+    """After `load` come analytics, chat and lazy images: the same site had 179, then 281 requests."""
     browser = clean_browser()
     browser.network.total_bytes = 20_000_000
     browser.network.request_count = 281
-    rezultati = run_level(2, browser)
-    assert rezultati["perf.page.weight"].status == "ok"
-    assert rezultati["perf.request.count"].status == "ok"
+    results = run_level(2, browser)
+    assert results["perf.page.weight"].status == "ok"
+    assert results["perf.request.count"].status == "ok"
 
 
-def test_ukupno_posle_load_je_samo_u_tehnickoj_recenici():
+def test_total_after_load_is_only_in_the_technical_sentence():
     browser = clean_browser()
     browser.network.bytes_at_load = 6_000_000
     browser.network.total_bytes = 9_000_000
-    nalaz = run_level(2, browser)["perf.page.weight"].findings[0]
-    assert nalaz.severity == "high", "6 MB do load, a ne 9 MB ukupno"
-    assert "prenosi 6 MB" in render(nalaz, "sr").client
-    assert "9000000" in render(nalaz, "sr").tech
+    found = run_level(2, browser)["perf.page.weight"].findings[0]
+    assert found.severity == "high", "6 MB until load, not 9 MB in total"
+    assert "prenosi 6 MB" in render(found, "sr").client
+    assert "9000000" in render(found, "sr").tech
 
 
-def test_previse_neizmerenih_odgovora_je_unknown():
+def test_too_many_unmeasured_responses_is_unknown():
     browser = clean_browser()
     browser.network = NetworkStats(
         request_count=40, requests_at_load=40, bytes_at_load=500_000, unmeasured_at_load=9
@@ -257,7 +262,7 @@ def test_previse_neizmerenih_odgovora_je_unknown():
     assert "nije izmereno" in reason(result.reason)
 
 
-def test_neuspeo_browser_daje_unknown_svuda():
+def test_failed_browser_gives_unknown_everywhere():
     browser = clean_browser(status="failed")
     results = run_level(2, browser)
     assert sorted(results) == LEVEL2_IDS
@@ -265,8 +270,8 @@ def test_neuspeo_browser_daje_unknown_svuda():
     assert all(r.reason for r in results.values())
 
 
-def test_timeout_bez_prekoracenja_praga_je_unknown_a_ne_ok():
-    """Merenja posle timeouta su nepotpuna i provere to moraju da znaju (§7.1)."""
+def test_timeout_without_exceeding_threshold_is_unknown_not_ok():
+    """Measurements after a timeout are incomplete, and the checks must know it."""
     browser = clean_browser()
     browser.timing = TimingStats(dom_content_loaded_ms=3000, load_ms=None, reached="timeout")
     results = run_level(2, browser)
@@ -274,8 +279,8 @@ def test_timeout_bez_prekoracenja_praga_je_unknown_a_ne_ok():
     assert results["perf.request.count"].status == "unknown"
 
 
-def test_slike_su_unknown_kad_stranica_nije_dovrsila_ucitavanje():
-    """Nula slika posle prekida ne znači da ih sajt nema, pa ni da su sve opisane."""
+def test_images_are_unknown_when_page_did_not_finish_loading():
+    """Zero images after a cut-off does not mean the site has none, nor that they all have a description."""
     browser = clean_browser()
     browser.timing = TimingStats(dom_content_loaded_ms=3000, load_ms=None, reached="timeout")
     browser.dom = DomStats(h1_count=1, images_total=0)
@@ -283,7 +288,7 @@ def test_slike_su_unknown_kad_stranica_nije_dovrsila_ucitavanje():
     assert result.status == "unknown" and "slike nisu prebrojane" in reason(result.reason)
 
 
-def test_timeout_je_sam_po_sebi_nalaz_za_vreme_ucitavanja():
+def test_timeout_is_itself_a_load_time_finding():
     browser = clean_browser()
     browser.timing = TimingStats(dom_content_loaded_ms=3000, load_ms=None, reached="timeout")
     result = run_level(2, browser)["perf.load.time"]
@@ -291,16 +296,16 @@ def test_timeout_je_sam_po_sebi_nalaz_za_vreme_ucitavanja():
     assert result.findings[0].severity == "high"
 
 
-def test_h1_je_unknown_kad_stranica_nije_dovrsila_ucitavanje():
-    """Prazan h1 posle timeouta nije nalaz — h1 može da stigne kasnije (§6)."""
+def test_h1_is_unknown_when_page_did_not_finish_loading():
+    """An empty h1 after a timeout is not a finding: the h1 can arrive later."""
     browser = clean_browser()
     browser.dom.h1_count = 0
     browser.timing = TimingStats(load_ms=None, reached="timeout")
     assert run_level(2, browser)["seo.h1.missing"].status == "unknown"
 
 
-def test_nula_predimenzioniranih_uz_nemerene_slike_je_unknown():
-    """Bez ovoga ne znaš da li je „0 predimenzioniranih" nalaz ili neuspelo merenje (§3.3)."""
+def test_zero_oversized_with_unmeasured_images_is_unknown():
+    """Without this you cannot tell whether "0 oversized" is a result or a failed measurement."""
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=20, images_unmeasured=15)
     result = run_level(2, browser)["perf.img.oversized"]
@@ -308,87 +313,87 @@ def test_nula_predimenzioniranih_uz_nemerene_slike_je_unknown():
     assert "nije izmereno" in reason(result.reason)
 
 
-def _slika(src: str, visak_kb: float) -> OversizedImage:
-    return OversizedImage(src=src, natural=[900, 900], client=[255, 280], ratio=3.53, est_waste_kb=visak_kb)
+def _image(src: str, waste_kb: float) -> OversizedImage:
+    return OversizedImage(src=src, natural=[900, 900], client=[255, 280], ratio=3.53, est_waste_kb=waste_kb)
 
 
-def test_svg_i_data_slike_nisu_prevelike():
-    """BUG-023: SVG čuvar mesta za lenje učitavanje (data:, viewBox 0 0 0 0) davao je „oko 0 kB"."""
+def test_svg_and_data_images_are_not_oversized():
+    """BUG-023: an SVG placeholder for lazy loading (data:, viewBox 0 0 0 0) gave "about 0 kB"."""
     browser = clean_browser()
     browser.dom.oversized_images = [
-        _slika("data:image/svg+xml,%3Csvg%20viewBox='0%200%200%200'%3E%3C/svg%3E", 0),
-        _slika("data:image/png;base64,iVBORw0KGgo=", 0),
-        _slika("https://cist.rs/logo.svg?v=2", 4),
-        _slika("https://cist.rs/ikona.SVG", 3),
+        _image("data:image/svg+xml,%3Csvg%20viewBox='0%200%200%200'%3E%3C/svg%3E", 0),
+        _image("data:image/png;base64,iVBORw0KGgo=", 0),
+        _image("https://cist.rs/logo.svg?v=2", 4),
+        _image("https://cist.rs/ikona.SVG", 3),
     ]
     assert run_level(2, browser)["perf.img.oversized"].status == "ok"
 
 
-def test_prevelike_slike_bez_izmerenog_prenosa_su_unknown_a_ne_0_kb():
-    """BUG-023: bez izmerenog prenosa višak je 0, a rečenica je govorila „oko 0 kB"."""
+def test_oversized_images_without_measured_transfer_are_unknown_not_0_kb():
+    """BUG-023: without a measured transfer the waste is 0, and the sentence said "about 0 kB"."""
     browser = clean_browser()
-    browser.dom.oversized_images = [_slika(f"https://cist.rs/s{i}.webp", 0) for i in range(3)]
+    browser.dom.oversized_images = [_image(f"https://cist.rs/s{i}.webp", 0) for i in range(3)]
     result = run_level(2, browser)["perf.img.oversized"]
     assert result.status == "unknown"
     assert reason(result.reason) == "3 prevelike slike nemaju izmeren prenos, pa višak nije poznat"
 
 
-def test_nalaz_broji_samo_slike_sa_izmerenim_viskom():
+def test_finding_counts_only_images_with_measured_waste():
     browser = clean_browser()
-    browser.dom.oversized_images = [_slika(f"https://cist.rs/s{i}.jpg", 100) for i in range(3)]
-    browser.dom.oversized_images.append(_slika("https://cist.rs/nemerena.jpg", 0))
-    nalaz = run_level(2, browser)["perf.img.oversized"].findings[0]
-    assert (nalaz.evidence["image_count"], nalaz.evidence["kb"]) == (3, 300)
-    assert "nemerena" not in " ".join(nalaz.evidence_urls)
+    browser.dom.oversized_images = [_image(f"https://cist.rs/s{i}.jpg", 100) for i in range(3)]
+    browser.dom.oversized_images.append(_image("https://cist.rs/nemerena.jpg", 0))
+    found = run_level(2, browser)["perf.img.oversized"].findings[0]
+    assert (found.evidence["image_count"], found.evidence["kb"]) == (3, 300)
+    assert "nemerena" not in " ".join(found.evidence_urls)
 
 
-def test_ista_slika_vise_puta_na_strani_broji_se_jednom_sa_najvecim_viskom():
-    """BUG-030: klonirani slajdovi su istu sliku, preuzetu jednom, brojali kao više slika."""
+def test_same_image_several_times_on_page_counts_once_with_largest_waste():
+    """BUG-030: cloned slides counted the same image, downloaded once, as several images."""
     browser = clean_browser()
     browser.dom.oversized_images = [
-        _slika("https://cist.rs/slajd.jpg", 300),
-        _slika("https://cist.rs/slajd.jpg", 300),
-        _slika("https://cist.rs/slajd.jpg", 120),
-        _slika("https://cist.rs/logo.png", 50),
-        _slika("https://cist.rs/baner.jpg", 80),
+        _image("https://cist.rs/slajd.jpg", 300),
+        _image("https://cist.rs/slajd.jpg", 300),
+        _image("https://cist.rs/slajd.jpg", 120),
+        _image("https://cist.rs/logo.png", 50),
+        _image("https://cist.rs/baner.jpg", 80),
     ]
-    nalaz = run_level(2, browser)["perf.img.oversized"].findings[0]
-    assert (nalaz.evidence["image_count"], nalaz.evidence["kb"], nalaz.evidence["worst_image"]) == (
+    found = run_level(2, browser)["perf.img.oversized"].findings[0]
+    assert (found.evidence["image_count"], found.evidence["kb"], found.evidence["worst_image"]) == (
         3, 430, "https://cist.rs/slajd.jpg"
     )
-    assert nalaz.evidence_urls == ["https://cist.rs/slajd.jpg", "https://cist.rs/baner.jpg", "https://cist.rs/logo.png"]
+    assert found.evidence_urls == ["https://cist.rs/slajd.jpg", "https://cist.rs/baner.jpg", "https://cist.rs/logo.png"]
 
 
 @pytest.mark.parametrize(
-    "slike, ocekivano",
+    "images, expected",
     [
-        pytest.param([("a.jpg", 100)] * 3, "ok", id="gv-1-slika-3-puta"),
-        pytest.param([("a.jpg", 100), ("a.jpg", 100), ("b.jpg", 100)], "ok", id="gv-2-slike-minus"),
+        pytest.param([("a.jpg", 100)] * 3, "ok", id="gv-1-image-3-times"),
+        pytest.param([("a.jpg", 100), ("a.jpg", 100), ("b.jpg", 100)], "ok", id="gv-2-images-minus"),
         pytest.param([("a.jpg", 100), ("a.jpg", 100), ("b.jpg", 100), ("c.jpg", 100)], "finding",
-                     id="gv-3-slike"),
-        pytest.param([("a.jpg", 350)] * 3, "ok", id="gv-700kB-zbir-duplikata-1050"),
-        pytest.param([("a.jpg", 400), ("b.jpg", 300)] * 2, "ok", id="gv-700kB-bez-duplikata"),
+                     id="gv-3-images"),
+        pytest.param([("a.jpg", 350)] * 3, "ok", id="gv-700kB-duplicates-sum-1050"),
+        pytest.param([("a.jpg", 400), ("b.jpg", 300)] * 2, "ok", id="gv-700kB-without-duplicates"),
         pytest.param([("a.jpg", 401), ("b.jpg", 300)] * 2, "finding", id="gv-700kB-plus"),
-        pytest.param([("a.jpg", 0)] * 3, "ok", id="nemerena-ista-3-puta-nije-unknown"),
+        pytest.param([("a.jpg", 0)] * 3, "ok", id="unmeasured-same-3-times-is-not-unknown"),
     ],
 )
-def test_prevelike_slike_prag_posle_uklanjanja_duplikata(slike, ocekivano):
-    """BUG-030: prag (≥ 3 slike ili > 700 kB) se meri nad različitim slikama."""
+def test_oversized_threshold_after_removing_duplicates(images, expected):
+    """BUG-030: the threshold (≥ 3 images or > 700 kB) is measured over distinct images."""
     browser = clean_browser()
-    browser.dom.oversized_images = [_slika(f"https://cist.rs/{ime}", kb) for ime, kb in slike]
-    assert run_level(2, browser)["perf.img.oversized"].status == ocekivano
+    browser.dom.oversized_images = [_image(f"https://cist.rs/{name}", kb) for name, kb in images]
+    assert run_level(2, browser)["perf.img.oversized"].status == expected
 
 
-def test_ponovljene_svg_i_data_slike_i_dalje_ne_ulaze():
+def test_repeated_svg_and_data_images_still_do_not_count():
     browser = clean_browser()
-    browser.dom.oversized_images = [_slika("https://cist.rs/a.svg", 400)] * 3 + [
-        _slika("data:image/png;base64,AAA=", 400)
-    ] * 3 + [_slika("https://cist.rs/b.jpg", 100)]
+    browser.dom.oversized_images = [_image("https://cist.rs/a.svg", 400)] * 3 + [
+        _image("data:image/png;base64,AAA=", 400)
+    ] * 3 + [_image("https://cist.rs/b.jpg", 100)]
     assert run_level(2, browser)["perf.img.oversized"].status == "ok"
 
 
-def test_veliki_visak_bajtova_pali_nalaz_i_ispod_tri_slike():
-    """Prag je ≥ 3 slike **ili** višak > 700 kB (§7.3)."""
+def test_large_byte_waste_fires_finding_below_three_images():
+    """The threshold is ≥ 3 images **or** waste > 700 kB."""
     browser = clean_browser()
     browser.dom.oversized_images = [
         OversizedImage(
@@ -403,23 +408,24 @@ def test_veliki_visak_bajtova_pali_nalaz_i_ispod_tri_slike():
 
 
 # --------------------------------------------------------------------------- #
-# O-2: video se ne računa u prag težine — skida se koliko vreme merenja dozvoli
+# ADR-016: video does not count toward the weight threshold; it downloads for as
+# long as the measurement allows
 # --------------------------------------------------------------------------- #
-def test_video_se_ne_racuna_u_prag_tezine():
-    """Isti sajt je u jednom prolazu preneo 77 MB videa, a u drugom 39 MB."""
+def test_video_does_not_count_toward_weight_threshold():
+    """The same site transferred 77 MB of video in one run and 39 MB in another."""
     browser = clean_browser()
     browser.network.bytes_at_load = 23_800_000
     browser.network.bytes_by_type_at_load = {"media": 22_000_000, "image": 1_500_000, "script": 300_000}
     assert run_level(2, browser)["perf.page.weight"].status == "ok"
 
 
-def test_nalaz_tezine_pominje_video_posebno():
+def test_weight_finding_mentions_video_separately():
     browser = clean_browser()
     browser.network.bytes_at_load = 30_000_000
     browser.network.bytes_by_type_at_load = {"media": 8_000_000, "image": 21_000_000, "script": 1_000_000}
-    nalaz = run_level(2, browser)["perf.page.weight"].findings[0]
-    assert nalaz.severity == "critical", "22 MB bez videa je iznad 7 MB"
-    assert nalaz.evidence["mb"] == 22.0
-    assert nalaz.evidence["video_mb"] == 8.0
-    assert nalaz.variant == "video"
-    assert "video" in render(nalaz, "sr").client and "video" in render(nalaz, "en").client
+    found = run_level(2, browser)["perf.page.weight"].findings[0]
+    assert found.severity == "critical", "22 MB without video is above 7 MB"
+    assert found.evidence["mb"] == 22.0
+    assert found.evidence["video_mb"] == 8.0
+    assert found.variant == "video"
+    assert "video" in render(found, "sr").client and "video" in render(found, "en").client

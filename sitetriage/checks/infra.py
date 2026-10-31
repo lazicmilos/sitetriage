@@ -1,4 +1,4 @@
-"""Infrastrukturne provere (§5, §5.2)."""
+"""Infrastructure checks."""
 
 from __future__ import annotations
 
@@ -9,13 +9,15 @@ from sitetriage.fetch.urls import host_of
 from sitetriage.models import HostVariant, SiteSnapshot
 
 SIMILARITY_CHARS = 2000
-# Samo ovi statusi tvrde da nečega nema. 401, 403, 429 i 5xx znače da je pristup
-# odbijen ili da server ne radi: tada ne znamo, pa je rezultat `unknown` (BUG-003).
-NE_POSTOJI = frozenset({404, 410})
-# Varijanta hosta koju nismo videli kao pretraživač: sertifikat nije prošao ili zahtev nije ni
-# poslat. Ne zna se da li služi sajt (Z-26). DNS greška i veza bez odgovora nisu takve: ništa ne služe.
-# Privremena greška DNS-a ne kaže da adresa ne postoji, pa se ne zna da li služi sajt.
-NEPROVERENA = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
+# Only these statuses claim that something does not exist. 401, 403, 429 and 5xx mean that access
+# was refused or that the server is not working: then we do not know, so the result is `unknown`
+# (BUG-003).
+NOT_FOUND_STATUSES = frozenset({404, 410})
+# A host variant we did not see the way a browser would: the certificate did not pass or the
+# request was never sent. Whether it serves the site is not known (ADR-014). A DNS error and a
+# connection without a response are not like that: they serve nothing.
+# A temporary DNS error does not say the name does not exist, so whether it serves the site is not known.
+UNCHECKED_KINDS = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
 
 
 @check(
@@ -24,21 +26,23 @@ NEPROVERENA = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
     category="infra",
     base_severity="medium",
     requires=["sitemap"],
-    description="Nema sitemap.xml, ili postoji ali je prazan.",
+    description="There is no sitemap.xml, or it exists but is empty.",
     threshold=(
-        "status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi i mapa veća od granice → unknown; "
-        "ima URL-ova → ok"
+        "status 404 or 410, or 200 with 0 URLs; other statuses and a sitemap larger than the limit "
+        "→ unknown; has URLs → ok"
     ),
 )
 def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
     info = snapshot.sitemap
-    # `status` je status prve mape; mrtva prva `Sitemap:` uz drugu koja radi nije „nema mape".
+    # `status` is the status of the first sitemap; a dead first `Sitemap:` next to a working second
+    # one is not "no sitemap".
     if info.urls:
         return ok(sitemap_missing.spec)
-    # Bez adresa, a sečena: mapa postoji, samo je veća od granice, pa se ne zna da li je prazna.
+    # No URLs, but truncated: the sitemap exists, it is just larger than the limit, so whether it is
+    # empty is not known.
     if info.truncated:
         return unknown(sitemap_missing.spec, "sitemap_too_large")
-    if info.status != 200 and info.status not in NE_POSTOJI:
+    if info.status != 200 and info.status not in NOT_FOUND_STATUSES:
         return unknown(sitemap_missing.spec, "sitemap_status", status=info.status)
     return finding(
         sitemap_missing.spec,
@@ -54,14 +58,14 @@ def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="low",
     requires=["robots"],
-    description="Nema robots.txt.",
-    threshold="status 404 ili 410; ostali statusi osim 200 → unknown",
+    description="There is no robots.txt.",
+    threshold="status 404 or 410; other statuses except 200 → unknown",
 )
 def robots_missing(snapshot: SiteSnapshot, ctx: Context):
     status = snapshot.robots.status
     if status == 200:
         return ok(robots_missing.spec)
-    if status not in NE_POSTOJI:
+    if status not in NOT_FOUND_STATUSES:
         return unknown(robots_missing.spec, "robots_status", status=status)
     return finding(
         robots_missing.spec,
@@ -76,17 +80,17 @@ def robots_missing(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="high",
     requires=["soft404"],
-    description="Nepostojeća adresa vraća 200 umesto 404.",
-    threshold="obe sonde vraćaju konačni status 200 (§5.2); status van {200, 404, 410} → unknown",
+    description="A non-existent URL returns 200 instead of 404.",
+    threshold="both probes return a final status 200; a status outside {200, 404, 410} → unknown",
 )
 def soft404(snapshot: SiteSnapshot, ctx: Context):
     probes = snapshot.soft404.probes
     statuses = [p.status for p in probes]
     if not all(s == 200 for s in statuses):
-        odbijene = [s for s in statuses if s != 200 and s not in NE_POSTOJI]
-        if odbijene:
-            return unknown(soft404.spec, "probe_status", statuses=odbijene)
-        # Jedna sonda 200 a druga 404 → `ok`, ne nalaz (§5.2).
+        refused = [s for s in statuses if s != 200 and s not in NOT_FOUND_STATUSES]
+        if refused:
+            return unknown(soft404.spec, "probe_status", statuses=refused)
+        # One probe 200 and the other 404 → `ok`, not a finding: one probe can hit an existing URL by chance.
         return ok(soft404.spec)
 
     home = snapshot.home
@@ -113,24 +117,26 @@ def soft404(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="high",
     requires=["entry"],
-    description="Sertifikat je nevalidan ili istekao.",
-    threshold="TLS provera odbila sertifikat; nepotpun lanac (nema međusertifikata) → unknown",
+    description="The certificate is invalid or expired.",
+    threshold=(
+        "TLS verification rejected the certificate; incomplete chain (no intermediate certificate) → unknown"
+    ),
 )
 def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
     entry = snapshot.entry
     tls = entry.tls
     if tls.valid:
-        # Veza koja nije ni uspostavljena ne dokazuje da je sertifikat ispravan.
-        # `ok` bi ovde bio tvrdnja koju nismo proverili (§3.4).
+        # A connection that was never established does not prove the certificate is valid.
+        # `ok` here would be a claim we did not check.
         if entry.status is None:
             return unknown(tls_invalid.spec, "tls_no_connection", kind=entry.error_kind)
-        # Https nije uspeo, pa je sajt dohvaćen preko http-a: sertifikat nije ni viđen (BUG-004).
+        # https failed, so the site was fetched over http: the certificate was never seen (BUG-004).
         https = next((e for e in snapshot.errors if e.stage == "entry"), None)
         if https is not None and entry.requested_url.startswith("http://"):
             return unknown(tls_invalid.spec, "tls_over_http", kind=https.kind, detail=https.detail[:120])
         return ok(tls_invalid.spec)
-    # Server ne šalje međusertifikat: Python odbija, a browser ga ume dopuniti sam, pa
-    # „posetilac vidi upozorenje" nije dokazano.
+    # The server does not send the intermediate certificate: Python rejects it, but a browser can
+    # fill it in by itself, so "the visitor sees a warning" is not proven.
     if "unable to get local issuer certificate" in (tls.error or ""):
         return unknown(tls_invalid.spec, "tls_incomplete_chain")
     return finding(
@@ -141,15 +147,15 @@ def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
     )
 
 
-def _pocetna(snapshot: SiteSnapshot) -> HostVariant:
-    """Konačna adresa početne u obliku varijante, da se poredi sa ostalim trima."""
+def _home_variant(snapshot: SiteSnapshot) -> HostVariant:
+    """The final URL of the home page as a variant, to compare with the other three."""
     home = snapshot.home
-    konacna = home.final_url or home.url
+    final = home.final_url or home.url
     canonical = home.canonical_normalized
-    return HostVariant(url=konacna, status=home.status, final_url=konacna, canonical=canonical)
+    return HostVariant(url=final, status=home.status, final_url=final, canonical=canonical)
 
 
-def _poreklo(url: str | None) -> str:
+def _origin(url: str | None) -> str:
     return f"{url.split('://')[0]}://{host_of(url)}" if url and host_of(url) else ""
 
 
@@ -159,31 +165,32 @@ def _poreklo(url: str | None) -> str:
     category="infra",
     base_severity="medium",
     requires=["home", "host_variants"],
-    description="Sajt radi na https-u, ali se otvara i preko http-a, bez preusmerenja na https.",
+    description="The site works on https, but it also opens over http, without a redirect to https.",
     threshold=(
-        "https na konačnom hostu vraća 200 sa ispravnim sertifikatom, a http:// istog hosta vraća 200 bez "
-        "preusmerenja na https; TLS greška ili neposlat zahtev → unknown; https ne radi → ne primenjuje se"
+        "https on the final host returns 200 with a valid certificate, and http:// of the same host returns "
+        "200 without a redirect to https; TLS error or request not sent → unknown; https not working → "
+        "not applicable"
     ),
 )
 def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
     spec = https_redirect_missing.spec
-    pocetna = _pocetna(snapshot)
-    host = host_of(pocetna.final_url)
-    adrese = {v.url: v for v in snapshot.host_variants}
+    home = _home_variant(snapshot)
+    host = host_of(home.final_url)
+    variants = {v.url: v for v in snapshot.host_variants}
     if not snapshot.entry.tls.valid:
-        pocetna.error_kind = "tls"
-    sema = pocetna.final_url.split("://")[0]
-    adrese[f"{sema}://{host}/"] = pocetna
-    https, http = adrese.get(f"https://{host}/"), adrese.get(f"http://{host}/")
-    for url, varijanta in ((f"https://{host}/", https), (f"http://{host}/", http)):
-        if varijanta is None or varijanta.error_kind in NEPROVERENA:
-            vrsta = varijanta.error_kind if varijanta else "—"
-            return unknown(spec, "variant_unchecked", url=url, kind=vrsta)
+        home.error_kind = "tls"
+    scheme = home.final_url.split("://")[0]
+    variants[f"{scheme}://{host}/"] = home
+    https, http = variants.get(f"https://{host}/"), variants.get(f"http://{host}/")
+    for url, variant in ((f"https://{host}/", https), (f"http://{host}/", http)):
+        if variant is None or variant.error_kind in UNCHECKED_KINDS:
+            kind = variant.error_kind if variant else "—"
+            return unknown(spec, "variant_unchecked", url=url, kind=kind)
     if https.status != 200 or not (https.final_url or "").startswith("https://"):
         return not_applicable(spec, "no_https", url=https.url)
     if http.status == 200 and (http.final_url or "").startswith("http://"):
-        dokaz = {"http_url": http.url, "status": http.status, "https_url": https.url}
-        return finding(spec, ctx, evidence=dokaz, urls=[http.url])
+        evidence = {"http_url": http.url, "status": http.status, "https_url": https.url}
+        return finding(spec, ctx, evidence=evidence, urls=[http.url])
     return ok(spec)
 
 
@@ -193,43 +200,43 @@ def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="medium",
     requires=["home", "host_variants"],
-    description="Isti sajt se otvara i sa www i bez www, a nijedna adresa ne preusmerava na drugu.",
+    description="The same site opens both with and without www, and neither URL redirects to the other.",
     threshold=(
-        "varijante vraćaju 200 na oba hosta (www i bez www); low ako canonical na svima upućuje na isto "
-        "poreklo; neproverena varijanta hosta koji nije viđen → unknown"
+        "the variants return 200 on both hosts (www and without www); low if the canonical on all of them "
+        "points to the same origin; an unchecked variant of a host that was not seen → unknown"
     ),
 )
 def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
     spec = host_duplicate.spec
-    pocetna = _pocetna(snapshot)
-    bez = (host_of(pocetna.final_url) or "").removeprefix("www.")
-    # Samo www i bez www: http i https istog hosta prijavljuje `infra.https.redirect.missing`, a
-    # adresa koja vodi na tuđ domen nije kopija sajta.
-    sluze = [
+    home = _home_variant(snapshot)
+    bare = (host_of(home.final_url) or "").removeprefix("www.")
+    # Only www and without www: http and https of the same host are reported by
+    # `infra.https.redirect.missing`, and a URL that leads to a different domain is not a copy of the site.
+    serving = [
         v
-        for v in [pocetna, *snapshot.host_variants]
-        if v.status == 200 and host_of(v.final_url) in (bez, f"www.{bez}")
+        for v in [home, *snapshot.host_variants]
+        if v.status == 200 and host_of(v.final_url) in (bare, f"www.{bare}")
     ]
-    hostovi = {host_of(v.final_url) for v in sluze}
-    if len(hostovi) < 2:
+    hosts = {host_of(v.final_url) for v in serving}
+    if len(hosts) < 2:
         for v in snapshot.host_variants:
-            if v.error_kind in NEPROVERENA and host_of(v.url) not in hostovi:
+            if v.error_kind in UNCHECKED_KINDS and host_of(v.url) not in hosts:
                 return unknown(spec, "variant_unchecked", url=v.url, kind=v.error_kind)
         return ok(spec)
-    canonical = {_poreklo(v.canonical) for v in sluze}
-    isti = len(canonical) == 1 and "" not in canonical
+    canonical = {_origin(v.canonical) for v in serving}
+    same = len(canonical) == 1 and "" not in canonical
     return finding(
         spec,
         ctx,
         evidence={
-            # Hostovi, ne poreklo: uz http bez preusmerenja spisak je imao četiri adrese (BUG-017).
-            "hosts": sorted(hostovi),
-            "host_count": len(hostovi),
-            "same_canonical": int(isti),
+            # Hosts, not origins: with http without a redirect the list had four entries (BUG-017).
+            "hosts": sorted(hosts),
+            "host_count": len(hosts),
+            "same_canonical": int(same),
         },
-        urls=sorted({v.url for v in sluze}),
-        severity="low" if isti else None,
-        variant="same_canonical" if isti else None,
+        urls=sorted({v.url for v in serving}),
+        severity="low" if same else None,
+        variant="same_canonical" if same else None,
     )
 
 
@@ -240,12 +247,13 @@ def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
     base_severity="critical",
     requires=["entry"],
     description=(
-        "Sajt se ne otvara ni u drugom pokušaju: ime ne postoji u DNS-u ili nema adresu, ili server "
-        "ne prihvata vezu ni preko https ni preko http. Domen ide u listu „Ne rade”, a ne u rangiranje."
+        "The site does not open even on the second attempt: the name does not exist in DNS or has no "
+        "address, or the server accepts no connection over https or http. The domain goes to the "
+        "“Not working” list, not into the ranking."
     ),
     threshold=(
-        "oba pokušaja, u razmaku od bar http.second_attempt_after_s (60 s): EAI_NONAME ili EAI_NODATA, "
-        "ili TCP veza odbijena ili istekla i na https i na http; bilo kakav HTTP odgovor → ok"
+        "both attempts, at least http.second_attempt_after_s (60 s) apart: EAI_NONAME or EAI_NODATA, "
+        "or the TCP connection refused or timed out on both https and http; any HTTP response → ok"
     ),
 )
 def unreachable(snapshot: SiteSnapshot, ctx: Context):
@@ -253,21 +261,22 @@ def unreachable(snapshot: SiteSnapshot, ctx: Context):
     if entry.status is not None:
         return ok(unreachable.spec)
     if snapshot.scanner_version.startswith("1."):
-        verzija = snapshot.scanner_version
-        return unknown(unreachable.spec, "v1_snapshot", version=verzija, field="entry_attempts")
-    razlog = snapshot.entry_unreachable()
-    pokusaji = snapshot.entry_attempts
-    # Jedan pokušaj, privremen DNS, prekinuto TLS rukovanje ili blokada ne dokazuju da sajt ne radi.
-    if razlog is None or len(pokusaji) < 2:
-        return unknown(unreachable.spec, "unreachable_unsure", kind=entry.error_kind, attempts=len(pokusaji))
+        version = snapshot.scanner_version
+        return unknown(unreachable.spec, "v1_snapshot", version=version, field="entry_attempts")
+    cause = snapshot.entry_unreachable()
+    attempts = snapshot.entry_attempts
+    # A single attempt, a temporary DNS error, an interrupted TLS handshake or a block do not prove
+    # that the site is down.
+    if cause is None or len(attempts) < 2:
+        return unknown(unreachable.spec, "unreachable_unsure", kind=entry.error_kind, attempts=len(attempts))
     return finding(
         unreachable.spec,
         ctx,
         evidence={
-            "cause": razlog,
-            "attempt_count": len(pokusaji),
-            "first_attempt": pokusaji[0],
-            "second_attempt": pokusaji[-1],
+            "cause": cause,
+            "attempt_count": len(attempts),
+            "first_attempt": attempts[0],
+            "second_attempt": attempts[-1],
             "detail": entry.error_detail or "",
         },
         urls=[entry.requested_url],

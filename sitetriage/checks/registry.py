@@ -1,12 +1,14 @@
-"""Registar provera (§2.4) i motor koji ga prolazi.
+"""The check registry and the engine that runs it.
 
-Provere se **ne pozivaju iz if-else lanca**. Svaka se registruje sa svojim
-metapodacima, a motor samo prođe kroz registar — pa su lista provera, tabela u
-README-u i `sitetriage explain` jedan isti podatak, a ne tri koja se razilaze.
+Checks are **not called from an if-else chain**. Each one registers with its own
+metadata and the engine just walks the registry, so the list of checks, the table
+in the README and `sitetriage explain` are one and the same data, not three copies
+that drift apart. Each check also declares its `requires`: the preconditions that
+say why it cannot run on a given snapshot.
 
-Pravilo koje se ne krši (§2.3): ovaj paket ne uvozi `httpx`, `playwright`, ni
-`fetch.*` osim `fetch.urls`. Ako ti zatreba nešto sa mreže — fali ti polje u
-snapshotu, dodaj polje.
+The rule that is never broken: this package does not import `httpx`, `playwright`, or
+`fetch.*` other than `fetch.urls` (enforced by `tests/test_arhitektura.py`). If you need
+something from the network, the snapshot is missing a field: add the field.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ CheckFn = Callable[[Any, "Context"], CheckResult]
 
 @dataclass
 class Context:
-    """Sve što provera sme da zna: ko je domen, koji su pragovi i, za nivo 1, šta je video nivo 2."""
+    """Everything a check may know: the domain, the thresholds and, for level 1, what level 2 saw."""
 
     domain: str
     industry: str
@@ -61,7 +63,7 @@ def check(
 ) -> Callable[[CheckFn], CheckFn]:
     def register(fn: CheckFn) -> CheckFn:
         if check_id in REGISTRY:
-            raise ValueError(f"duplikat check_id: {check_id}")
+            raise ValueError(f"duplicate check_id: {check_id}")
         spec = CheckSpec(
             check_id=check_id,
             level=level,
@@ -73,7 +75,7 @@ def check(
             fn=fn,
         )
         REGISTRY[check_id] = spec
-        # Telo provere dohvata svoj spec preko `fn.spec` — bez traženja po registru.
+        # The check body reaches its spec through `fn.spec`, without a registry lookup.
         fn.spec = spec  # type: ignore[attr-defined]
         return fn
 
@@ -81,22 +83,23 @@ def check(
 
 
 # --------------------------------------------------------------------------- #
-# Konstruktori rezultata — jedini način na koji provera sme da odgovori
+# Result constructors: the only way a check may answer
 # --------------------------------------------------------------------------- #
 def ok(spec: CheckSpec) -> CheckResult:
     return CheckResult(check_id=spec.check_id, status="ok")
 
 
 def unknown(spec: CheckSpec, reason: str, **evidence: Any) -> CheckResult:
-    """`unknown` bez razloga je bug (§3.4) — potpis to i ne dozvoljava.
+    """`unknown` without a reason is a bug, and the signature does not even allow it.
 
-    Razlog je kod iz kataloga (`sitetriage.messages`) i podaci za rečenicu, kao kod nalaza.
+    The reason is a code from the catalog (`sitetriage.messages`) plus data for the sentence,
+    the same as for a finding.
     """
     return CheckResult(check_id=spec.check_id, status="unknown", reason=Reason(reason, evidence))
 
 
 def not_applicable(spec: CheckSpec, reason: str, **evidence: Any) -> CheckResult:
-    """Provera nema šta da proveri na ovom sajtu; razlog je obavezan, kao za `unknown` (Z-21)."""
+    """The check has nothing to check on this site; the reason is mandatory, as for `unknown` (ADR-015)."""
     return CheckResult(check_id=spec.check_id, status="not_applicable", reason=Reason(reason, evidence))
 
 
@@ -109,10 +112,10 @@ def finding(
     severity: str | None = None,
     variant: str | None = None,
 ) -> CheckResult:
-    """Nalaz nosi dokaz, a rečenicu iz njega pravi `sitetriage.messages` pri prikazu.
+    """A finding carries evidence; `sitetriage.messages` builds the sentence from it when shown.
 
-    To nije stil nego tvrdnja: ako rečenica za klijenta sadrži broj, taj broj
-    nužno postoji u `evidence`. „Sajt je spor" tako ne može da prođe (§3.5).
+    That is not style but a guarantee: if the client sentence contains a number, that number
+    necessarily exists in `evidence`. "The site is slow" cannot get through that way (ADR-022).
     """
     return CheckResult(
         check_id=spec.check_id,
@@ -133,20 +136,20 @@ def finding(
 
 
 # --------------------------------------------------------------------------- #
-# Preduslovi: `requires` iz §2.4 — zašto provera ne može da se izvrši
+# Requirements (`requires`): why a check cannot run
 # --------------------------------------------------------------------------- #
 def _home_ok(snapshot: Any) -> bool:
     home = getattr(snapshot, "home", None)
     return bool(home and home.status == 200 and home.html_bytes)
 
 
-# Rečenica za neispunjen preduslov je u katalogu pod `requires.<ime>`.
+# The sentence for an unmet requirement is in the catalog under `requires.<name>`.
 REQUIREMENTS: dict[str, Callable[[Any], bool]] = {
     "entry": lambda s: s.entry is not None,
     "entry_response": lambda s: s.entry is not None and s.entry.status is not None,
     "home": _home_ok,
     "home_html": lambda s: bool(s.home and s.home.raw_html),
-    # Telo početne sečeno na `http.max_body_kb`: ono što je posle granice nije viđeno.
+    # Home page body cut at `http.max_body_kb`: whatever came after the limit was not seen.
     "home_complete": lambda s: not s.home.truncated,
     "robots": lambda s: s.robots.status is not None,
     "sitemap": lambda s: s.sitemap.status is not None,
@@ -160,50 +163,51 @@ REQUIREMENTS: dict[str, Callable[[Any], bool]] = {
 }
 
 
-# Provera koja čita polje uvedeno u v2 navodi ga u `requires` kao `v2:<polje>`. Snapshot iz
-# 1.x to polje nema, a na njima je kalibrisana lista A: provera je tada `unknown`, nikad
-# `ok` sa podrazumevanom vrednošću i nikad pad.
-NOVO_POLJE = "v2:"
+# A check that reads a field introduced in v2 lists it in `requires` as `v2:<field>`. A snapshot
+# from 1.x does not have that field, and list A was calibrated on such snapshots: the check is then
+# `unknown`, never `ok` with a default value and never a crash.
+NEW_FIELD_PREFIX = "v2:"
 
 
 def unmet(spec: CheckSpec, snapshot: Any) -> Reason | None:
     for name in spec.requires:
-        if name.startswith(NOVO_POLJE):
-            verzija = getattr(snapshot, "scanner_version", "")
-            if verzija.startswith("1."):
-                return Reason("v1_snapshot", {"version": verzija, "field": name.removeprefix(NOVO_POLJE)})
+        if name.startswith(NEW_FIELD_PREFIX):
+            version = getattr(snapshot, "scanner_version", "")
+            if version.startswith("1."):
+                field = name.removeprefix(NEW_FIELD_PREFIX)
+                return Reason("v1_snapshot", {"version": version, "field": field})
             continue
         try:
-            ispunjen = REQUIREMENTS[name](snapshot)
+            met = REQUIREMENTS[name](snapshot)
         except (AttributeError, TypeError):
-            ispunjen = False
-        if not ispunjen:
+            met = False
+        if not met:
             return Reason(f"requires.{name}")
     return None
 
 
 # --------------------------------------------------------------------------- #
-# Motor
+# Engine
 # --------------------------------------------------------------------------- #
 def run(level: int, snapshot: Any, ctx: Context) -> list[CheckResult]:
-    """Svaka provera u sopstvenom `try`: izuzetak nikad ne napušta domen (§8.2)."""
+    """Each check runs in its own `try`: an exception never leaves the domain."""
     results: list[CheckResult] = []
     for spec in sorted(REGISTRY.values(), key=lambda s: s.check_id):
         if spec.level != level:
             continue
         reason = unmet(spec, snapshot)
         if reason:
-            # Lagani nivo 2 vreme namerno ne meri (BUG-020): to nije nepoznanica, pa ni `partial`.
+            # Light level 2 deliberately does not measure time (BUG-020): not an unknown, so not `partial`.
             status = "not_applicable" if reason.code == "requires.level2_full" else "unknown"
             results.append(CheckResult(check_id=spec.check_id, status=status, reason=reason))
             continue
         try:
             results.append(spec.fn(snapshot, ctx))
-        except Exception as exc:  # noqa: BLE001 — granica domena, namerno široka
+        except Exception as exc:  # noqa: BLE001 — domain boundary, deliberately broad
             results.append(unknown(spec, "check_crashed", error=f"{type(exc).__name__}: {exc}"))
     return results
 
 
 def load_all() -> None:
-    """Uvozi module sa proverama da bi se dekoratori izvršili."""
+    """Imports the check modules so that their decorators run."""
     from sitetriage.checks import a11y, i18n, infra, perf, seo, social  # noqa: F401
