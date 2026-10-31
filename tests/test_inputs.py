@@ -1,4 +1,4 @@
-"""Lista domena i CSV iz Excel-a (§4.1). Lista najčešće stiže iz Excel-a, a kupac nije programer."""
+"""Lista domena i CSV iz Excel-a (§4.1). Lista najčešće stiže iz Excel-a, a operater nije nužno programer."""
 
 from __future__ import annotations
 
