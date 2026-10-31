@@ -1,8 +1,8 @@
 # Contributing to SiteTriage
 
-Thanks for your interest in SiteTriage. It scans a list of domains and ranks the sites that deserve a
-full manual audit. The Python package and the command are both called `sitetriage`. If you have not
-used the tool yet, start with the [README](README.md).
+SiteTriage scans a list of domains and ranks the sites that deserve a full manual audit. The Python
+package and the command are both called `sitetriage`. If you have not used the tool yet, start with
+the [README](README.md).
 
 > **Language.** The project started in Serbian. Since 3.0 the public interface is English
 > ([ADR-012](docs/adr/ADR-012-english-public-interface.md)), and code identifiers, comments and test
@@ -151,8 +151,8 @@ pre-commit run --all-files                  # optional, once
 
 ## Architecture rules
 
-These rules are what make the tool testable without a network and its reports defensible. A PR that
-breaks one of them will not be merged, however useful the feature.
+These rules keep the tool testable without a network and its reports defensible. A PR that breaks
+one of them will not be merged, however useful the feature.
 
 1. **Checks never touch the network.** Code that fetches and code that draws conclusions are
    separate layers. A check receives a snapshot that was already collected and returns results.

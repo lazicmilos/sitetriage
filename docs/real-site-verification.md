@@ -13,9 +13,9 @@ calibration decisions, each recorded in an [ADR](adr/README.md). The log of the 
 
 ## 0. Preparation (10 min; the first build pulls about 2 GB)
 
-Everything goes through Docker: the same image, the same Chromium and Python versions as CI. If your
-result differs from someone else's, the difference is in the network and the sites, not in the
-environment.
+Everything goes through Docker, with the same image and the same Chromium and Python versions as
+CI. If your result differs from someone else's, the network and the sites differ; the environment
+does not.
 
 ```bash
 git pull

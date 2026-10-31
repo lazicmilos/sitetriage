@@ -48,7 +48,7 @@ worker.
 
 ## Limits of level 2
 
-Level 2 is the first line of defence, not the only one:
+Level 2 is the first line of defence. It cannot be the only one:
 
 1. **Redirects.** `route` sees only the first address, not the target of a redirect. Verified on
    Playwright 1.56: an allowed page that answers 302 to a private port takes Chromium to that port.
