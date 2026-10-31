@@ -1,7 +1,7 @@
 # Contributing to SiteTriage
 
 Thanks for your interest in SiteTriage. It scans a list of domains and ranks the sites that deserve a
-full manual audit. The repository, Python package and command are still called `skener`.
+full manual audit. The Python package and the command are called `sitetriage`.
 
 > **Language.** The project started in Serbian, so most code identifiers, comments, docs, tests and
 > commit history are in Serbian. Contributor-facing material is moving to English. Write new comments,
