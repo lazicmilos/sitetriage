@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import jsonschema
 from factories import clean_browser, clean_site
-from test_json import SEMA
+from test_json import SCHEMA
 
 from sitetriage import pipeline, store
 from sitetriage.config import load_config
@@ -57,7 +57,7 @@ def test_partial_zbog_budzeta_i_zbog_unknown_se_broje_posebno(tmp_path):
     rezultat = pipeline.recheck(tmp_path, load_config())
     assert rezultat.summary["partial_budget"] == 2 and rezultat.summary["partial_unknown"] == 2
     assert rezultat.budget_share == 0.5 and rezultat.unknown_share["infra.robots.missing"] == 0.5
-    jsonschema.validate(to_jsonable(rezultat), SEMA)
+    jsonschema.validate(to_jsonable(rezultat), SCHEMA)
 
 
 def test_udeo_unknown_ne_broji_domene_koji_ne_rade():
