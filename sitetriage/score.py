@@ -1,8 +1,8 @@
-"""Bodovanje, rangiranje i politika eskalacije (§6, §9). Čisto: bez I/O.
+"""Scoring, ranking and the escalation policy. Pure: no I/O.
 
-Sve troje su odluke nad već prikupljenim podacima, pa žive zajedno i testiraju se
-zajedno. Eskalacija je ovde jer joj treba skor nivoa 1: kad kandidata ima više od
-gornjeg limita, prolaze oni sa najvišim (§6).
+All three are decisions over data already collected, so they live together and are tested
+together. Escalation is here because it needs the level 1 score: when there are more
+candidates than the upper limit, the ones with the highest score go through (ADR-019).
 """
 
 from __future__ import annotations
@@ -21,14 +21,15 @@ from sitetriage.models import (
     Unknown,
 )
 
-# Sajtovi koji rade: samo oni se rangiraju i samo oni ulaze u imenilac udela iz §7.
-RADE = ("scanned", "partial")
+# Working sites: only they are ranked, and only they count in the denominator of the
+# exit-criteria shares (ADR-015).
+WORKING_STATUSES = ("scanned", "partial")
 
 
 def weigh(finding: Finding, industry: str, config: dict) -> float:
-    """`weight = base_points × industry_multiplier[industry][category]` (§9.2).
+    """`weight = base_points × industry_multiplier[industry][category]`.
 
-    Ozbiljnost se posle množenja **ne menja** — menja se samo broj bodova (§3.5).
+    The severity **does not change** after the multiplication; only the number of points does.
     """
     base = get(config, f"severity_points.{finding.severity}")
     return round(base * multiplier(config, industry, finding.category), 4)
@@ -92,36 +93,37 @@ def _partial_causes(site: SiteSnapshot, unknowns: Sequence[Unknown]) -> list[str
 
 
 def partial_shares(reports: Sequence[DomainReport]) -> tuple[float, dict[str, float]]:
-    """Udeo budžeta među domenima koji rade, i udeo `unknown`-a po proveri (Z-22, §7).
+    """The budget share among working domains, and the `unknown` share per check (ADR-015).
 
-    Imenilac za proveru su domeni koji rade i na kojima je pokrenuta: nivo 2 samo gde je radio.
-    `failed`, `unreachable` i izuzeti ne ulaze, jer tamo nijedna provera nije ni imala šta da vidi.
+    The denominator for a check is the working domains it ran on: for level 2 only where level 2
+    ran. `failed`, `unreachable` and excluded domains do not count, because no check had anything
+    to see there.
     """
     from sitetriage.checks import registry
 
     registry.load_all()
-    rade = [r for r in reports if r.status in RADE]
-    budzet = sum("budget" in r.partial_causes for r in rade)
-    po_proveri = {}
+    working = [r for r in reports if r.status in WORKING_STATUSES]
+    budget = sum("budget" in r.partial_causes for r in working)
+    per_check = {}
     for spec in sorted(registry.REGISTRY.values(), key=lambda s: s.check_id):
-        # Provera bez ispunjenog preduslova nije ni pokrenuta, npr. vreme na laganom nivou 2 (BUG-020).
-        pokrenuta = [
+        # A check with an unmet requirement did not even run, e.g. time on light level 2 (BUG-020).
+        ran_on = [
             r
-            for r in rade
+            for r in working
             if (spec.level == 1 or r.level2_ran)
             and not any(
                 n.check_id == spec.check_id and n.reason.code.startswith("requires.")
                 for n in r.not_applicable
             )
         ]
-        if pokrenuta:
-            nepoznato = sum(any(u.check_id == spec.check_id for u in r.unknowns) for r in pokrenuta)
-            po_proveri[spec.check_id] = round(nepoznato / len(pokrenuta), 4)
-    return (round(budzet / len(rade), 4) if rade else 0.0), po_proveri
+        if ran_on:
+            unknown = sum(any(u.check_id == spec.check_id for u in r.unknowns) for r in ran_on)
+            per_check[spec.check_id] = round(unknown / len(ran_on), 4)
+    return (round(budget / len(working), 4) if working else 0.0), per_check
 
 
 def _failure(site: SiteSnapshot) -> Reason:
-    """Zašto početna nije stigla, za listu „Nije skenirano"."""
+    """Why the home page did not arrive, for the "Not scanned" list."""
     entry = site.entry
     if entry is None:
         return Reason("entry_missing")
@@ -131,28 +133,28 @@ def _failure(site: SiteSnapshot) -> Reason:
 
 
 def rank(reports: Iterable[DomainReport]) -> list[DomainReport]:
-    """§9.4: sajt sa jednom katastrofom je bolji lead od sajta sa deset sitnica.
+    """A site with one disaster is a better lead than a site with ten trifles.
 
-    Primarni ključ je najteži pojedinačni nalaz; zbir samo razrešava izjednačenje.
-    Rangiranje po zbiru bi hotel stavilo iznad institucije, a institucija ima najskuplji SEO
-    problem koji postoji. Rangiraju se samo sajtovi koji rade (Z-20): onaj koji se ne
-    otvara ide u „Ne rade", a onaj koji alat nije pregledao u „Nije skenirano".
+    The primary key is the worst single finding; the total only breaks ties.
+    Ranking by the total would put the hotel above the institution, and the institution has the
+    most expensive SEO problem there is. Only working sites are ranked (ADR-013): one that does
+    not open goes to "Not working", and one the tool did not look at goes to "Not scanned".
     """
-    rade = (r for r in reports if r.status in RADE)
-    ordered = sorted(rade, key=lambda r: (-r.max_finding_weight, -r.total_score, r.domain))
+    working = (r for r in reports if r.status in WORKING_STATUSES)
+    ordered = sorted(working, key=lambda r: (-r.max_finding_weight, -r.total_score, r.domain))
     for position, report in enumerate(ordered, start=1):
         report.rank = position
     return ordered
 
 
 # --------------------------------------------------------------------------- #
-# Politika eskalacije na nivo 2 (§6)
+# Escalation policy to level 2
 # --------------------------------------------------------------------------- #
 def escalation_reasons(site: SiteSnapshot, results: Sequence[CheckResult], config: dict) -> list[Reason]:
-    """Razlozi zbog kojih domen ide na nivo 2; prazna lista znači da ne ide.
+    """The reasons a domain goes to level 2; an empty list means it does not go.
 
-    Prazan sirovi HTML **nije nalaz**, nego signal. Ako ga prijaviš kao nalaz,
-    rekao si klijentu da nema h1 iako ga ima — samo ga ti nisi video (§6).
+    Empty raw HTML **is not a finding** but a signal. If you report it as a finding,
+    you told the client there is no h1 although there is one; you just did not see it.
     """
     home = site.home
     if home is None or home.status != 200:
@@ -175,8 +177,8 @@ def escalation_reasons(site: SiteSnapshot, results: Sequence[CheckResult], confi
     if any(f.check_id == "perf.compression.missing" for f in findings):
         reasons.append(Reason("html_uncompressed"))
 
-    # Ovaj uslov zatvara rupu koju ostala četiri ostavljaju: sajt sa čistim SEO-om
-    # i sporom stranicom inače nikad ne bi stigao na nivo 2 (§6, `b2b-firma.example`).
+    # This condition closes the gap the other conditions leave: a site with clean SEO and a slow
+    # page would otherwise never reach level 2 (the `b2b-firma.example` fixture).
     slow = get(config, "escalation.slow_entry_ms")
     if site.entry and site.entry.elapsed_ms and site.entry.elapsed_ms > slow:
         reasons.append(Reason("slow_entry", {"ms": site.entry.elapsed_ms, "threshold": slow}))
@@ -191,22 +193,22 @@ def level1_score(site: SiteSnapshot, results: Sequence[CheckResult], config: dic
 def select_for_level2(
     candidates: Sequence[tuple[SiteSnapshot, Sequence[CheckResult]]], config: dict
 ) -> list[SiteSnapshot]:
-    """Tvrd gornji limit (§6).
+    """A hard upper limit (ADR-019).
 
-    Bez njega prvi prolaz nad 200 domena gde ih 180 ima bar jedan nalaz traje sat
-    vremena i ti odustaneš od alata.
+    Without it, the first run over 200 domains where 180 have at least one finding takes an
+    hour and you give up on the tool.
     """
     limit = get(config, "escalation.max_level2")
 
     def key(pair: tuple[SiteSnapshot, Sequence[CheckResult]]) -> tuple[bool, float, str]:
         site, results = pair
         findings, _ = collect(results)
-        # Kandidat bez nalaza ≥ medium je kandidat samo zbog signala koje vidi browser
-        # (prazan HTML, nema h1, spora početna). Nivo 2 mu je jedina šansa za pravi
-        # nalaz; bez njega u izveštaju stoji kao „0 nalaza", a nije ni meren (BUG-005).
-        # Zato ide prvi, pa tek onda ostali po skoru nivoa 1.
-        jak = any(SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER["medium"] for f in findings)
-        return (jak, -level1_score(site, results, config), site.domain)
+        # A candidate without a finding ≥ medium is a candidate only because of signals the
+        # browser sees (empty HTML, no h1, slow home page). Level 2 is its only chance of a real
+        # finding; without it the report shows it as "0 findings", although it was never
+        # measured (BUG-005). So it goes first, and only then the others by level 1 score.
+        strong = any(SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER["medium"] for f in findings)
+        return (strong, -level1_score(site, results, config), site.domain)
 
     return [site for site, _ in sorted(candidates, key=key)[:limit]]
 
@@ -218,11 +220,11 @@ def analyze(
     browser: BrowserSnapshot | None = None,
     escalation: Sequence[Reason] = (),
 ) -> DomainReport:
-    """Snapshoti → provere → bodovan izveštaj. Bez I/O, pa `recheck` ide bez mreže."""
+    """Snapshots → checks → scored report. No I/O, so `recheck` runs without the network."""
     from sitetriage.checks import registry
 
     registry.load_all()
-    # Nivo 1 vidi i nivo 2: provera duplikata broji i veze iz renderovanog DOM-a (Z-21).
+    # Level 1 also sees level 2: the duplicate checks also count links from the rendered DOM (ADR-015).
     ctx = registry.Context(domain=site.domain, industry=site.industry, config=config, browser=browser)
     results = list(registry.run(1, site, ctx))
     if browser is not None:

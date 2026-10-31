@@ -20,7 +20,7 @@ from sitetriage.messages import number, text
 from sitetriage.messages import reason as razlog
 from sitetriage.messages import render as poruka
 from sitetriage.models import DomainReport
-from sitetriage.score import RADE, partial_shares
+from sitetriage.score import WORKING_STATUSES, partial_shares
 
 # Znak i boje po ozbiljnosti; oznaka („KRITIČNO") dolazi iz kataloga jezika.
 OZBILJNOST = {
@@ -139,7 +139,7 @@ def render(
         return [r for r in reports if r.status == status]
 
     # Rangiranje je samo za sajtove koji rade; ostali imaju svoje odeljke (Z-20).
-    ranked = [r for r in reports if r.status in RADE]
+    ranked = [r for r in reports if r.status in WORKING_STATUSES]
     level2 = sum(1 for r in reports if r.level2_ran)
     generated = reports[0].scanned_at if reports else ""
 
