@@ -46,7 +46,7 @@ Nivo 2 je prva linija odbrane, a ne jedina:
 
 1. **Preusmerenje.** `route` vidi samo prvu adresu, a ne i cilj preusmerenja. Provereno na
    Playwright 1.56: dozvoljena strana koja vraća 302 na privatni port odvede Chromium do tog
-   porta. Test `test_browser_ne_prati_preusmerenje_na_privatnu_adresu` je označen kao
+   porta. Test `test_browser_does_not_follow_redirect_to_private_address` je označen kao
    `xfail(strict=True)`; kad Playwright počne da vidi preusmerenja, test pada i ova tačka se
    briše.
 2. **Vreme između provere i veze.** Chromium sam razrešava ime, pa između naše provere i

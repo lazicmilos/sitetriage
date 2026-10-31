@@ -9,7 +9,7 @@ Covers:  Z-20 (with O-5, O-8, O-14)
 
 Recorded on 2026-10-31 from `docs/kalibracija.md`, `docs/izvestaj-testiranja-100.md`,
 `docs/izvestaj-testiranja-2.md`, `docs/izvestaj-testiranja-3.md`, `CHANGELOG.md` (2.0.0),
-`skener.toml` and `tests/test_ne_rade.py`. The date is the date the requirement was accepted
+`skener.toml` and `tests/test_unreachable.py`. The date is the date the requirement was accepted
 (run D on list A). The repository does not record when the decision itself was taken.
 
 ## Context
@@ -50,7 +50,7 @@ looks like "down" but is not: a temporary DNS failure (EAI_AGAIN). Over a mobile
   decision, 2026-09-27).
 - A domain excluded by the operator gets the separate status `excluded` and no request at all.
 
-The decision table lives in `tests/test_ne_rade.py` (`test_ne_radi_samo_kad_je_sigurno`).
+The decision table lives in `tests/test_unreachable.py` (`test_unreachable_only_when_certain`).
 
 ## Consequences
 
