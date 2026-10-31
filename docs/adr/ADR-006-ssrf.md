@@ -24,7 +24,7 @@ adresa je čista funkcija u `skener/addresses.py`, koju pokriva i mutaciono test
 **Ulaz.** Domen sa IP adresom, portom ili korisničkim imenom ne dobija nijedan zahtev, osim kad
 je `host:port` izričito dozvoljen. Takav domen je `failed` sa razlogom.
 
-**Nivo 1.** `httpx` dobija sopstveni mrežni backend (`_JavneAdrese` u `fetch/http.py`). On
+**Nivo 1.** `httpx` dobija sopstveni mrežni backend (`_PublicAddresses` u `fetch/http.py`). On
 razrešava ime, proverava svaku adresu i otvara TCP vezu baš na proverenu adresu. SNI i `Host`
 i dalje nose ime domena. Provera je na mestu gde se otvara veza, pa pokriva i svako
 preusmerenje, a DNS rebinding ne prolazi. Blokiran domen je `failed` sa razlogom „adresa nije
@@ -46,7 +46,7 @@ Nivo 2 je prva linija odbrane, a ne jedina:
 
 1. **Preusmerenje.** `route` vidi samo prvu adresu, a ne i cilj preusmerenja. Provereno na
    Playwright 1.56: dozvoljena strana koja vraća 302 na privatni port odvede Chromium do tog
-   porta. Test `test_browser_ne_prati_preusmerenje_na_privatnu_adresu` je označen kao
+   porta. Test `test_browser_does_not_follow_redirect_to_private_address` je označen kao
    `xfail(strict=True)`; kad Playwright počne da vidi preusmerenja, test pada i ova tačka se
    briše.
 2. **Vreme između provere i veze.** Chromium sam razrešava ime, pa između naše provere i

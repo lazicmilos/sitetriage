@@ -1,9 +1,9 @@
-"""`robots.txt`: parsiranje i poštovanje (§4.3).
+"""`robots.txt`: parsing and obeying it.
 
-Parsiranje je čisto i testira se bez mreže; dohvatanje radi `fetch.http`.
+Parsing is pure and is tested without a network; `fetch.http` does the fetching.
 
-Alat koji istim dahom prijavljuje da sajt nema `robots.txt` i ignoriše ga kad ga
-ima je alat kome ne možeš da veruješ (§15, zamka 7).
+A tool that reports in the same breath that a site has no `robots.txt` and ignores it when it
+has one is a tool you cannot trust.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 @dataclass(frozen=True)
 class RobotsRules:
-    """Pravila iz `User-agent: *` sekcije, plus globalne `Sitemap:` direktive."""
+    """Rules from the `User-agent: *` section, plus the global `Sitemap:` directives."""
 
     disallow: tuple[str, ...] = ()
     allow: tuple[str, ...] = ()
@@ -25,7 +25,7 @@ class RobotsRules:
 
 
 def parse(body: str | None) -> RobotsRules:
-    """Čita `User-agent: *` sekciju. Pun RFC nije potreban (§4.3)."""
+    """Reads the `User-agent: *` section. The full RFC is not needed."""
     if not body:
         return RobotsRules()
 
@@ -34,7 +34,7 @@ def parse(body: str | None) -> RobotsRules:
     sitemaps: list[str] = []
     crawl_delay: float | None = None
     in_star_group = False
-    # Uzastopni `User-agent` redovi čine jednu grupu; prvo pravilo je zatvara.
+    # Consecutive `User-agent` lines form one group; the first rule closes it.
     group_open = False
 
     for raw in body.splitlines():
@@ -51,7 +51,7 @@ def parse(body: str | None) -> RobotsRules:
             continue
 
         if field_name == "user-agent":
-            if group_open:  # nova grupa počinje posle pravila
+            if group_open:  # a new group starts after a rule
                 in_star_group = False
                 group_open = False
             in_star_group = in_star_group or value == "*"
@@ -72,11 +72,11 @@ def parse(body: str | None) -> RobotsRules:
 
 
 def allows(rules: RobotsRules, url_or_path: str) -> bool:
-    """Tačno: najduže poklapanje pobeđuje, `Allow` nadjačava `Disallow`.
+    """Exact matching: the longest match wins, and `Allow` overrides `Disallow`.
 
-    Spec traži samo prefiksno poklapanje sa `*` i `$`, ali `Allow` sa najdužim
-    poklapanjem košta tri reda i sprečava da izbacimo iz uzorka putanje koje sajt
-    izričito dozvoljava unutar zabranjenog prefiksa.
+    The specification asks only for prefix matching with `*` and `$`, but `Allow` with the longest
+    match costs three lines and keeps us from dropping from the sample paths that the site
+    explicitly allows inside a disallowed prefix.
     """
     path = _path_of(url_or_path)
     longest_disallow = _longest_match(rules.disallow, path)

@@ -81,8 +81,8 @@ def chromium_starts() -> str | None:
 def pytest_runtest_setup(item):
     """Applies to every test marked `browser`, not only to `test_fetch_browser.py`.
 
-    `tryfirst`: the test is skipped before its fixtures run, because some fixtures start the
-    browser too.
+    `tryfirst`: the test is skipped before its fixtures run, because some fixtures (e.g.
+    `two_runs`) start the browser too.
     """
     if item.get_closest_marker("browser") and (reason := chromium_starts()):
         pytest.skip(reason)

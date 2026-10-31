@@ -1,7 +1,7 @@
-"""Sitemap: parsiranje, rekurzija i determinističko uzorkovanje (§4.4).
+"""Sitemap: parsing, recursion and deterministic sampling.
 
-Parsiranje i uzorkovanje su čiste funkcije; rekurzivno dohvatanje radi
-`fetch.http` pozivajući `parse` u petlji sa ograničenjima iz konfiguracije.
+Parsing and sampling are pure functions; `fetch.http` does the recursive fetching by calling
+`parse` in a loop, with the limits from the configuration.
 """
 
 from __future__ import annotations
@@ -14,19 +14,19 @@ from xml.etree import ElementTree
 
 from sitetriage.fetch.urls import normalize, path_group, same_site
 
-# `too_large`: mapa postoji, ali je veća od granice, pa se ne zna šta navodi.
+# `too_large`: the sitemap exists but is larger than the limit, so what it lists is not known.
 SitemapKind = Literal["index", "urlset", "unknown", "too_large"]
 
 GZIP_MAGIC = b"\x1f\x8b"
 
 
 def parse(data: bytes | None, *, max_bytes: int) -> tuple[SitemapKind, list[str]]:
-    """Vraća (vrsta, lokacije). Podržava `.xml.gz` — ima ih dosta (§4.4).
+    """Returns (kind, locations). Supports `.xml.gz`, of which there are plenty.
 
-    ponytail: tvrd limit na ulaz umesto defusedxml zavisnosti. Sitemap je sadržaj sa tuđeg
-    servera, pa je `max_bytes` (`sitemap.max_kb`) granica poverenja, i to za raspakovanu
-    veličinu: gzip od 50 kB je i 50 MB. Ako ikad zatreba pun štit od XML bombi,
-    `defusedxml.ElementTree` je zamena u jednom redu.
+    ponytail: a hard limit on the input instead of a defusedxml dependency. A sitemap is content
+    from someone else's server, so `max_bytes` (`sitemap.max_kb`) is the trust boundary, and it
+    applies to the decompressed size: 50 kB of gzip can be 50 MB. If a full shield against XML
+    bombs is ever needed, `defusedxml.ElementTree` is a one-line replacement.
     """
     if not data:
         return "unknown", []
@@ -37,7 +37,7 @@ def parse(data: bytes | None, *, max_bytes: int) -> tuple[SitemapKind, list[str]
             return "unknown", []
     if len(data) > max_bytes:
         return "too_large", []
-    # Prazan red pre `<?xml` (čest WordPress kvar) je za XML greška, ali mapa sajta postoji (BUG-028).
+    # A blank line before `<?xml` (common on WordPress) is an XML error, yet the sitemap exists (BUG-028).
     data = data.lstrip()
 
     try:
@@ -63,33 +63,33 @@ def parse(data: bytes | None, *, max_bytes: int) -> tuple[SitemapKind, list[str]
 
 
 def _gunzip(data: bytes, limit: int) -> bytes:
-    """Najviše `limit` bajtova raspakovanog gzip-a, deo po deo, i kad ima više delova (`cat a.gz b.gz`).
+    """At most `limit` bytes of decompressed gzip, chunk by chunk, also for several members (`cat a.gz b.gz`).
 
-    Prekinut gzip daje ono što je raspakovano do prekida, a `gzip.decompress` bi tu pukao.
+    A truncated gzip gives what was decompressed up to the cut, where `gzip.decompress` would fail.
     """
     out = bytearray()
     while len(out) < limit:
-        raspakivac = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        out += raspakivac.decompress(data, limit - len(out))
-        data = raspakivac.unused_data
-        if not raspakivac.eof or data[:2] != GZIP_MAGIC:
+        decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        out += decompressor.decompress(data, limit - len(out))
+        data = decompressor.unused_data
+        if not decompressor.eof or data[:2] != GZIP_MAGIC:
             break
     return bytes(out)
 
 
 def _tag(element: ElementTree.Element) -> str:
-    """Skida XML namespace: `{http://…}urlset` → `urlset`."""
+    """Strips the XML namespace: `{http://…}urlset` → `urlset`."""
     return element.tag.rpartition("}")[2].lower()
 
 
 def sample(home_url: str, urls: Iterable[str], sample_size: int) -> list[str]:
-    """Determinističko uzorkovanje po §4.4.
+    """Deterministic sampling: the home page, then round robin over path groups.
 
-    Grupisanje po prvom segmentu putanje je važno: leksikografski prvih 8 URL-ova
-    daje osam postova iz bloga i propusti da su stranice usluga sve iste.
+    Grouping by the first path segment matters: the lexicographically first 8 URLs give
+    eight blog posts and miss that the service pages are all the same.
 
-    Bez fiksnog redosleda isti sajt u dva prolaza daje različite nalaze i nijedan
-    test nema smisla (§15, zamka 5) — zato nigde nema `random`.
+    Without a fixed order the same site gives different findings in two runs and no test
+    means anything, which is why there is no `random` anywhere.
     """
     home = normalize(home_url)
     picked = [home] if home else []
@@ -100,12 +100,12 @@ def sample(home_url: str, urls: Iterable[str], sample_size: int) -> list[str]:
     groups: dict[str, set[str]] = defaultdict(set)
     for url in urls:
         canonical = normalize(url)
-        # Sitemap je tuđ sadržaj: strani host iz njega ne troši budžet ovog domena.
+        # A sitemap is someone else's content: a foreign host in it does not spend this domain's budget.
         if canonical and canonical != home and same_site(canonical, home_url):
             groups[path_group(canonical)].add(canonical)
 
-    # Grupe: po veličini opadajuće, pa po imenu — da izjednačenje ne zavisi od
-    # redosleda ubacivanja. URL-ovi unutar grupe: leksikografski.
+    # Groups: by size descending, then by name, so that a tie does not depend on
+    # insertion order. URLs inside a group: lexicographically.
     ordered = [
         sorted(members)
         for _, members in sorted(groups.items(), key=lambda kv: (-len(kv[1]), kv[0]))

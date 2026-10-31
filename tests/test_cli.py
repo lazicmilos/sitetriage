@@ -465,7 +465,7 @@ def test_bez_playwright_nivo_2_se_preskace_uz_poruku(tmp_path, monkeypatch, capl
 
     redovi = list(csv.DictReader((out / "summary.csv").open(encoding="utf-8")))
     assert redovi[0]["level2_ran"] == "0"
-    assert "Playwright nije instaliran" in caplog.text
+    assert "Playwright is not installed" in caplog.text
 
 
 @pytest.mark.browser
@@ -485,7 +485,7 @@ def test_record_nivo_2_snima_i_browser_snapshot(tmp_path):
 # Greške komandi i logovanje
 # --------------------------------------------------------------------------- #
 def test_recheck_bez_snapshota_puca_razumljivo(tmp_path):
-    with pytest.raises(SystemExit, match="nijedan snapshot"):
+    with pytest.raises(SystemExit, match="no snapshot found"):
         cli.main(["recheck", str(tmp_path), "--out", str(tmp_path / "izlaz")])
 
 
