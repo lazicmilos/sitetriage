@@ -37,7 +37,7 @@ def slug(domain: str) -> str:
     izlaznog direktorijuma.
     """
     cleaned = _UNSAFE.sub("_", domain.strip().lower()).strip("._-")
-    return cleaned or "nepoznat-domen"
+    return cleaned or "unknown-domain"
 
 
 def write_site(directory: Path, snapshot: SiteSnapshot, *, compress: bool = False) -> Path:
