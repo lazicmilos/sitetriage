@@ -1,11 +1,11 @@
-"""Nivo 2: Playwright, sklapanje `BrowserSnapshot` (§7).
+"""Level 2: Playwright, assembling the `BrowserSnapshot`.
 
-Playwright se uvozi lenjo, da alat radi i kad nivo 2 nije instaliran.
+Playwright is imported lazily, so the tool works when level 2 is not installed.
 
-Najozbiljnija zamka u projektu je merenje težine. `encodedBodySize` iz
-Performance API-ja vraća 0 za resurse sa drugog porekla bez `Timing-Allow-Origin`,
-pa sajt sa svim slikama na CDN-u ispadne težak 2 kB. Zato se ovde sluša mrežni
-saobraćaj i sabiraju stvarni odgovori (§7.2).
+The most serious pitfall in the project is measuring weight. `encodedBodySize` from the
+Performance API returns 0 for cross-origin resources without `Timing-Allow-Origin`, so a
+site with all its images on a CDN comes out at 2 kB. That is why this module listens to
+network traffic and adds up the real responses (ADR-016).
 """
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ log = logging.getLogger("sitetriage.browser")
 
 CONSOLE_SAMPLES = 5
 CLOSE_TIMEOUT_S = 10
-# Odgovori bez tela po definiciji — nisu „nemereni", njihova veličina je poznata i nula.
-BEZ_TELA = {204, 304}
+# Responses without a body by definition: they are not "unmeasured", their size is known and zero.
+NO_BODY_STATUSES = {204, 304}
 
 _SCROLL = """
 async () => {
@@ -69,7 +69,7 @@ _DOM = """
   let withoutAlt = 0, emptyAlt = 0, unmeasured = 0;
   const oversized = [];
   for (const img of images) {
-    // Tri stanja, ne dva: nema atributa je greška, alt="" je ispravno.
+    // Three states, not two: a missing attribute is an error, alt="" is correct.
     if (!img.hasAttribute('alt')) withoutAlt++;
     else if (img.getAttribute('alt').trim() === '') emptyAlt++;
 
@@ -107,12 +107,12 @@ _TIMING = """
 
 
 class _Recorder:
-    """Sabira stvarne odgovore dok stižu (§7.2).
+    """Adds up the real responses as they arrive (ADR-016).
 
-    Svaki zahtev pripada fazi u kojoj je **počeo**: pre ili posle `load` glavnog dokumenta.
-    Telo zahteva započetog pre `load` broji se u „do load" i kad stigne kasnije (Z-24). Posle
-    `load` stižu analitika, chat i lenje slike, pa je isti sajt jednom imao 179, a drugi put 281
-    zahtev; broj koji ide klijentu mora da se ponovi.
+    Every request belongs to the phase in which it **started**: before or after the `load` of the
+    main document. The body of a request started before `load` counts towards "until load" even
+    when it arrives later. After `load` come analytics, chat and lazy images, so the same site once
+    had 179 and another time 281 requests; the number that goes to the client must repeat.
     """
 
     def __init__(self) -> None:
@@ -129,8 +129,8 @@ class _Recorder:
         self.console_warnings = 0
         self.samples: list[str] = []
         self._loaded = False
-        # Po `id`, jer lažni zahtevi u testovima nemaju hash; vrednost drži objekat živim, pa se
-        # `id` ne ponavlja.
+        # By `id`, because fake requests in tests have no hash; the value keeps the object alive, so the
+        # `id` is not reused.
         self._pre_load: dict[int, Any] = {}
         self._tasks: dict[asyncio.Task, bool] = {}
 
@@ -162,26 +162,27 @@ class _Recorder:
 
     async def _measure(self, response: Any, at_load: bool) -> None:
         url = response.url
-        # `data:` i `blob:` su već u HTML-u — brojanjem ih dupliraš (§7.2).
+        # `data:` and `blob:` are already in the HTML; counting them counts them twice.
         if url.startswith(("data:", "blob:")):
             return
         status = response.status
-        # Preusmerenja nemaju telo; brojati ih kao „nemerena" bi lažno podiglo prag.
+        # Redirects have no body; counting them as "unmeasured" would falsely push the count over
+        # the threshold.
         if 300 <= status < 400:
             return
 
-        size: int | None = 0 if status in BEZ_TELA else None
+        size: int | None = 0 if status in NO_BODY_STATUSES else None
         if size is None:
             try:
-                # Preneti bajtovi, ne raspakovano telo: rečenica kaže „prenosi X MB", a JS i
-                # CSS putuju sažeti (BUG-016). Baca za odgovore iz keša i prekinute (§15, zamka 11).
+                # Transferred bytes, not the decompressed body: the sentence says "transfers X MB", and JS
+                # and CSS travel compressed (BUG-016). It throws for cached and aborted responses.
                 size = (await response.request.sizes())["responseBodySize"]
             except Exception:  # noqa: BLE001
                 header = response.headers.get("content-length")
                 size = int(header) if header and header.isdigit() else None
 
         if size is None:
-            # Ne broj nulu — nula je tačno greška koju spec opisuje kod Performance API-ja.
+            # Do not count zero: zero is exactly the Performance API error described above.
             self.unmeasured += 1
             self.unmeasured_at_load += at_load
             return
@@ -195,10 +196,10 @@ class _Recorder:
             self.by_type_at_load[kind] = self.by_type_at_load.get(kind, 0) + size
 
     async def drain(self, timeout: float) -> None:
-        """Telo koje ne stigne za `timeout` je nemereno, ne nula.
+        """A body that does not arrive within `timeout` is unmeasured, not zero.
 
-        Strim ili video se ne završi nikad, a merenje veličine na njega čeka bez
-        kraja — na klinika.example je to zauvek blokiralo ceo prolaz.
+        A stream or a video never finishes, and the size measurement waits for it without
+        end; on klinika.example that blocked the whole run forever (BUG-002).
         """
         if self._tasks:
             _done, pending = await asyncio.wait(self._tasks, timeout=timeout)
@@ -218,7 +219,7 @@ def _resource_type(response: Any) -> str:
 
 
 def est_waste_kb(transfer_bytes: int, natural: Sequence[int], client: Sequence[int]) -> float:
-    """§7.5: grubo, ali daje broj koji možeš da napišeš u mejlu."""
+    """Estimated waste of an oversized image: rough, but it gives a number you can write in an email."""
     natural_area = natural[0] * natural[1]
     if not transfer_bytes or natural_area <= 0:
         return 0.0
@@ -227,13 +228,13 @@ def est_waste_kb(transfer_bytes: int, natural: Sequence[int], client: Sequence[i
 
 
 def network_profile(config: dict) -> NetworkProfile:
-    profil = get(config, "network_profile")
-    return NetworkProfile(profil["download_mbps"], profil["upload_mbps"], profil["latency_ms"])
+    profile = get(config, "network_profile")
+    return NetworkProfile(profile["download_mbps"], profile["upload_mbps"], profile["latency_ms"])
 
 
 def network_conditions(profile: NetworkProfile) -> dict[str, Any]:
-    """Parametri za CDP `Network.emulateNetworkConditions`, koji protok prima u bajtovima u sekundi:
-    4,8 Mb/s = 600 000 B/s."""
+    """Parameters for CDP `Network.emulateNetworkConditions`, which takes throughput in bytes per second:
+    4.8 Mb/s = 600 000 B/s."""
     return {
         "offline": False,
         "latency": profile.latency_ms,
@@ -243,12 +244,12 @@ def network_conditions(profile: NetworkProfile) -> dict[str, Any]:
 
 
 class _LoadSlot:
-    """Isključivo pravo na učitavanje do `load` (BUG-006).
+    """Exclusive right to load until `load` (BUG-006).
 
-    Tri sajta koja se učitavaju istovremeno dele istu vezu i produžavaju jedan
-    drugom vreme učitavanja do 4,6×. Zato se učitava jedan po jedan; skrol, DOM i
-    merenje težine i dalje idu paralelno. Oslobađa se tačno jednom, ma kako se
-    merenje završilo.
+    Three sites loading at the same time share one connection and make each other's
+    load time up to 4.6× longer. So they load one at a time; scrolling, the DOM and the
+    weight measurement still run in parallel. It is released exactly once, however the
+    measurement ended.
     """
 
     def __init__(self, lock: asyncio.Lock | None) -> None:
@@ -274,11 +275,11 @@ async def capture(
     slot: _LoadSlot | None = None,
     light: bool = False,
 ) -> BrowserSnapshot:
-    """Nov kontekst po domenu = prazan keš.
+    """A new context per domain = an empty cache.
 
-    Bez toga drugi domen sa istog CDN-a meri lažno manju težinu (§15, zamka 10).
-    `slot` se oslobađa čim se stranica učita, pa sledeći sajt meri svoje vreme bez
-    tuđeg saobraćaja na vezi.
+    Without it a second domain on the same CDN measures a falsely lower weight.
+    `slot` is released as soon as the page has loaded, so the next site measures its own time
+    without someone else's traffic on the connection.
     """
     from playwright.async_api import Error as PlaywrightError
 
@@ -302,15 +303,15 @@ async def capture(
         },
         device_scale_factor=1,
         user_agent=ua,
-        ignore_https_errors=True,  # nevalidan sertifikat je nalaz nivoa 1, ne razlog da nivo 2 stane
-        # `route` ne vidi zahteve koje šalje service worker (ADR-006).
+        ignore_https_errors=True,  # an invalid certificate is a level 1 finding, not a reason to stop level 2
+        # `route` does not see requests sent by a service worker (ADR-006).
         service_workers="block",
     )
     try:
-        await context.route("**/*", _cuvar(addresses.allowlist(config), PlaywrightError, site.domain))
+        await context.route("**/*", _address_guard(addresses.allowlist(config), PlaywrightError, site.domain))
         page = await context.new_page()
         if not light:
-            # Pre navigacije, da i prvi zahtev ide simuliranom vezom (Z-30).
+            # Before navigation, so the first request also goes over the emulated link (ADR-010).
             profile = network_profile(config)
             cdp = await context.new_cdp_session(page)
             await cdp.send("Network.emulateNetworkConditions", network_conditions(profile))
@@ -325,8 +326,8 @@ async def capture(
         try:
             response = await page.goto(url, wait_until="load", timeout=timeout_ms)
             reached = "load"
-            # Strana greške (npr. 403 zaštite od botova) nije početna; meriti nju daje lažnu
-            # težinu i lažne nalaze (BUG-021).
+            # An error page (e.g. a 403 from bot protection) is not the home page; measuring it gives a
+            # false weight and false findings (BUG-021).
             if response is not None and response.status >= 400:
                 snapshot.errors.append(SnapshotError("http_status", str(response.status), response.url))
                 snapshot.status = "failed"
@@ -339,7 +340,7 @@ async def capture(
             reached = "timeout"
 
         if reached == "load":
-            # Mirovanje mreže je poželjno, ne obavezno.
+            # Network idle is welcome, not required.
             with contextlib.suppress(PlaywrightError):
                 await page.wait_for_load_state(
                     "networkidle", timeout=get(config, "browser.idle_after_load_ms")
@@ -347,8 +348,8 @@ async def capture(
         if slot is not None:
             slot.release()
 
-        # Bez skrola sve lazy slike imaju naturalWidth == 0 i provera tiho nalazi
-        # nulu (§15, zamka 2).
+        # Without scrolling all lazy images have naturalWidth == 0 and the check silently finds
+        # nothing.
         try:
             await page.evaluate(_SCROLL)
             await page.wait_for_timeout(get(config, "browser.scroll_pause_ms"))
@@ -374,13 +375,13 @@ async def capture(
             samples=recorder.samples,
         )
         snapshot.status = "ok" if reached == "load" else "partial"
-    except Exception as exc:  # noqa: BLE001 — izuzetak nikad ne napušta domen (§8.2)
+    except Exception as exc:  # noqa: BLE001 — an exception never leaves the domain
         snapshot.errors.append(SnapshotError("browser", type(exc).__name__, str(exc)[:300]))
         snapshot.status = "failed"
     finally:
         if slot is not None:
             slot.release()
-        # I zatvaranje ume da zaglavi; posle tvrdog limita ne sme da ga produži.
+        # Closing can hang too; after the hard limit it must not extend it.
         with contextlib.suppress(Exception):
             await asyncio.wait_for(context.close(), CLOSE_TIMEOUT_S)
     return snapshot
@@ -424,7 +425,7 @@ async def _read_dom(
         for item in raw["oversized"]
     ]
     oversized.sort(key=lambda image: -image.est_waste_kb)
-    # Veze i tekst koje crta JavaScript vidi samo nivo 2 (Z-21, Z-25).
+    # Links and text drawn by JavaScript are seen only by level 2 (ADR-015, ADR-017).
     links = internal(raw["links"], snapshot.url)
     text = collapse_ws(raw["text"]) or ""
     return DomStats(
@@ -453,10 +454,10 @@ async def _capture_within_limit(
     load_lock: asyncio.Lock | None = None,
     light: bool = False,
 ) -> BrowserSnapshot:
-    """Tvrd limit po domenu — poslednja odbrana od zastoja za koji još ne znamo.
+    """Hard per-domain limit: the last defence against a hang we do not know about yet.
 
-    Jedan domen koji visi ne sme da zaustavi ostalih 199 (§8.2). Čekanje na red za
-    učitavanje nije rad na domenu, pa ne ulazi u limit.
+    One hanging domain must not stop the other 199. Waiting for the loading turn is not
+    work on the domain, so it does not count towards the limit.
     """
     limit_s = get(config, "browser.max_seconds_per_domain")
     slot = _LoadSlot(load_lock)
@@ -465,13 +466,13 @@ async def _capture_within_limit(
     try:
         snapshot = await asyncio.wait_for(capture(browser, site, config, ua, slot, light), limit_s)
     except TimeoutError:
-        log.error("nivo 2 prekinut posle %s s", limit_s, extra={"domain": site.domain})
+        log.error("level 2 aborted after %s s", limit_s, extra={"domain": site.domain})
         snapshot = BrowserSnapshot(
             domain=site.domain,
             url=(site.home.final_url if site.home else None) or "",
             fetched_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             status="failed",
-            errors=[SnapshotError("browser", "timeout", f"prekinut posle tvrdog limita od {limit_s} s")],
+            errors=[SnapshotError("browser", "timeout", f"aborted after the hard limit of {limit_s} s")],
         )
     finally:
         slot.release()
@@ -479,50 +480,50 @@ async def _capture_within_limit(
     return snapshot
 
 
-def _tiho_za_zatvoren_kontekst(prethodni: Callable | None) -> Callable:
-    """Posle tvrdog limita Playwright-ova navigacija ostane bez čitaoca; kad se kontekst
-    zatvori, njena greška je očekivana posledica prekida, ne kvar (BUG-007). Sve ostalo
-    ide rukovaocu koji je bio postavljen pre nivoa 2.
+def _quiet_on_closed_context(previous: Callable | None) -> Callable:
+    """After the hard limit Playwright's navigation is left without a reader; when the context
+    closes, its error is an expected consequence of the abort, not a fault (BUG-007). Everything else
+    goes to the handler that was installed before level 2.
     """
 
     def handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
         if type(context.get("exception")).__name__ == "TargetClosedError":
             return
-        if prethodni is not None:
-            prethodni(loop, context)
+        if previous is not None:
+            previous(loop, context)
         else:
             loop.default_exception_handler(context)
 
     return handler
 
 
-def _cuvar(allowed: addresses.Allowlist, error_type: type, domain: str) -> Any:
-    """Svaki zahtev browsera prolazi istu proveru adrese kao nivo 1 (ADR-006).
+def _address_guard(allowed: addresses.Allowlist, error_type: type, domain: str) -> Any:
+    """Every browser request goes through the same address check as level 1 (ADR-006).
 
-    Chromium sam razrešava ime, pa između ove provere i njegove veze postoji prozor, a
-    WebSocket i preusmerenja `route` ne vidi. Zato produkcija dodaje i filter izlaznog
-    saobraćaja na nivou mreže; ovo je prva linija, ne jedina.
+    Chromium resolves the name itself, so there is a window between this check and its
+    connection, and `route` does not see WebSocket or redirects. That is why production also
+    adds an egress filter at the network level; this is the first line of defence, not the only one.
 
-    Za odbijen zahtev Chromium javlja samo `ERR_BLOCKED_BY_CLIENT`, i kad je adresa privatna i kad
-    DNS nije odgovorio. Zato razlog ide u log, jednom po hostu.
+    For a refused request Chromium reports only `ERR_BLOCKED_BY_CLIENT`, both when the address is
+    private and when DNS did not answer. So the reason goes to the log, once per host.
     """
-    presude: dict[tuple[str, int], str | None] = {}
+    verdicts: dict[tuple[str, int], str | None] = {}
 
     async def handler(route: Any) -> None:
         parts = urlsplit(route.request.url)
-        dozvoljeno = False
+        allowed_request = False
         if parts.scheme in ("http", "https") and parts.hostname:
             port = parts.port or (443 if parts.scheme == "https" else 80)
-            kljuc = (parts.hostname, port)
-            if kljuc not in presude:
-                presude[kljuc] = await _zasto_odbiti(parts.hostname, port, allowed)
-                if presude[kljuc]:
-                    razlog = presude[kljuc]
-                    log.info("nivo 2 odbija %s:%d: %s", *kljuc, razlog, extra={"domain": domain})
-            dozvoljeno = presude[kljuc] is None
-        # Posle tvrdog limita kontekst je zatvoren, pa ni odgovor ruti nema kome da ode.
+            key = (parts.hostname, port)
+            if key not in verdicts:
+                verdicts[key] = await _refusal_reason(parts.hostname, port, allowed)
+                if verdicts[key]:
+                    reason = verdicts[key]
+                    log.info("level 2 refuses %s:%d: %s", *key, reason, extra={"domain": domain})
+            allowed_request = verdicts[key] is None
+        # After the hard limit the context is closed, so the route's answer has nowhere to go.
         with contextlib.suppress(error_type):
-            if dozvoljeno:
+            if allowed_request:
                 await route.continue_()
             else:
                 await route.abort("blockedbyclient")
@@ -530,9 +531,10 @@ def _cuvar(allowed: addresses.Allowlist, error_type: type, domain: str) -> Any:
     return handler
 
 
-async def _zasto_odbiti(host: str, port: int, allowed: addresses.Allowlist) -> str | None:
-    """Razlog da zahtev ne ide, ili `None`. Chromium bira adresu sam, pa sme samo ako su dozvoljene
-    sve, a neuspeo DNS je odbijanje: ne zna se kuda bi veza otišla."""
+async def _refusal_reason(host: str, port: int, allowed: addresses.Allowlist) -> str | None:
+    """The reason the request must not go, or `None`. Chromium picks the address itself, so the request
+    may go only if all addresses are allowed, and a failed DNS lookup is a refusal: nobody knows where
+    the connection would go."""
     loop = asyncio.get_running_loop()
     try:
         try:
@@ -540,25 +542,25 @@ async def _zasto_odbiti(host: str, port: int, allowed: addresses.Allowlist) -> s
         except socket.gaierror as exc:
             if exc.errno != socket.EAI_AGAIN:
                 raise
-            # Privremena greška se ponavlja jednom, kao na nivou 1: presuda važi za ceo domen.
+            # A temporary error is retried once, as on level 1: the verdict holds for the whole domain.
             await asyncio.sleep(0.5)
             infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except OSError as exc:
-        return f"DNS nije razrešio ime ({exc})"
+        return f"DNS did not resolve the name ({exc})"
     ips = sorted({info[4][0] for info in infos})
-    zabranjene = [ip for ip in ips if not addresses.may_connect(ip, host, port, allowed)]
-    if not ips or zabranjene:
-        return f"adresa nije javna: {', '.join(zabranjene) or '—'}"
+    blocked = [ip for ip in ips if not addresses.may_connect(ip, host, port, allowed)]
+    if not ips or blocked:
+        return f"address is not public: {', '.join(blocked) or '—'}"
     return None
 
 
 async def _browser_ua(browser: Any, config: dict) -> str:
-    """UA koji Chromium sam šalje, sa identitetom operatera na kraju, kao kod Googlebot-a.
+    """The UA Chromium sends itself, with the operator identity at the end, as Googlebot does.
 
-    Servisi koje sajt učitava biraju sadržaj po UA: na UA koji nije browser reklame pokreću
-    dodatne aukcije, a Google Fonts šalje veći format, pa su težina, zahtevi i vreme bili do dva
-    puta veći nego kod posetioca u Chrome-u (BUG-019). „HeadlessChrome” deo zaštita od botova
-    odbija sa 403, pa ide „Chrome”; identitet operatera ostaje (BUG-021).
+    Services a site loads choose content by UA: for a UA that is not a browser, ads run extra
+    auctions and Google Fonts sends a larger format, so weight, requests and time were up to twice
+    as high as for a visitor in Chrome (BUG-019). Bot protection refuses the "HeadlessChrome" part
+    with a 403, so it becomes "Chrome"; the operator identity stays (BUG-021).
     """
     cdp = await browser.new_browser_cdp_session()
     try:
@@ -569,10 +571,10 @@ async def _browser_ua(browser: Any, config: dict) -> str:
 
 
 def _launch_options(config: dict) -> dict[str, Any]:
-    """Gotov Chromium umesto Playwright-ovog, kad ga okruženje već ima.
+    """An installed Chromium instead of Playwright's, when the environment already has one.
 
-    Bez izolacije sajtova: pun Chromium iframe sa drugog sajta (YouTube, mape) učitava u poseban
-    proces, a mrežni profil postavljen na stranicu taj proces ne usporava (ADR-010).
+    Without site isolation: full Chromium loads an iframe from another site (YouTube, maps) in a separate
+    process, and the network profile set on the page does not slow that process down (ADR-010).
     """
     path = get(config, "browser.executable_path") or os.environ.get("SITETRIAGE_CHROMIUM", "")
     options: dict[str, Any] = {"args": ["--disable-site-isolation-trials"]}
@@ -587,63 +589,64 @@ async def capture_all(
     *,
     light: bool = False,
 ) -> dict[str, BrowserSnapshot]:
-    """Jedna instanca browsera za ceo prolaz, nov kontekst po domenu (§7.1).
+    """One browser instance for the whole run, a new context per domain.
 
-    `on_done` se zove za svaki završen domen, posle upisa na disk. `light` meri bez profila i bez
-    reda za učitavanje: težinu, zahteve i DOM, ali ne i vreme (BUG-020).
+    `on_done` is called for every finished domain, after the write to disk. `light` measures without
+    the profile and without the loading queue: weight, requests and the DOM, but not time (BUG-020).
     """
     sites = list(sites)
     if not sites:
         return {}
 
-    # Jednom po prolazu, pre prvog sajta: profil samo usporava (Z-33). Bez profila veza nije bitna.
+    # Once per run, before the first site: the profile can only slow down (ADR-018). Without the
+    # profile the link does not matter.
     link_mbps = None if light else await measure_link(config)
-    potrebno = get(config, "network_profile.min_link_ratio") * get(config, "network_profile.download_mbps")
-    if link_mbps is not None and link_mbps < potrebno:
+    required = get(config, "network_profile.min_link_ratio") * get(config, "network_profile.download_mbps")
+    if link_mbps is not None and link_mbps < required:
         log.warning(
-            "stvarna veza je %s Mb/s, a merenje pod profilom traži bar %g Mb/s; "
-            "vreme učitavanja biće unknown",
+            "the real link is %s Mb/s, but measuring under the profile needs at least %g Mb/s; "
+            "load time will be unknown",
             link_mbps,
-            potrebno,
+            required,
         )
 
     loop = asyncio.get_running_loop()
-    prethodni = loop.get_exception_handler()
-    loop.set_exception_handler(_tiho_za_zatvoren_kontekst(prethodni))
+    previous = loop.get_exception_handler()
+    loop.set_exception_handler(_quiet_on_closed_context(previous))
     try:
         return await _capture_all(sites, config, snapshot_dir, on_done, link_mbps, light)
     finally:
-        # Zaostale greške zatvorenih konteksta stižu kad sakupljač smeća pokupi napuštene
-        # future-e. Zato se to radi ovde, dok je rukovalac još postavljen (BUG-007), a
-        # posle toga petlja dobija nazad svoj: u procesu koji dugo živi nivo 2 ne sme
-        # trajno da menja globalno stanje.
+        # Leftover errors of closed contexts arrive when the garbage collector picks up abandoned
+        # futures. So that is done here, while the handler is still installed (BUG-007), and
+        # afterwards the loop gets its own back: in a long-lived process level 2 must not
+        # change global state for good.
         gc.collect()
-        loop.set_exception_handler(prethodni)
+        loop.set_exception_handler(previous)
 
 
-def _slobodno_kb() -> int | None:
-    """`MemAvailable` iz /proc/meminfo; van Linux-a ga nema."""
+def _available_kb() -> int | None:
+    """`MemAvailable` from /proc/meminfo; outside Linux there is none."""
     try:
-        for red in Path("/proc/meminfo").read_text().splitlines():
-            if red.startswith("MemAvailable:"):
-                return int(red.split()[1])
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1])
     except OSError:
         pass
     return None
 
 
-def _konteksta(config: dict, light: bool) -> int:
-    """Koliko domena ide kroz browser odjednom; svaki kontekst je stotine MB RAM-a (§8.1).
+def _context_count(config: dict, light: bool) -> int:
+    """How many domains go through the browser at once; every context costs hundreds of MB of RAM.
 
-    Pun nivo 2 učitava jedan po jedan (BUG-006), pa mu je dosta `browser.concurrency`. Laganom
-    brzinu određuje baš broj konteksta, a granicu mašina: jedan na svaki slobodan GB, najviše dva
-    po jezgru i najviše 8 (Z-32). `browser.light_concurrency` ≥ 1 to fiksira.
+    Full level 2 loads one at a time (BUG-006), so `browser.concurrency` is enough for it. For light
+    level 2 the number of contexts is exactly what sets the speed, and the machine sets the limit: one
+    per free GB, at most two per core and at most 8 (ADR-019). `browser.light_concurrency` ≥ 1 fixes it.
     """
     if not light:
         return get(config, "browser.concurrency")
-    if zadato := get(config, "browser.light_concurrency"):
-        return zadato
-    kb = _slobodno_kb()
+    if configured := get(config, "browser.light_concurrency"):
+        return configured
+    kb = _available_kb()
     if kb is None:
         return get(config, "browser.concurrency")
     return max(1, min(8, kb // 1_048_576, 2 * (os.cpu_count() or 1)))
@@ -660,10 +663,10 @@ async def _capture_all(
     from playwright.async_api import async_playwright
 
     results: dict[str, BrowserSnapshot] = {}
-    odjednom = _konteksta(config, light)
-    log.info("nivo 2%s: %d domena odjednom", " lagano" if light else "", odjednom)
-    limit = asyncio.Semaphore(odjednom)
-    # Učitava se jedan po jedan; ostatak merenja ide paralelno (BUG-006, Z-31).
+    at_once = _context_count(config, light)
+    log.info("level 2%s: %d domains at once", " light" if light else "", at_once)
+    limit = asyncio.Semaphore(at_once)
+    # Pages load one at a time; the rest of the measurement runs in parallel (BUG-006, ADR-018).
     load_lock = asyncio.Lock() if get(config, "browser.serial_load") and not light else None
 
     async with async_playwright() as playwright:
@@ -673,13 +676,13 @@ async def _capture_all(
 
             async def one(site: SiteSnapshot) -> tuple[str, BrowserSnapshot]:
                 async with limit:
-                    log.info("nivo 2 počinje", extra={"domain": site.domain})
+                    log.info("level 2 starts", extra={"domain": site.domain})
                     snapshot = await _capture_within_limit(browser, site, config, ua, load_lock, light)
                     snapshot.link_mbps = link_mbps
                     if snapshot_dir is not None:
                         store.write_browser(snapshot_dir, snapshot)
                     log.info(
-                        "nivo 2 gotov: %d B u %d zahteva (%s)",
+                        "level 2 done: %d B in %d requests (%s)",
                         snapshot.network.total_bytes,
                         snapshot.network.request_count,
                         snapshot.timing.reached,
@@ -695,7 +698,7 @@ async def _capture_all(
 
     for site, item in zip(sites, gathered, strict=True):
         if isinstance(item, BaseException):
-            log.error("nivo 2 izgubljen: %r", item, extra={"domain": site.domain})
+            log.error("level 2 lost: %r", item, extra={"domain": site.domain})
             results[site.domain] = BrowserSnapshot(
                 domain=site.domain,
                 errors=[SnapshotError("browser", type(item).__name__, str(item)[:300])],

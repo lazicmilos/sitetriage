@@ -141,18 +141,18 @@ class LaznaRuta:
 @pytest.mark.parametrize(
     "razresi, razlog",
     [
-        pytest.param(socket.gaierror(socket.EAI_AGAIN, "privremeno"), "DNS nije razrešio ime", id="ke-dns"),
+        pytest.param(socket.gaierror(socket.EAI_AGAIN, "privremeno"), "DNS did not resolve the name", id="ke-dns"),
         # Ime koje ne postoji se ne ponavlja: odgovor DNS-a je konačan.
-        pytest.param(socket.gaierror(socket.EAI_NONAME, "nema"), "DNS nije razrešio ime", id="ke-nema-imena"),
+        pytest.param(socket.gaierror(socket.EAI_NONAME, "nema"), "DNS did not resolve the name", id="ke-nema-imena"),
         pytest.param(
             [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", 443))],
-            "adresa nije javna: 10.0.0.5",
+            "address is not public: 10.0.0.5",
             id="ke-privatna",
         ),
     ],
 )
 def test_nivo_2_upisuje_zasto_odbija_zahtev(monkeypatch, caplog, razresi, razlog):
-    from sitetriage.fetch.browser import _cuvar
+    from sitetriage.fetch.browser import _address_guard
 
     def lazni_dns(*_args, **_kwargs):
         if isinstance(razresi, Exception):
@@ -162,16 +162,16 @@ def test_nivo_2_upisuje_zasto_odbija_zahtev(monkeypatch, caplog, razresi, razlog
     monkeypatch.setattr(socket, "getaddrinfo", lazni_dns)
     ruta = LaznaRuta("https://primer.rs/")
     caplog.set_level("INFO", logger="sitetriage")
-    asyncio.run(_cuvar(frozenset(), RuntimeError, "primer.rs")(ruta))
+    asyncio.run(_address_guard(frozenset(), RuntimeError, "primer.rs")(ruta))
     assert ruta.ishod == "blockedbyclient"
-    [zapis] = [r for r in caplog.records if "odbija" in r.getMessage()]
+    [zapis] = [r for r in caplog.records if "refuses" in r.getMessage()]
     assert razlog in zapis.getMessage() and "primer.rs:443" in zapis.getMessage()
     assert zapis.domain == "primer.rs"
 
 
 def test_nivo_2_ponavlja_privremenu_dns_gresku(monkeypatch):
     """Presuda važi za ceo domen, pa bi jedna privremena greška blokirala sve zahteve ka hostu."""
-    from sitetriage.fetch.browser import _cuvar
+    from sitetriage.fetch.browser import _address_guard
 
     javna = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 443))]
     odgovori = [socket.gaierror(socket.EAI_AGAIN, "privremeno"), javna]
@@ -184,7 +184,7 @@ def test_nivo_2_ponavlja_privremenu_dns_gresku(monkeypatch):
 
     monkeypatch.setattr(socket, "getaddrinfo", lazni_dns)
     ruta = LaznaRuta("https://primer.rs/")
-    asyncio.run(_cuvar(frozenset(), RuntimeError, "primer.rs")(ruta))
+    asyncio.run(_address_guard(frozenset(), RuntimeError, "primer.rs")(ruta))
     assert ruta.ishod == "continue" and not odgovori
 
 
