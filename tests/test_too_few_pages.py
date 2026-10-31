@@ -98,7 +98,8 @@ def test_js_navigation_without_level2_stays_unknown():
 
 
 def test_not_applicable_does_not_make_partial():
-    report = analyze(small_site(), load_config())
+    # With the `rs` profile `i18n.lang.mismatch` runs, so only the duplicate checks are not applicable.
+    report = analyze(small_site(), load_config(profile="rs"))
     assert report.status == "scanned" and not report.unknowns
     assert sorted(n.check_id for n in report.not_applicable) == sorted(DUPLICATES)
     page = html_out.render([report], load_config())

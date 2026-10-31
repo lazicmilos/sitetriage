@@ -163,6 +163,16 @@ REQUIREMENTS: dict[str, Callable[[Any], bool]] = {
 }
 
 
+# Reason codes of a check the configuration switched off: like an unmet requirement, the check did
+# not run, so it is left out of the `unknown` share (ADR-015, ADR-023).
+SWITCHED_OFF = frozenset({"no_content_language"})
+
+
+def did_not_run(reason: Reason) -> bool:
+    """`not_applicable` because the check could not or was not meant to run on this domain."""
+    return reason.code.startswith("requires.") or reason.code in SWITCHED_OFF
+
+
 # A check that reads a field introduced in v2 lists it in `requires` as `v2:<field>`. A snapshot
 # from 1.x does not have that field, and list A was calibrated on such snapshots: the check is then
 # `unknown`, never `ok` with a default value and never a crash.

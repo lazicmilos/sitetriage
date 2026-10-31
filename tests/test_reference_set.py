@@ -67,9 +67,10 @@ def spec_config() -> dict:
     This set checks that the chain snapshot → checks → points → ranking works over the
     state the specification describes. Calibrating thresholds on real sites has its own
     boundary value tests; if the calibrated thresholds applied here, every calibration
-    would "break" the specification.
+    would "break" the specification. The fixtures are Serbian sites, so the set runs with the
+    `rs` profile (ADR-023).
     """
-    config = load_config()
+    config = load_config(profile="rs")
     config["thresholds"]["perf"]["page_weight_mb"] = {"medium": 1.5, "high": 3.0, "critical": 8.0}
     return config
 

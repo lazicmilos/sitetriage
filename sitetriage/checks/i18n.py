@@ -1,14 +1,19 @@
 """Language checks.
 
-Serbian is recognised by the share of Cyrillic letters and the share of diacritics among Latin
-letters: Serbian in Latin script has 2–5 % diacritics, English none.
+`i18n.lang.missing` and `i18n.lang.invalid` work for any language. `i18n.lang.mismatch` needs to
+know the language of the content, and it only detects the languages listed in
+`thresholds.i18n.content_languages`, which is empty unless a profile sets it (ADR-023). The only
+detector so far is Serbian (`sr`, the `rs` profile): it is recognised by the share of Cyrillic
+letters and the share of diacritics among Latin letters. Serbian in Latin script has 2–5 %
+diacritics, English none.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
-from sitetriage.checks.registry import Context, check, finding, ok, unknown
+from sitetriage.checks.registry import Context, check, finding, not_applicable, ok, unknown
 from sitetriage.models import SiteSnapshot
 
 BCP47 = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$")
@@ -47,6 +52,19 @@ def detect_language(text: str, cyr_ratio: float, dia_ratio: float) -> str:
     if lat and dia / lat > dia_ratio:
         return "sr"
     return "undetermined"
+
+
+def _is_serbian(text: str, ctx: Context) -> bool:
+    cyr_ratio = ctx.th("thresholds.i18n.cyrillic_ratio")
+    dia_ratio = ctx.th("thresholds.i18n.diacritic_ratio")
+    return detect_language(text, cyr_ratio, dia_ratio) == "sr"
+
+
+# One detector per content language (`models.CONTENT_LANGUAGES`), and the `lang` codes it cannot
+# tell apart from its language: a `lang` among them is never a mismatch.
+DETECTORS: dict[str, tuple[Callable[[str, Context], bool], frozenset[str]]] = {
+    "sr": (_is_serbian, SIMILAR_TO_SERBIAN),
+}
 
 
 def _page_state(snapshot: SiteSnapshot, ctx: Context) -> tuple[str | None, str, int, str]:
@@ -138,13 +156,21 @@ def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
     # so the consequence is accessibility, not search ranking (ADR-022).
     base_severity="medium",
     requires=["home"],
-    description="The content is reliably Serbian, but the lang tag says otherwise.",
+    description=(
+        "The content is reliably Serbian, but the lang tag says otherwise. Needs a content-language "
+        "profile (rs); without one the check is not applicable."
+    ),
     threshold=(
+        "needs a content-language profile (--profile rs), otherwise not applicable; "
         "content detected as sr (Cyrillic > 30 % or diacritics > 0.5 %) "
         "with the lang of a language not written in Cyrillic or with č/ć/š/ž/đ (not sr, hr, bs, ru, mk, bg…)"
     ),
 )
 def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
+    languages = ctx.th("thresholds.i18n.content_languages")
+    if not languages:
+        # Off by default: the only detector is Serbian, and elsewhere it would only guess (ADR-023).
+        return not_applicable(lang_mismatch.spec, "no_content_language")
     home = snapshot.home
     lang, text, length, source = _page_state(snapshot, ctx)
     if _raw_html_truncated(snapshot, source):
@@ -160,10 +186,8 @@ def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
     if not _lang_usable(lang):
         return ok(lang_mismatch.spec)
 
-    cyr_ratio = ctx.th("thresholds.i18n.cyrillic_ratio")
-    dia_ratio = ctx.th("thresholds.i18n.diacritic_ratio")
-    detected = detect_language(text, cyr_ratio, dia_ratio)
-    if detected != "sr" or lang.strip().lower().split("-")[0] in SIMILAR_TO_SERBIAN:
+    detected = next((code for code in languages if DETECTORS[code][0](text, ctx)), None)
+    if detected is None or lang.strip().lower().split("-")[0] in DETECTORS[detected][1]:
         return ok(lang_mismatch.spec)
 
     cyr = sum(1 for ch in text if _is_cyrillic(ch))

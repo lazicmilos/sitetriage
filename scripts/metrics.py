@@ -1,6 +1,7 @@
 """Run metrics from saved snapshots, without a single network request.
 
     python scripts/metrics.py out/snapshots/
+    python scripts/metrics.py out/snapshots/ --profile rs     # the profile the run used (ADR-023)
 
 Answers the questions of `docs/real-site-verification.md`: how many domains are
 `partial`, why, and which check says `unknown` most often. A high share of `unknown`
@@ -18,8 +19,8 @@ from sitetriage.config import load_config
 from sitetriage.score import analyze
 
 
-def main(directory: str) -> int:
-    config = load_config()
+def main(directory: str, profile: str | None = None) -> int:
+    config = load_config(profile=profile)
     pairs = list(store.read_all(Path(directory)))
     if not pairs:
         print(f"no snapshots in {directory}")
@@ -70,6 +71,11 @@ def main(directory: str) -> int:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
+    args = sys.argv[1:]
+    profile = None
+    if len(args) == 3 and args[1] == "--profile":
+        profile = args.pop(2)
+        args.pop(1)
+    if len(args) != 1 or args[0] in ("-h", "--help"):
         sys.exit(__doc__)
-    sys.exit(main(sys.argv[1]))
+    sys.exit(main(args[0], profile))

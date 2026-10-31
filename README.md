@@ -11,8 +11,9 @@ look for vulnerabilities.
 ![Screenshot of an HTML report](docs/izvestaj.png)
 
 > The report in the screenshot was produced from the hand-written test set. The full HTML is in
-> [`docs/primer-izvestaja.html`](docs/primer-izvestaja.html), in Serbian (`--lang en` gives the same
-> report in English). It is a single file with no CDN and opens without a network connection.
+> [`docs/primer-izvestaja.html`](docs/primer-izvestaja.html), in Serbian and with the `rs`
+> [profile](#profiles) (`--lang en` gives the same report in English). It is a single file with no
+> CDN and opens without a network connection.
 
 ## What it deliberately does not do
 
@@ -136,6 +137,29 @@ header accepts only ASCII.
 The defaults ship with the tool; your own TOML passed with `--config` overrides only what it sets.
 All defaults, with comments, are in [`sitetriage/sitetriage.toml`](sitetriage/sitetriage.toml).
 
+### Profiles
+
+A profile is a set of settings for one market that ships with the tool, in
+[`sitetriage/profiles/`](sitetriage/profiles/). It is merged between the defaults and your own
+file: defaults, then the profile, then `--config`. Choose it with `--profile NAME` on `scan`,
+`recheck` and `record`, or with a top-level `profile = "NAME"` in your `--config` file. The flag
+wins, and `--profile ""` turns off a profile your file chooses. An unknown name fails and lists
+the profiles that exist.
+
+There is one profile so far, `rs`, for sites in Serbia. It turns on Serbian content detection
+(`thresholds.i18n.content_languages = ["sr"]`), and with it `i18n.lang.mismatch`: Serbian content
+on a page whose `lang` names another language. Without a profile that check is "not applicable",
+because its only detector recognises Serbian and would mistake Croatian or Czech text for it
+([ADR-023](docs/adr/ADR-023-profiles.md)). Every other check works the same with or without a
+profile.
+
+```bash
+sitetriage scan leads.csv --config my.toml --profile rs --out report/
+```
+
+The profile a run used is in `report.json` (`profile`), in the header of the HTML report and in the
+summary line at the end of the run.
+
 ### First scan
 
 ```bash
@@ -204,7 +228,8 @@ builds on the code. Its shape is described by the schema
 [`sitetriage/schema/report-3.json`](sitetriage/schema/report-3.json), and the schema version is the
 first field of the document (`schema_version`, now `3.0`). Next to it are the tool version, the run
 time in UTC, the duration of each level, a configuration digest (`config_digest`: the sha256 of the
-thresholds, multipliers and points, without the operator identity and concurrency), the environment
+thresholds, multipliers and points, without the operator identity and concurrency), the
+[profile](#profiles) (`profile`, `null` without one), the environment
 (OS, Python, Chromium, network profile, measured link speed) and totals by status. Domains are in
 three lists: `ranked`, `unreachable` ("Not working") and `not_scanned` (`failed`, with the cause in
 `reason`).
@@ -236,6 +261,7 @@ fails if the output does not validate against the schema.
 sitetriage recheck report/snapshots/ --out new/                       # score saved snapshots again, no network
 sitetriage recheck report/snapshots/ --config trial-thresholds.toml --out new/
 sitetriage recheck report/snapshots/ --lang en --out english/         # the same run, report in English
+sitetriage recheck report/snapshots/ --profile rs --out serbian/      # with Serbian content detection
 sitetriage record my-domains.csv --out recordings/                    # record snapshots as fixtures
 sitetriage explain seo.canonical.duplicate                            # what a check does, its threshold and sentences
 sitetriage explain --all --markdown                                   # the table of checks below
@@ -310,7 +336,7 @@ in it.
 | `check_id` | Level | Category | Severity | Threshold |
 |---|---|---|---|---|
 | `i18n.lang.invalid` | 1 | i18n | medium | lang ∈ {zxx, und, empty} or does not parse as BCP-47 |
-| `i18n.lang.mismatch` | 1 | i18n | medium | content detected as sr (Cyrillic > 30 % or diacritics > 0.5 %) with the lang of a language not written in Cyrillic or with č/ć/š/ž/đ (not sr, hr, bs, ru, mk, bg…) |
+| `i18n.lang.mismatch` | 1 | i18n | medium | needs a content-language profile (--profile rs), otherwise not applicable; content detected as sr (Cyrillic > 30 % or diacritics > 0.5 %) with the lang of a language not written in Cyrillic or with č/ć/š/ž/đ (not sr, hr, bs, ru, mk, bg…) |
 | `i18n.lang.missing` | 1 | i18n | medium | the lang attribute does not exist |
 | `infra.host.duplicate` | 1 | infra | medium | the variants return 200 on both hosts (www and without www); low if the canonical on all of them points to the same origin; an unchecked variant of a host that was not seen → unknown |
 | `infra.https.redirect.missing` | 1 | infra | medium | https on the final host returns 200 with a valid certificate, and http:// of the same host returns 200 without a redirect to https; TLS error or request not sent → unknown; https not working → not applicable |
@@ -358,6 +384,8 @@ Every check returns one of four states, and the last two always come with a reas
   `unknown`. Unlike `unknown`, `not_applicable` does not make a domain partially scanned. When the
   sitemap lists fewer addresses than the sample needs, the sample is topped up with links from the
   home page ([ADR-015](docs/adr/ADR-015-not-applicable-and-partial-causes.md)).
+  `i18n.lang.mismatch` gives it, with the reason `no_content_language`, when no
+  [profile](#profiles) turns on content language detection.
 
 ### Sentences for the site owner
 
@@ -386,8 +414,8 @@ The lists are not published.
 | requests up to `load` | 60 / 90 | The rounded p50 and p75 of list A (57 and 87). For checks with two levels, the same percentile gives the same severity as for weight: p50 is medium, p75 is high ([ADR-020](docs/adr/ADR-020-threshold-calibration.md)). |
 | time to `load` | 6 / 9 s, under the network profile | The rounded p50 and p75 of list A (5.6 and 9.3 s), measured under the profile from a fast real connection. The 25 s timeout is p95 (22.1 s) plus a reserve ([ADR-020](docs/adr/ADR-020-threshold-calibration.md)). |
 | load time measurement | one site at a time | When three sites load at once, they share one connection and slow each other down by up to 4.6 times. So sites load one by one up to the `load` event, while scrolling and reading the page run in parallel ([ADR-018](docs/adr/ADR-018-load-time-validity.md)). |
-| diacritics for detecting Serbian | 0.005 | Serbian in Latin script has 2–5 % diacritics, English none. The threshold is ten times lower than expected so that it holds on short texts, and still ten times above the noise. |
-| wrong language tag | medium | Google determines a page's language from its content and does not use `lang`. The consequence is accessibility (screen readers), not search position ([ADR-022](docs/adr/ADR-022-client-sentence-claims.md)). |
+| diacritics for detecting Serbian | 0.005 | Serbian in Latin script has 2–5 % diacritics, English none. The threshold is ten times lower than expected so that it holds on short texts, and still ten times above the noise. It applies only with the `rs` profile, which turns Serbian detection on ([ADR-023](docs/adr/ADR-023-profiles.md)). |
+| wrong language tag | medium | Google determines a page's language from its content and does not use `lang`. The consequence is accessibility (screen readers), not search position ([ADR-022](docs/adr/ADR-022-client-sentence-claims.md)). The check needs a content-language profile (`--profile rs`); without one it is "not applicable". |
 | uncompressed HTML | low | On the HTML alone the saving is tenths of a second. The sentence says exactly how much, computed from the size. |
 | ratio for oversized images | 2.5 | Screens with `devicePixelRatio` 2 legitimately ask for an image twice as large. A threshold of 2 would call every correctly built retina site broken. |
 | duplicates | ≥ 3 pages from ≥ 3 path groups | Eight blog posts with the same template title are not the same as a whole site that presents itself to Google as a single page. |
@@ -409,9 +437,9 @@ readable history of calibration decisions. The calibration log behind them is
 [`docs/sr/kalibracija.md`](docs/sr/kalibracija.md) (in Serbian); the decisions themselves are
 summarized in English in the [ADRs](docs/adr/README.md).
 
-Both lists come from one country and are mostly small businesses and associations. For other
-industries and markets the distributions may differ, so repeat the calibration on your own lists
-with `recheck`.
+Both lists come from one country and are mostly small businesses and associations, and they were
+scanned with what is now the `rs` profile. For other industries and markets the distributions may
+differ, so repeat the calibration on your own lists with `recheck`.
 
 ## Tests
 
