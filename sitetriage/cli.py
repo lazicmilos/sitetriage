@@ -170,9 +170,10 @@ def _emit(result: ScanResult, config: dict, args: argparse.Namespace) -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     formats = {f.strip() for f in args.format.split(",") if f.strip()}
+    lang = args.lang or get(config, "report.lang")
 
     if "csv" in formats:
-        csv_out.write_findings(out / "findings.csv", reports, bom=args.csv_bom, lang=args.lang)
+        csv_out.write_findings(out / "findings.csv", reports, bom=args.csv_bom, lang=lang)
         csv_out.write_summary(out / "summary.csv", reports, bom=args.csv_bom)
     if "html" in formats:
         html_out.write(
@@ -181,7 +182,7 @@ def _emit(result: ScanResult, config: dict, args: argparse.Namespace) -> None:
             config,
             duration_s=result.duration_s["total"],
             excluded=result.summary.get("excluded", 0),
-            lang=args.lang,
+            lang=lang,
         )
     if "json" in formats:
         json_out.write(out / "report.json", result)
@@ -300,7 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
         )
         sub.add_argument("--csv-bom", action="store_true", help="UTF-8 with a BOM, for Excel")
         sub.add_argument(
-            "--lang", choices=LANGS, default="sr", help="language of sentences and reports (default: sr)"
+            "--lang",
+            choices=LANGS,
+            default=None,
+            help="language of sentences and reports (default: report.lang, en; the rs profile sets sr)",
         )
         sub.add_argument("--debug-domain", metavar="DOMAIN", help="DEBUG log for this domain only")
 

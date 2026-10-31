@@ -21,7 +21,7 @@ from sitetriage import cli, pipeline
 from sitetriage.checks import i18n
 from sitetriage.config import ConfigError, available_profiles, digest, get, load_config, profile_path
 from sitetriage.messages import LANGS, reason
-from sitetriage.models import CONTENT_LANGUAGES, Reason, to_jsonable
+from sitetriage.models import CONTENT_LANGUAGES, REPORT_LANGUAGES, Reason, to_jsonable
 from sitetriage.report import html_out
 from sitetriage.score import analyze, escalation_reasons, partial_shares
 
@@ -82,9 +82,11 @@ def test_profile_is_merged_over_the_defaults_and_changes_only_what_it_sets():
     default, rs = load_config(), load_config(profile="rs")
     assert get(rs, "thresholds.i18n.content_languages") == ["sr"]
     assert rs["profile"] == "rs"
+    assert (get(default, "report.lang"), get(rs, "report.lang")) == ("en", "sr")
     for cfg in (default, rs):
         del cfg["profile"]
         del cfg["thresholds"]["i18n"]["content_languages"]
+        del cfg["report"]["lang"]
     assert default == rs
 
 
@@ -367,6 +369,39 @@ def test_recheck_profile_from_flag_or_config_key(tmp_path, arguments, key, expec
     out = tmp_path / "out"
     assert cli.main(["recheck", str(FIXTURES), "--out", str(out), "--config", str(config), *arguments]) == 0
     assert json.loads((out / "report.json").read_text(encoding="utf-8"))["profile"] == expected
+
+
+# --------------------------------------------------------------------------- #
+# Report language: English by default, Serbian with the rs profile, --lang wins
+# --------------------------------------------------------------------------- #
+def test_report_languages_are_the_message_catalogs():
+    assert set(REPORT_LANGUAGES) == set(LANGS)
+
+
+@pytest.mark.parametrize(
+    "arguments, expected",
+    [
+        pytest.param([], "en", id="tab-default"),
+        pytest.param(["--profile", "rs"], "sr", id="tab-profile"),
+        pytest.param(["--profile", "rs", "--lang", "en"], "en", id="tab-flag-over-profile"),
+        pytest.param(["--lang", "sr"], "sr", id="tab-flag"),
+    ],
+)
+def test_report_language_from_default_profile_or_flag(tmp_path, arguments, expected):
+    out = tmp_path / "out"
+    assert cli.main(["recheck", str(FIXTURES), "--out", str(out), "--format", "html", *arguments]) == 0
+    assert f'<html lang="{expected}">' in (out / "index.html").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("lang", ["de", "", None], ids=["nv-unknown", "nv-empty", "nv-not-a-string"])
+def test_unknown_report_language_in_config_is_an_error(tmp_path, lang):
+    value = "[]" if lang is None else f'"{lang}"'
+    with pytest.raises(ConfigError, match="report.lang"):
+        load_config(_toml(tmp_path, f"[report]\nlang = {value}\n"))
+
+
+def test_report_language_does_not_change_the_digest(tmp_path):
+    assert digest(load_config(_toml(tmp_path, '[report]\nlang = "sr"\n'))) == digest(load_config())
 
 
 def test_unknown_profile_on_the_command_line_is_a_message_not_a_traceback(tmp_path):

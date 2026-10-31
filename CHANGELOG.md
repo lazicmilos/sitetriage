@@ -6,9 +6,15 @@ finding, the JSON) raises the major version.
 
 ## Unreleased
 
-The project is open-sourced under the name SiteTriage, under the MIT license.
+## 3.0.0 — 2026-10-31
 
-### Breaking changes (3.0)
+The first release as SiteTriage, open source under the MIT license. The interface, the code and
+the documentation are now English; Serbian stays as a report language (`--lang sr`) and as the
+`rs` profile. Upgrading from 2.x: read the breaking changes below and the full old → new mapping in
+[ADR-012](docs/adr/ADR-012-english-public-interface.md), and add `--profile rs` to keep the
+Serbian language check.
+
+### Breaking changes
 
 The public interface is now English, with no aliases for the old names. The complete old → new
 mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
@@ -43,6 +49,8 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
   keys appear in `evidence_json` in `findings.csv`. Field names, `check_id`s, reason codes and CSV
   columns are unchanged, and the Serbian and English sentences are word for word the same.
 - `config_digest` changes, because the industry multiplier tables are renamed.
+- Reports and client sentences are in English by default (`report.lang = "en"`); in 2.x the
+  default was Serbian. `--lang sr` or the `rs` profile gives the Serbian report.
 - The working folder for lists and results is `work/` instead of `rad/`; Docker Compose mounts it
   as `/work` instead of `/rad`.
 - Operator-facing text is English: CLI help, log lines, errors, and the free-text details stored in

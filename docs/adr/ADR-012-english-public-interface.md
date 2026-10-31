@@ -51,7 +51,7 @@ The migration to English runs in waves:
    `scanner_version` in each snapshot still records which version wrote it. Snapshots from 1.x and
    2.x stay readable: `recheck` maps the old industry values when it reads them (see
    [Snapshots](#snapshots)).
-7. The version is `3.0.0.dev0` until the release.
+7. The version is `3.0.0.dev0` until the release, which shipped as 3.0.0 on 2026-10-31.
 8. Wave B uses the glossary at the end of this ADR. An identifier that contains one of its Serbian
    terms gets the English term listed there. That way two people renaming different directories
    pick the same name for the same thing.
