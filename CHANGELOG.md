@@ -6,9 +6,15 @@ finding, the JSON) raises the major version.
 
 ## Unreleased
 
-The project is open-sourced under the name SiteTriage, under the MIT license.
+## 3.0.0 — 2026-10-31
 
-### Breaking changes (3.0)
+The first release as SiteTriage, open source under the MIT license. The interface, the code and
+the documentation are now English; Serbian stays as a report language (`--lang sr`) and as the
+`rs` profile. Upgrading from 2.x: read the breaking changes below and the full old → new mapping in
+[ADR-012](docs/adr/ADR-012-english-public-interface.md), and add `--profile rs` to keep the
+Serbian language check.
+
+### Breaking changes
 
 The public interface is now English, with no aliases for the old names. The complete old → new
 mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
