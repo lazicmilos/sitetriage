@@ -59,7 +59,7 @@ version = { attr = "skener.__version__" }
 testpaths = ["tests"]
 addopts = "-m 'not live' --strict-markers"
 markers = [
-    "live: pravi mrežni prolaz nad ispitnim skupom; iskljucen po defaultu (pytest -m live)",
+    "live: pravi mrežni prolaz nad listom iz SKENER_LIVE_CSV; iskljucen po defaultu (pytest -m live)",
     "browser: trazi instaliran Playwright/Chromium; preskace se ako ga nema",
 ]
 

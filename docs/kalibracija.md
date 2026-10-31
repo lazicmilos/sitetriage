@@ -474,7 +474,7 @@ Rezultat: 11/12 live testova, `partial` 3/8 (38 %), `unknown` za `infra.soft404`
 
 - **Zapažanje:** nema `seo.canonical.duplicate` ni `infra.soft404`, koje specifikacija očekuje.
 - **Uzrok:** sajt je popravljen. Svih 8 stranica u uzorku ima sopstveni canonical, a obe sonde vraćaju 404.
-- **Odluka:** alat radi ispravno. Oba nalaza su u `POPRAVLJENO` u `tests/test_live.py`; fixture-i ostaju kao u specifikaciji.
+- **Odluka:** alat radi ispravno. Oba nalaza su tada upisana kao popravljena u `tests/test_live.py` (lista je kasnije premeštena u `SKENER_LIVE_CSV`); fixture-i ostaju kao u specifikaciji.
 
 ### Velika mapa sajta pojede budžet pre sondi za lažni 404 (bag)
 
