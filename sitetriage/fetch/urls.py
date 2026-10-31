@@ -1,7 +1,7 @@
-"""Normalizacija i poređenje URL-ova (§4.5). Čista: bez mreže, bez diska.
+"""URL normalization and comparison. Pure: no network, no disk.
 
-Bez ovoga `https://d.rs/usluge` i `https://d.rs/usluge/` nisu duplikat, a jesu —
-i provera canonical-a proizvodi lažne pozitive (§15, zamka 4).
+Without it `https://d.rs/usluge` and `https://d.rs/usluge/` are not duplicates, although they
+are, and the canonical check produces false positives.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ _WS = re.compile(r"\s+")
 
 
 def normalize(url: str | None, base: str | None = None) -> str | None:
-    """Kanonski oblik URL-a, ili `None` ako adresa nije upotrebljiva.
+    """The canonical form of a URL, or `None` if the URL is not usable.
 
-    `www.` se namerno **ne** uklanja: `www` i non-www jesu različite adrese za
-    Google, pa je njihovo mešanje nalaz, a ne šum (§4.5, tačka 7).
+    `www.` is deliberately **not** stripped: `www` and non-www are different URLs for
+    Google, so mixing them is a finding, not noise.
     """
     if not url:
         return None
@@ -34,7 +34,7 @@ def normalize(url: str | None, base: str | None = None) -> str | None:
         return None
 
     host = parts.hostname.rstrip(".")
-    if ":" in host:  # IPv6 literal: `hostname` skida zagrade, a bez njih URL ne parsira
+    if ":" in host:  # IPv6 literal: `hostname` drops the brackets, and without them the URL does not parse
         host = f"[{host}]"
     if parts.port and parts.port != DEFAULT_PORTS[parts.scheme]:
         host = f"{host}:{parts.port}"
@@ -56,10 +56,10 @@ def _keep_params(query: str) -> list[tuple[str, str]]:
 
 
 def path_group(url: str | None) -> str:
-    """Prvi segment putanje — osnova grupisanja pri uzorkovanju (§4.4).
+    """The first path segment, the basis for grouping when sampling.
 
-    Grupisanje je važno: leksikografski prvih 8 URL-ova daje osam blog postova
-    i propusti da su stranice usluga sve iste.
+    Grouping matters: the lexicographically first 8 URLs give eight blog posts
+    and miss that the service pages are all the same.
     """
     if not url:
         return "/"
@@ -72,7 +72,7 @@ def host_of(url: str | None) -> str | None:
 
 
 def same_site(a: str | None, b: str | None) -> bool:
-    """`www.d.rs` i `d.rs` su isti sajt *za uzorkovanje linkova* — ne za canonical."""
+    """`www.d.rs` and `d.rs` are the same site *for sampling links*, not for canonical."""
     ha, hb = host_of(a), host_of(b)
     if not ha or not hb:
         return False
@@ -80,7 +80,7 @@ def same_site(a: str | None, b: str | None) -> bool:
 
 
 def collapse_ws(text: str | None) -> str | None:
-    """Poređenje `title` i `description` ide nad trim + sažetim razmacima (§4.5)."""
+    """`title` and `description` are compared after trimming and collapsing whitespace."""
     if text is None:
         return None
     return _WS.sub(" ", text).strip()
