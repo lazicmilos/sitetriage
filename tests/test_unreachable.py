@@ -39,7 +39,7 @@ OUTCOMES = {
     "dns_temporary": ("dns_temporary", "[Errno -3] Temporary failure in name resolution"),
     "no_connection": ("no_connection", "[Errno 111] Connection refused"),
     "handshake": ("tls_handshake", "[SSL: UNEXPECTED_EOF_WHILE_READING]"),
-    "blocked": ("blocked", "address is not public: ne-rade.test → 10.0.0.5"),
+    "blocked": ("blocked", "address is not public: ne-rade.test:443 → 10.0.0.5"),
 }
 
 
@@ -307,6 +307,18 @@ def test_not_scanned_has_a_reason(change, code):
     report = analyze(site, load_config())
     assert report.status == "failed" and report.reason.code == code
     assert "{" not in reason(report.reason, "en")
+
+
+def test_pg_crash_before_the_entry_reason_carries_the_cause():
+    """BUG-12: a domain whose fetch crashed has no entry, and the cause is only in `errors`."""
+    from sitetriage.models import SnapshotError
+
+    site = clean_site(pages=[])
+    site.entry = None
+    site.errors = [SnapshotError("fetch", "InvalidURL", "Invalid IPv4 address: '0177.0.0.1'")]
+    report = analyze(site, load_config())
+    assert report.status == "failed" and report.reason.code == "entry_error"
+    assert report.reason.evidence == {"kind": "InvalidURL", "detail": "Invalid IPv4 address: '0177.0.0.1'"}
 
 
 def test_error_reason_carries_the_detail():

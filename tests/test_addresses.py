@@ -73,6 +73,16 @@ def test_allowed_private_is_not_a_list():
         pytest.param("https://institucija.example", None, id="ke-name-with-scheme"),
         pytest.param("8.8.8.8", "IP address", id="nv-ip-address"),
         pytest.param("http://[::1]/", "IP address", id="nv-ipv6-address"),
+        # BUG-12: other notations of an IPv4 address. Their meaning depends on the parser (`0177` is
+        # octal 127 in a browser and an error in httpx), so they are refused like an IP address.
+        pytest.param("0177.0.0.1", "IP address", id="nv-octal-dotted-quad"),
+        pytest.param("http://0x7f.0.0.1/", "IP address", id="nv-hex-dotted-quad"),
+        pytest.param("127.1", "IP address", id="nv-short-ipv4"),
+        pytest.param("2130706433", "IP address", id="nv-ipv4-as-one-number"),
+        pytest.param("010.0.0.1.", "IP address", id="nv-octal-with-trailing-dot"),
+        pytest.param("1and1.example", None, id="ke-name-starting-with-digits"),
+        pytest.param("123.example", None, id="ke-numeric-label-not-last"),
+        pytest.param("0x7f.example", None, id="ke-hex-looking-label-not-last"),
         pytest.param("institucija.example:8080", "with a port", id="nv-port"),
         pytest.param(
             "http://institucija.example:x/", "port in the domain is not a number", id="nv-port-not-a-number"
