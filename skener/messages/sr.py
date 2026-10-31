@@ -60,6 +60,19 @@ FINDINGS: dict[str, dict] = {
             "{usteda_s} s."
         ),
         "tech": "content-encoding={kodiranje}, html_bytes={bajtova} (dekodirano), ušteda ≈ {usteda_s} s",
+        "variants": {
+            "truncated": {
+                "client": (
+                    "Server šalje stranicu nesažetu (više od {kb} kB). Sažimanje bi prenos smanjilo na "
+                    "otprilike četvrtinu, što na sporijoj mobilnoj vezi ({brzina} Mb/s) skraćuje "
+                    "učitavanje za više od {usteda_s} s."
+                ),
+                "tech": (
+                    "content-encoding={kodiranje}, html_bytes>{bajtova} (dekodirano, sečeno na "
+                    "http.max_body_kb), ušteda > {usteda_s} s"
+                ),
+            }
+        },
     },
     "perf.redirect.chain": {
         "client": (
@@ -74,6 +87,15 @@ FINDINGS: dict[str, dict] = {
             "da preuzme i obradi, što usporava prikaz, najviše na telefonu."
         ),
         "tech": "html_bytes={bajtova} > {prag_kb} kB",
+        "variants": {
+            "truncated": {
+                "client": (
+                    "Sam kod početne strane teži više od {kb} kB, pre slika i skripti. Pretraživač mora "
+                    "sve to da preuzme i obradi, što usporava prikaz, najviše na telefonu."
+                ),
+                "tech": "html_bytes>{bajtova} (sečeno na http.max_body_kb) > {prag_kb} kB",
+            }
+        },
     },
     "perf.page.weight": {
         "client": "Početna strana prenosi {mb} MB. " + _TEZINA,
@@ -399,6 +421,14 @@ REASONS: dict[str, str] = {
     "requires.entry_response": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)",
     "requires.home": "početna strana nije uspešno dohvaćena",
     "requires.home_html": "sirovi HTML početne strane nije sačuvan",
+    "requires.home_complete": (
+        "HTML početne je veći od http.max_body_kb i tu je sečen, pa ono što je posle granice nije viđeno"
+    ),
+    "body_truncated": "HTML početne je sečen na {kb} kB (http.max_body_kb), pa se ne zna koliko je ceo",
+    "sitemap_too_large": (
+        "mapa sajta je veća od granice (sitemap.max_kb ili http.max_body_kb) i nije pročitana, pa se ne "
+        "zna da li navodi adrese"
+    ),
     "requires.robots": "zahtev za robots.txt nije izvršen (mrežna greška ili budžet)",
     "requires.sitemap": "zahtev za sitemap nije izvršen (mrežna greška ili budžet)",
     "requires.soft404": "bar jedna od dve sonde za lažni 404 nije izvršena",

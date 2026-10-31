@@ -190,7 +190,7 @@ generiše ponovo; CI proverava samo da u njoj nije izostala nijedna provera iz r
 | `infra.host.duplicate` | 1 | infra | medium | varijante vraćaju 200 na oba hosta (www i bez www); low ako canonical na svima upućuje na isto poreklo; neproverena varijanta hosta koji nije viđen → unknown |
 | `infra.https.redirect.missing` | 1 | infra | medium | https na konačnom hostu vraća 200 sa ispravnim sertifikatom, a http:// istog hosta vraća 200 bez preusmerenja na https; TLS greška ili neposlat zahtev → unknown; https ne radi → ne primenjuje se |
 | `infra.robots.missing` | 1 | infra | low | status 404 ili 410; ostali statusi osim 200 → unknown |
-| `infra.sitemap.missing` | 1 | infra | medium | status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi → unknown; ima URL-ova → ok |
+| `infra.sitemap.missing` | 1 | infra | medium | status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi i mapa veća od granice → unknown; ima URL-ova → ok |
 | `infra.soft404` | 1 | infra | high | obe sonde vraćaju konačni status 200 (§5.2); status van {200, 404, 410} → unknown |
 | `infra.tls.invalid` | 1 | infra | high | TLS provera odbila sertifikat; nepotpun lanac (nema međusertifikata) → unknown |
 | `infra.unreachable` | 1 | infra | critical | oba pokušaja, u razmaku od bar http.second_attempt_after_s (60 s): EAI_NONAME ili EAI_NODATA, ili TCP veza odbijena ili istekla i na https i na http; bilo kakav HTTP odgovor → ok |
