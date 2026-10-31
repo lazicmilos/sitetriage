@@ -71,11 +71,11 @@ def test_dozvola_nije_lista():
     [
         pytest.param("institucija.example", None, id="ke-ime"),
         pytest.param("https://institucija.example", None, id="ke-ime-sa-semom"),
-        pytest.param("8.8.8.8", "IP adresa", id="nv-ip-adresa"),
-        pytest.param("http://[::1]/", "IP adresa", id="nv-ipv6-adresa"),
-        pytest.param("institucija.example:8080", "portom", id="nv-port"),
-        pytest.param("http://institucija.example:x/", "port u domenu nije broj", id="nv-port-nije-broj"),
-        pytest.param("admin@institucija.example", "korisničkim imenom", id="nv-korisnicko-ime"),
+        pytest.param("8.8.8.8", "IP address", id="nv-ip-adresa"),
+        pytest.param("http://[::1]/", "IP address", id="nv-ipv6-adresa"),
+        pytest.param("institucija.example:8080", "with a port", id="nv-port"),
+        pytest.param("http://institucija.example:x/", "the port in the domain is not a number", id="nv-port-nije-broj"),
+        pytest.param("admin@institucija.example", "with a user name", id="nv-korisnicko-ime"),
         pytest.param("http://staging.rs:8123", None, id="ke-izricito-dozvoljen"),
     ],
 )

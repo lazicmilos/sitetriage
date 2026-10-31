@@ -1,9 +1,9 @@
-"""Koje adrese alat sme da otvori (ADR-006). Čisto: bez mreže i bez diska.
+"""Which addresses the tool may open (ADR-006). Pure: no network and no disk.
 
-Skener otvara adrese koje zada korisnik. U web aplikaciji to znači da neko upiše
-`localhost`, `10.0.0.5` ili `169.254.169.254` i pregleda server iznutra (SSRF). Zato je
-dozvoljena samo globalna unicast adresa, osim `host:port` parova koje konfiguracija
-izričito navodi u `[net] allowed_private`. Opšti prekidač koji isključuje zaštitu ne postoji.
+The scanner opens addresses given by the user. In a web application that means someone can type
+`localhost`, `10.0.0.5` or `169.254.169.254` and look at the server from the inside (SSRF). So
+only a global unicast address is allowed, except for the `host:port` pairs that the configuration
+lists explicitly in `[net] allowed_private`. There is no global switch that turns the protection off.
 """
 
 from __future__ import annotations
@@ -17,15 +17,15 @@ Allowlist = frozenset[tuple[str, int]]
 
 
 class BlockedAddress(Exception):
-    """Adresa nije javna. Domen je `failed`: sajt možda radi, samo ga namerno nismo otvorili."""
+    """The address is not public. The domain is `failed`: the site may work, we chose not to open it."""
 
 
 def is_public(ip: str) -> bool:
-    """Globalna unicast adresa. IPv4 upakovan u IPv6 (`::ffff:127.0.0.1`) sudi se kao IPv4."""
-    adresa = ipaddress.ip_address(ip.split("%", 1)[0])
-    if isinstance(adresa, ipaddress.IPv6Address) and adresa.ipv4_mapped is not None:
-        adresa = adresa.ipv4_mapped
-    return adresa.is_global and not adresa.is_multicast
+    """A global unicast address. IPv4 mapped into IPv6 (`::ffff:127.0.0.1`) is judged as IPv4."""
+    address = ipaddress.ip_address(ip.split("%", 1)[0])
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        address = address.ipv4_mapped
+    return address.is_global and not address.is_multicast
 
 
 def parse_allowed(entries: Iterable[str]) -> Allowlist:
@@ -38,7 +38,7 @@ def parse_allowed(entries: Iterable[str]) -> Allowlist:
         except ValueError:
             port = None
         if not parts.hostname or port is None or parts.username is not None or parts.path:
-            raise ValueError(f"{entry!r} nije oblika host:port")
+            raise ValueError(f"{entry!r} is not of the form host:port")
         allowed.add((parts.hostname.lower(), port))
     return frozenset(allowed)
 
@@ -60,24 +60,24 @@ def is_ip(host: str) -> bool:
 
 
 def input_problem(domain: str, allowed: Allowlist) -> str | None:
-    """Zašto se domen iz liste ne otvara, ili `None`.
+    """Why a domain from the list is not opened, or `None`.
 
-    IP adresa, korisničko ime i port u domenu zaobilaze ime koje se proverava, pa se
-    odbijaju, osim kad je `host:port` izričito dozvoljen.
+    An IP address, a user name or a port in the domain bypass the name that is checked, so they
+    are refused, except when the `host:port` is explicitly allowed.
     """
     parts = urlsplit(domain if "://" in domain else f"//{domain}")
     host = (parts.hostname or "").lower()
     try:
         port = parts.port
     except ValueError:
-        return "port u domenu nije broj"
+        return "the port in the domain is not a number"
     if parts.username is not None:
-        return "domen sa korisničkim imenom se ne otvara"
-    podrazumevani = 80 if parts.scheme == "http" else 443
-    if (host, port or podrazumevani) in allowed:
+        return "a domain with a user name is not opened"
+    default_port = 80 if parts.scheme == "http" else 443
+    if (host, port or default_port) in allowed:
         return None
     if port is not None:
-        return "domen sa portom se ne otvara, osim kad je izričito dozvoljen"
+        return "a domain with a port is not opened unless it is explicitly allowed"
     if is_ip(host):
-        return "IP adresa umesto domena se ne otvara, osim kad je izričito dozvoljena"
+        return "an IP address instead of a domain is not opened unless it is explicitly allowed"
     return None

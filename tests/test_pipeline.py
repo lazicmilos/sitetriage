@@ -39,7 +39,7 @@ def test_scan_odbija_neispravan_ulaz(targets, level, greska):
 
 
 def test_recheck_bez_snapshota_je_greska_ulaza(tmp_path):
-    with pytest.raises(InputError, match="nijedan snapshot"):
+    with pytest.raises(InputError, match="no snapshot found"):
         pipeline.recheck(tmp_path, load_config())
 
 
@@ -61,7 +61,7 @@ def test_greska_u_on_event_ne_obara_prolaz(caplog):
 
     rezultat = pipeline.recheck(FIXTURES, load_config(), on_event=puca)
     assert len(rezultat.ranked) == sum(1 for p in FIXTURES.iterdir() if p.is_dir())
-    assert "on_event pukao" in caplog.text
+    assert "on_event failed" in caplog.text
 
 
 # --------------------------------------------------------------------------- #
