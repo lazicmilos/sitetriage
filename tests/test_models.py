@@ -68,3 +68,22 @@ def test_ok_sa_nalazom_je_bug():
     )
     with pytest.raises(ValueError, match="status nije"):
         CheckResult(check_id="seo.title.missing", status="ok", findings=[finding])
+
+
+@pytest.mark.parametrize(
+    "old, new",
+    [("restoran", "restaurant"), ("zdravstvo", "healthcare"), ("institucija", "institution"),
+     ("ostalo", "other"), ("hotel", "hotel")],
+)
+def test_pre_3_0_snapshot_gets_the_english_industry(tmp_path, old, new):
+    """Snapshot field names did not change in 3.0, only industry values (ADR-012). An old value
+    would fall back to `other` multipliers without a word, so `recheck` maps it on read."""
+    from sitetriage import store
+
+    data = to_jsonable(_snapshot())
+    data.update(industry=old, scanner_version="2.0.0")
+    folder = tmp_path / "d.rs"
+    folder.mkdir()
+    (folder / store.SITE_NAME).write_text(json.dumps(data), encoding="utf-8")
+    [(site, browser)] = list(store.read_all(tmp_path))
+    assert site.industry == new and browser is None

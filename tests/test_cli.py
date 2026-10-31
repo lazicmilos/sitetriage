@@ -31,7 +31,7 @@ def test_only_filtrira(tmp_path):
 def test_upozorenja_iz_liste_idu_u_log_sa_brojem_reda(tmp_path, caplog):
     path = tmp_path / "d.csv"
     path.write_text(
-        "domain,industry\ninstitucija.example,institucija\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8"
+        "domain,industry\ninstitucija.example,institution\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8"
     )
     cli.read_domains(path)
     assert "red 3: domen se ponavlja" in caplog.text
@@ -42,7 +42,7 @@ def test_izuzeti_iz_konfiguracije_i_sa_komandne_linije(tmp_path):
     with FakeSite() as prvi:
         host, port = prvi.address
         domains = tmp_path / "d.csv"
-        domains.write_text(f"domain,industry\n{prvi.base_url},ostalo\n", encoding="utf-8")
+        domains.write_text(f"domain,industry\n{prvi.base_url},other\n", encoding="utf-8")
         iz_konfiguracije = tmp_path / "izuzeti.txt"
         iz_konfiguracije.write_text("# pisali 25.09.\nnekidrugi.rs\n", encoding="utf-8")
         sa_komandne_linije = tmp_path / "jos.txt"
@@ -60,7 +60,7 @@ def test_izuzeti_iz_konfiguracije_i_sa_komandne_linije(tmp_path):
 
 def test_nepostojeci_fajl_sa_izuzetima_puca_razumljivo(tmp_path):
     domains = tmp_path / "d.csv"
-    domains.write_text("domain,industry\ninstitucija.example,institucija\n", encoding="utf-8")
+    domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
     with pytest.raises(SystemExit, match="fajl sa izuzetim domenima ne postoji"):
         cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), "--exclude", "nema.txt"])
 
@@ -90,7 +90,7 @@ def prolaz(tmp_path_factory):
     with FakeSite() as cist, FakeSite(soft404=True, extra={"/": Response(html("Bez oznaka"))}) as los:
         domains = tmp_path / "domains.csv"
         domains.write_text(
-            f"domain,industry,note\n{cist.base_url},hotel,\n{los.base_url},restoran,\n",
+            f"domain,industry,note\n{cist.base_url},hotel,\n{los.base_url},restaurant,\n",
             encoding="utf-8",
         )
         out = tmp_path / "izvestaj"
@@ -125,7 +125,7 @@ def test_summary_ima_red_po_domenu(prolaz):
     rows = list(csv.DictReader((out / "summary.csv").open(encoding="utf-8")))
     assert len(rows) == 2
     assert set(rows[0]) == set(csv_out.SUMMARY_HEADER)
-    assert {r["industry"] for r in rows} == {"hotel", "restoran"}
+    assert {r["industry"] for r in rows} == {"hotel", "restaurant"}
     assert [int(r["rank"]) for r in rows] == [1, 2]
 
 
@@ -219,7 +219,7 @@ def test_nacrt_mejla_ima_tri_recenice():
 
 
 def test_nacrt_mejla_za_cist_sajt_ne_izmislja_probleme():
-    report = DomainReport(domain="cist.rs", industry="zdravstvo")
+    report = DomainReport(domain="cist.rs", industry="healthcare")
     assert "nisam našao" in html_out.email_draft(report)
     assert "did not find" in html_out.email_draft(report, "en")
 
@@ -315,7 +315,7 @@ def test_argumenti_komandne_linije_menjaju_konfiguraciju(tmp_path, monkeypatch):
 
     monkeypatch.setattr(cli.pipeline, "scan", scan)
     domains = tmp_path / "d.csv"
-    domains.write_text("domain,industry\ninstitucija.example,institucija\n", encoding="utf-8")
+    domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
     izlaz = tmp_path / "izlaz"
     argumenti = ["--concurrency", "2", "--max-level2", "0", "--format", "csv", "--level", "1"]
     assert cli.main(["scan", str(domains), "--out", str(izlaz), *argumenti]) == 0
@@ -353,7 +353,7 @@ def test_scan_bez_identiteta_odbija_pre_ijednog_zahteva(tmp_path, monkeypatch):
     monkeypatch.delenv("SITETRIAGE_OPERATOR_CONTACT", raising=False)
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
-        domains.write_text(f"domain,industry\n{site.base_url},ostalo\n", encoding="utf-8")
+        domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
         with pytest.raises(SystemExit, match=r"\[operator\] name"):
             cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), "--level", "1"])
         assert site.requests == [], f"zahtevi pre provere identiteta: {site.requests}"
@@ -389,7 +389,7 @@ def test_verzija_je_ista_u_paketu_cli_i_user_agentu(capsys, monkeypatch):
 )
 def test_nevazeci_brojevi_na_komandnoj_liniji_se_odbijaju(tmp_path, argumenti):
     domains = tmp_path / "d.csv"
-    domains.write_text("domain,industry\ninstitucija.example,institucija\n", encoding="utf-8")
+    domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
     with pytest.raises(SystemExit) as izlaz:
         cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), *argumenti])
     assert izlaz.value.code == 2, "argparse odbija pre ijednog zahteva"
@@ -431,7 +431,7 @@ def test_scan_auto_salje_na_pun_nivo_2_samo_kandidate(tmp_path):
     ) as bez_h1:
         domains = tmp_path / "d.csv"
         domains.write_text(
-            f"domain,industry\n{cist.base_url},ostalo\n{bez_h1.base_url},ostalo\n", encoding="utf-8"
+            f"domain,industry\n{cist.base_url},other\n{bez_h1.base_url},other\n", encoding="utf-8"
         )
         out = tmp_path / "izvestaj"
         assert cli.main(["scan", str(domains), "--out", str(out), "--config", str(config)]) == 0
@@ -459,7 +459,7 @@ def test_bez_playwright_nivo_2_se_preskace_uz_poruku(tmp_path, monkeypatch, capl
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
-        domains.write_text(f"domain,industry\n{site.base_url},ostalo\n", encoding="utf-8")
+        domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
         out = tmp_path / "izvestaj"
         argumenti = ["scan", str(domains), "--out", str(out), "--level", "2", "--config", str(config)]
         assert cli.main(argumenti) == 0
@@ -475,7 +475,7 @@ def test_record_nivo_2_snima_i_browser_snapshot(tmp_path):
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
-        domains.write_text(f"domain,industry\n{site.base_url},ostalo\n", encoding="utf-8")
+        domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
         out = tmp_path / "fixtures"
         argumenti = ["record", str(domains), "--out", str(out), "--level", "2", "--config", str(config)]
         assert cli.main(argumenti) == 0

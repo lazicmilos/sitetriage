@@ -107,7 +107,7 @@
       ],
       "properties": {
         "domain": {"type": "string"},
-        "industry": {"enum": ["hotel", "restoran", "zdravstvo", "ecommerce", "b2b", "institucija", "ostalo"]},
+        "industry": {"enum": ["hotel", "restaurant", "healthcare", "ecommerce", "b2b", "institution", "other"]},
         "final_url": {"type": ["string", "null"]},
         "status": {"enum": ["scanned", "partial", "failed", "unreachable"]},
         "partial_causes": {"type": "array", "items": {"enum": ["budget", "unknown"]}, "uniqueItems": true},

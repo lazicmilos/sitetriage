@@ -33,7 +33,7 @@ def veliki_prolaz():
     try:
         config = load_config()
         config["http"]["delay_ms"] = [0, 0]
-        targets = [DomainInput(domain=s.base_url, industry="ostalo") for s in sites]
+        targets = [DomainInput(domain=s.base_url, industry="other") for s in sites]
         # Pokvareni domeni: niko ne sluša, server odbija, server traži da se stane.
         targets += [
             DomainInput(domain="http://127.0.0.1:1"),

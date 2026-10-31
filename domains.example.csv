@@ -1,9 +1,9 @@
 domain,industry,note
-institucija.example,institucija,canonical na svakoj strani isti
+institucija.example,institution,canonical na svakoj strani isti
 hotel-planina.example,hotel,planina
-restoran-centar.example,restoran,teska pocetna
-restoran-ugao.example,restoran,
+restoran-centar.example,restaurant,teska pocetna
+restoran-ugao.example,restaurant,
 prodavnica.example,ecommerce,
-ordinacija.example,zdravstvo,
+ordinacija.example,healthcare,
 b2b-firma.example,b2b,cist SEO, spora stranica
-klinika.example,zdravstvo,kontrolni cist sajt
+klinika.example,healthcare,kontrolni cist sajt

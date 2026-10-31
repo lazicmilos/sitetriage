@@ -29,7 +29,7 @@ MAX_STAROST_DANA = 90
 
 # (delatnost, obavezni check_id-evi) — prepisano iz tabele u §12.4.
 OCEKIVANO = {
-    "institucija.example": ("institucija", {"seo.canonical.duplicate", "infra.soft404", "seo.h1.missing"}),
+    "institucija.example": ("institution", {"seo.canonical.duplicate", "infra.soft404", "seo.h1.missing"}),
     "hotel-planina.example": (
         "hotel",
         {
@@ -41,9 +41,9 @@ OCEKIVANO = {
             "seo.h1.missing",
         },
     ),
-    "restoran-centar.example": ("restoran", {"seo.canonical.missing", "perf.page.weight"}),
+    "restoran-centar.example": ("restaurant", {"seo.canonical.missing", "perf.page.weight"}),
     "restoran-ugao.example": (
-        "restoran",
+        "restaurant",
         {
             "seo.canonical.missing",
             "seo.description.missing",
@@ -55,9 +55,9 @@ OCEKIVANO = {
         "ecommerce",
         {"seo.h1.missing", "perf.page.weight", "perf.request.count"},
     ),
-    "ordinacija.example": ("zdravstvo", {"i18n.lang.mismatch", "a11y.img.alt.missing"}),
+    "ordinacija.example": ("healthcare", {"i18n.lang.mismatch", "a11y.img.alt.missing"}),
     "b2b-firma.example": ("b2b", set()),
-    "klinika.example": ("zdravstvo", set()),
+    "klinika.example": ("healthcare", set()),
 }
 
 

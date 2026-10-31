@@ -11,7 +11,7 @@ from __future__ import annotations
 from sitetriage.checks.registry import Context, check, finding, ok, unknown
 
 # Zakonska izloženost po pristupačnosti je veća, pa je prag ozbiljnosti niži.
-IZLOZENE_DELATNOSTI = {"zdravstvo", "institucija"}
+IZLOZENE_DELATNOSTI = {"healthcare", "institution"}
 
 
 @check(
@@ -23,7 +23,7 @@ IZLOZENE_DELATNOSTI = {"zdravstvo", "institucija"}
     description="Većina slika nema alt atribut (prazan alt se ne broji).",
     threshold=(
         "≥ 5 slika i udeo bez alt atributa > 0,5; > 0,8 uz ≥ 15 slika → high; "
-        "zdravstvo/institucija → bar medium"
+        "healthcare/institution → bar medium"
     ),
 )
 def img_alt_missing(snapshot, ctx: Context):

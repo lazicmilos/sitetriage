@@ -66,7 +66,7 @@ def _v1(browser: BrowserSnapshot) -> BrowserSnapshot:
 def test_v1_snapshot_daje_unknown_a_ne_pad(check_id, polje):
     """Podrazumevana nula bi bila `ok` za težinu koju niko nije izmerio."""
     browser = _v1(clean_browser())
-    ctx = registry.Context(domain=browser.domain, industry="ostalo", config=load_config())
+    ctx = registry.Context(domain=browser.domain, industry="other", config=load_config())
     rezultat = {r.check_id: r for r in registry.run(2, browser, ctx)}[check_id]
     assert rezultat.status == "unknown"
     assert reason(rezultat.reason) == f"snapshot iz verzije 1.0.0 nema {polje}"

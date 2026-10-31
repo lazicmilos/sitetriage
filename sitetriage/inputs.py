@@ -87,12 +87,12 @@ def read_domain_list(data: bytes, source: str) -> tuple[list[DomainInput], list[
             warnings.append(InputWarning("domen se ponavlja u listi, preskačem ga", row_no, domain))
             continue
         seen.add(domain.lower())
-        industry = (row.get("industry") or "").strip().lower() or "ostalo"
+        industry = (row.get("industry") or "").strip().lower() or "other"
         if industry not in INDUSTRIES:
             warnings.append(
-                InputWarning(f"nepoznata delatnost {industry!r}, koristim `ostalo`", row_no, domain)
+                InputWarning(f"nepoznata delatnost {industry!r}, koristim `other`", row_no, domain)
             )
-            industry = "ostalo"
+            industry = "other"
         domains.append(DomainInput(domain=domain, industry=industry, note=(row.get("note") or "").strip()))
     if not domains:
         raise InputError(f"{source}: nijedan domen nije učitan")

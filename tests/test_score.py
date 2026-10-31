@@ -41,14 +41,14 @@ def nalaz(check_id: str, category: str, severity: str, level: int = 1) -> CheckR
 # Nalazi iz ispitnog skupa (§12.4), prepisani u proverljiv oblik.
 ISPITNI_SKUP = {
     "restoran-centar.example": (
-        "restoran",
+        "restaurant",
         [
             nalaz("perf.page.weight", "perf", "critical", level=2),
             nalaz("seo.canonical.missing", "seo", "high"),
         ],
     ),
     "restoran-ugao.example": (
-        "restoran",
+        "restaurant",
         [
             nalaz("seo.canonical.missing", "seo", "high"),
             nalaz("seo.description.missing", "seo", "medium"),
@@ -57,7 +57,7 @@ ISPITNI_SKUP = {
         ],
     ),
     "institucija.example": (
-        "institucija",
+        "institution",
         [
             nalaz("seo.canonical.duplicate", "seo", "critical"),
             nalaz("infra.soft404", "infra", "high"),
@@ -90,11 +90,11 @@ def izvestaj(domain: str):
 @pytest.mark.parametrize(
     "category, severity, industry, expected",
     [
-        ("perf", "critical", "restoran", 60.0),  # 40 × 1,5
-        ("seo", "high", "restoran", 24.0),  # 20 × 1,2
-        ("social", "high", "restoran", 30.0),  # 20 × 1,5
+        ("perf", "critical", "restaurant", 60.0),  # 40 × 1,5
+        ("seo", "high", "restaurant", 24.0),  # 20 × 1,2
+        ("social", "high", "restaurant", 30.0),  # 20 × 1,5
         ("social", "high", "b2b", 14.0),  # 20 × 0,7 — b2b se ne deli u porukama
-        ("a11y", "high", "zdravstvo", 30.0),  # 20 × 1,5
+        ("a11y", "high", "healthcare", 30.0),  # 20 × 1,5
         ("infra", "medium", "hotel", 8.0),  # infra je svuda 1,0
         ("i18n", "medium", "hotel", 10.4),  # 8 × 1,3
         ("qa", "low", "hotel", 2.1),  # 3 × 0,7 — slab prodajni signal
@@ -257,7 +257,7 @@ def test_gornji_limit_bira_najvise_skorove():
     """
     kandidati = []
     for i in range(5):
-        site = clean_site(domain=f"d{i}.rs", industry="restoran")
+        site = clean_site(domain=f"d{i}.rs", industry="restaurant")
         severity = "critical" if i == 4 else "medium"
         kandidati.append((site, [nalaz("perf.page.weight", "perf", severity)]))
 
@@ -268,7 +268,7 @@ def test_gornji_limit_bira_najvise_skorove():
 
 
 def test_skor_nivoa_1_ne_broji_nalaze_nivoa_2():
-    site = clean_site(industry="restoran")
+    site = clean_site(industry="restaurant")
     results = [nalaz("seo.canonical.missing", "seo", "high")]
     assert level1_score(site, results, CONFIG) == 24.0
 

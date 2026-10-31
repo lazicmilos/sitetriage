@@ -20,7 +20,7 @@ Category = Literal["seo", "social", "i18n", "infra", "perf", "a11y", "qa"]
 # `not_applicable`: provera nema šta da proveri na ovom sajtu (Z-21); razlog je obavezan.
 CheckStatus = Literal["ok", "finding", "unknown", "not_applicable"]
 Industry = Literal[
-    "hotel", "restoran", "zdravstvo", "ecommerce", "b2b", "institucija", "ostalo"
+    "hotel", "restaurant", "healthcare", "ecommerce", "b2b", "institution", "other"
 ]
 # `unreachable`: sajt se ne otvara ni posle drugog pokušaja, pa ide u listu „Ne rade" (Z-20).
 # `excluded`: administrator je tražio da se sajt ne skenira; u izveštaju je samo njihov broj.
@@ -212,7 +212,7 @@ class Budget:
 @dataclass
 class SiteSnapshot:
     domain: str
-    industry: str = "ostalo"
+    industry: str = "other"
     fetched_at: str = ""
     scanner_version: str = __version__
     entry: Entry | None = None
@@ -407,7 +407,7 @@ class Unknown:
 @dataclass
 class DomainReport:
     domain: str
-    industry: str = "ostalo"
+    industry: str = "other"
     final_url: str | None = None
     status: DomainStatus = "scanned"
     # Zašto je `partial`: `budget`, `unknown` ili oba (Z-22). Prazno za ostale statuse.
@@ -483,5 +483,5 @@ class ScanResult:
 @dataclass
 class DomainInput:
     domain: str
-    industry: str = "ostalo"
+    industry: str = "other"
     note: str = ""

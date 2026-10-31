@@ -128,7 +128,7 @@ def test_jedan_izvor_brzine_za_recenicu_i_merenje():
     browser = clean_browser(network_profile=profil)
     browser.network.bytes_at_load = 20_000_000
     browser.timing.load_ms = 9_000
-    ctx = registry.Context(domain=browser.domain, industry="ostalo", config=cfg)
+    ctx = registry.Context(domain=browser.domain, industry="other", config=cfg)
     nalazi = {r.check_id: r.findings[0] for r in registry.run(2, browser, ctx) if r.status == "finding"}
     assert nalazi["perf.page.weight"].evidence["brzina"] == nalazi["perf.load.time"].evidence["brzina"] == 9.6
 
@@ -197,7 +197,7 @@ def test_malo_slika_ne_pravi_nalaz():
 
 @pytest.mark.parametrize(
     "industry, expected",
-    [("ostalo", "low"), ("hotel", "low"), ("zdravstvo", "medium"), ("institucija", "medium")],
+    [("other", "low"), ("hotel", "low"), ("healthcare", "medium"), ("institution", "medium")],
 )
 def test_ozbiljnost_alta_zavisi_od_delatnosti(industry, expected):
     """Zdravstvo i institucije imaju zakonsku izloženost po pristupačnosti (§7.4)."""
@@ -210,7 +210,7 @@ def test_ozbiljnost_alta_zavisi_od_delatnosti(industry, expected):
 def test_visok_udeo_prelazi_u_high_bez_obzira_na_delatnost():
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=30, images_without_alt_attr=28)
-    result = run_level(2, browser, industry="ostalo")["a11y.img.alt.missing"]
+    result = run_level(2, browser, industry="other")["a11y.img.alt.missing"]
     assert result.findings[0].severity == "high"
 
 

@@ -45,7 +45,7 @@ def _site(izmena: Callable[[Any], None]) -> Any:
     return site
 
 
-def _nalazi(level: int, snapshot: Any, industry: str = "ostalo") -> list[Finding]:
+def _nalazi(level: int, snapshot: Any, industry: str = "other") -> list[Finding]:
     return [f for result in run_level(level, snapshot, industry).values() for f in result.findings]
 
 
