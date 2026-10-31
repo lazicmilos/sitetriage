@@ -9,11 +9,15 @@ lists explicitly in `[net] allowed_private`. There is no global switch that turn
 from __future__ import annotations
 
 import ipaddress
+import re
 from collections.abc import Iterable
 from typing import Any
 from urllib.parse import urlsplit
 
 Allowlist = frozenset[tuple[str, int]]
+
+# A label that is a number in decimal, octal or hex notation (`127`, `0177`, `0x7f`).
+NUMERIC_LABEL = re.compile(r"[0-9]+|0x[0-9a-f]*")
 
 
 class BlockedAddress(Exception):
@@ -59,6 +63,17 @@ def is_ip(host: str) -> bool:
     return True
 
 
+def looks_like_ipv4(host: str) -> bool:
+    """A name whose last label is a number, e.g. `0177.0.0.1`, `127.1` or `2130706433`.
+
+    A browser reads such a name as an IPv4 address in octal, hex or shortened notation (the
+    WHATWG URL rule "ends in a number"), while `ipaddress` and httpx do not. What it means depends
+    on who parses it, and no real domain ends in a number, so it is treated as an IP address.
+    """
+    labels = host.lower().removesuffix(".").split(".")
+    return bool(NUMERIC_LABEL.fullmatch(labels[-1]))
+
+
 def input_problem(domain: str, allowed: Allowlist) -> str | None:
     """Why a domain from the list is not opened, or `None`.
 
@@ -78,6 +93,6 @@ def input_problem(domain: str, allowed: Allowlist) -> str | None:
         return None
     if port is not None:
         return "a domain with a port is not opened unless it is explicitly allowed"
-    if is_ip(host):
+    if is_ip(host) or looks_like_ipv4(host):
         return "an IP address instead of a domain is not opened unless it is explicitly allowed"
     return None

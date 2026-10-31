@@ -74,8 +74,8 @@ another server.
 
 The tool opens public addresses only. `localhost`, `10.x`, `192.168.x`, `169.254.169.254` and the
 other private and special addresses are never opened, not when a public name resolves to them and
-not after a redirect. A domain given with an IP address, a port or a user name gets no request at
-all. Without this, a web application built on the scanner would let its users look inside the
+not after a redirect. A domain given with an IP address (in any notation, `0177.0.0.1` and `127.1`
+included), a port or a user name gets no request at all. Without this, a web application built on the scanner would let its users look inside the
 server (SSRF).
 
 Staging with a port works only when you allow it explicitly:

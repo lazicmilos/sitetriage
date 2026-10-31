@@ -126,6 +126,9 @@ def _failure(site: SiteSnapshot) -> Reason:
     """Why the home page did not arrive, for the "Not scanned" list."""
     entry = site.entry
     if entry is None:
+        # Fetching crashed before the entry was kept: the cause is in the snapshot's errors (BUG-12).
+        if crash := next((e for e in site.errors if e.stage == "fetch"), None):
+            return Reason("entry_error", {"kind": crash.kind, "detail": crash.detail})
         return Reason("entry_missing")
     if entry.status is not None:
         return Reason("entry_status", {"status": entry.status})
