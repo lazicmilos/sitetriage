@@ -15,7 +15,7 @@ import tracemalloc
 
 import pytest
 from factories import run_level
-from localserver import FakeSite, Response, beskonacno, bomba, html
+from localserver import FakeSite, Response, bomb, endless, html
 from test_fetch_http import scan
 
 from sitetriage.config import get, load_config
@@ -50,7 +50,7 @@ def test_podrazumevane_granice_su_iznad_svih_pragova_za_html():
 @pytest.mark.parametrize("encoding", ["gzip", "deflate"])
 def test_pg_html_bomba_se_sece_na_granici(encoding):
     """65 kB na žici, 64 MB raspakovano: početna se čita do `http.max_body_kb` i označava kao sečena."""
-    telo = bomba(64 * 1024 * KB, encoding=encoding, prefix=HTML_PREFIX)
+    telo = bomb(64 * 1024 * KB, encoding=encoding, prefix=HTML_PREFIX)
     assert len(telo) < 200 * KB
     pocetna = Response(telo, headers={"content-encoding": encoding}, encoded=True)
     with FakeSite(extra={"/": pocetna}) as site:
@@ -65,7 +65,7 @@ def test_pg_html_bomba_se_sece_na_granici(encoding):
 
 def test_pg_html_bomba_ne_zauzima_memoriju_preko_granice():
     """Vrh memorije prati granicu, ne raspakovanu veličinu: 1 MB granica, 64 MB bomba."""
-    telo = bomba(64 * 1024 * KB, prefix=HTML_PREFIX)
+    telo = bomb(64 * 1024 * KB, prefix=HTML_PREFIX)
     cfg = load_config()
     cfg["http"]["delay_ms"] = [0, 0]
     cfg["http"]["max_body_kb"] = 1024
@@ -90,7 +90,7 @@ def test_pg_html_bomba_ne_zauzima_memoriju_preko_granice():
 def test_pg_bomba_u_preusmerenju_se_ne_raspakuje():
     """Telo odgovora koji preusmerava se ne čita: httpx bi ga inače ceo raspakovao pre sledećeg koraka."""
     preusmerenje = Response(
-        bomba(64 * 1024 * KB),
+        bomb(64 * 1024 * KB),
         status=302,
         headers={"content-encoding": "gzip", "location": "/pocetna"},
         encoded=True,
@@ -113,7 +113,7 @@ def test_pg_bomba_u_preusmerenju_se_ne_raspakuje():
 # --------------------------------------------------------------------------- #
 def test_pg_beskonacno_telo_se_sece_a_prolaz_ide_dalje():
     """Server šalje bez kraja i bez Content-Length: čita se do granice, ostatak sajta se skenira."""
-    with FakeSite(extra={"/": Response(chunks=beskonacno(HTML_PREFIX + b" " * 65536))}) as site:
+    with FakeSite(extra={"/": Response(chunks=endless(HTML_PREFIX + b" " * 65536))}) as site:
         started = time.monotonic()
         snapshot = scan(site, **{"http.max_body_kb": 256})
         trajanje = time.monotonic() - started
@@ -134,7 +134,7 @@ def test_pg_telo_koje_kaplje_ima_ukupan_rok():
         async with Fetcher(cfg) as fetcher:
             return await asyncio.wait_for(fetch_site(fetcher, DomainInput(domain=site.base_url)), 15)
 
-    kap = Response(chunks=beskonacno(b"x", pauza=0.2))
+    kap = Response(chunks=endless(b"x", pause=0.2))
     with FakeSite(extra={"/": kap}) as site:
         started = time.monotonic()
         snapshot = asyncio.run(prolaz(site))
@@ -229,7 +229,7 @@ def test_pg_sitemap_gz_bomba_nije_nalaz_da_mape_nema():
     robots = b"User-agent: *\nSitemap: {base}/sitemap.xml.gz\n"
     xml = b'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
     gz = {"content-type": "application/gzip"}
-    mapa = Response(bomba(64 * 1024 * KB, prefix=xml), headers=gz, encoded=True)
+    mapa = Response(bomb(64 * 1024 * KB, prefix=xml), headers=gz, encoded=True)
     with FakeSite(extra={"/sitemap.xml.gz": mapa}) as site:
         site.extra["/robots.txt"] = Response(robots.replace(b"{base}", site.base_url.encode()))
         snapshot = scan(site)
@@ -279,7 +279,7 @@ def zlib_sazmi(data: bytes, wbits: int) -> bytes:
 def test_raspakivanje_ne_vraca_komad_veci_od_koraka():
     from sitetriage.fetch.http import RASPAKOVANO_ODJEDNOM, _Raspakivanje
 
-    delovi = list(_Raspakivanje(["gzip"]).decode(bomba(8 * 1024 * KB)))
+    delovi = list(_Raspakivanje(["gzip"]).decode(bomb(8 * 1024 * KB)))
     assert sum(map(len, delovi)) == 8 * 1024 * KB
     assert max(map(len, delovi)) <= RASPAKOVANO_ODJEDNOM
 

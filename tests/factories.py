@@ -1,8 +1,10 @@
-"""Gradivni blokovi za testove: čist sajt kao polazna tačka.
+"""Building blocks for tests: a clean site as the starting point.
 
-Baza je sajt na kome **nijedna provera ne sme da nađe ništa**. Svaki pozitivan
-test kvari tačno jednu stvar. To je U4 pretvoren u alat: ako neka provera počne
-da laje na čistu bazu, pada ceo skup testova odjednom (§1.2, §12.3).
+The base is a site on which **no check may find anything**. Each positive test breaks exactly
+one thing. This turns the most important success criterion into a tool: a deliberately clean
+site gets no findings, the guard against false positives. If a check starts barking at the
+clean base, the whole test suite fails at once. Each check also has a positive, a negative and
+an `unknown` test (see "Test design conventions" in CONTRIBUTING.md).
 """
 
 from __future__ import annotations
@@ -34,9 +36,9 @@ from sitetriage.models import (
 registry.load_all()
 CONFIG = load_config()
 
-# Dovoljno dug srpski tekst da jezička heuristika bude pouzdana (§5.1) i da
-# stranica ne izgleda prazno politici eskalacije (§6).
-SRPSKI_TEKST = (
+# Serbian text (test data), long enough for the language heuristic to be reliable and for the
+# page not to look empty to the escalation policy, which treats too little text as a signal.
+SERBIAN_TEXT = (
     "Dobrodošli u našu ordinaciju. Nudimo usluge opšte stomatologije, protetike i "
     "implantologije. Naš tim čine iskusni lekari koji rade sa najsavremenijom opremom. "
     "Zakažite pregled telefonom ili putem kontakt forme. Radno vreme je od ponedeljka do "
@@ -53,7 +55,7 @@ def page(
     canonical: str | None = None,
     og: OpenGraph | None = None,
     lang: str | None = "sr",
-    text: str = SRPSKI_TEKST,
+    text: str = SERBIAN_TEXT,
     status: int = 200,
     html_bytes: int = 20_000,
     headers: dict[str, str] | None = None,
@@ -81,8 +83,8 @@ def page(
 
 
 def clean_site(*, domain: str = "cist.rs", industry: str = "other", **overrides: Any) -> SiteSnapshot:
-    """Sajt bez ijednog problema. Sve provere nivoa 1 nad njim moraju biti `ok`."""
-    home = page(f"https://{domain}/", raw_html=f"<html lang=sr><h1>Naslov</h1>{SRPSKI_TEKST}</html>")
+    """A site without a single problem. Every level-1 check on it must be `ok`."""
+    home = page(f"https://{domain}/", raw_html=f"<html lang=sr><h1>Naslov</h1>{SERBIAN_TEXT}</html>")
     others = [
         page(f"https://{domain}/usluge", title="Usluge", description="Spisak naših usluga."),
         page(f"https://{domain}/o-nama", title="O nama", description="Ko smo i čime se bavimo."),
@@ -115,7 +117,7 @@ def clean_site(*, domain: str = "cist.rs", industry: str = "other", **overrides:
             ]
         ),
         sample_source="sitemap",
-        # Sve tri preostale adrese preusmeravaju na konačnu (Z-26).
+        # The other three host variants all redirect to the final URL (ADR-014).
         host_variants=[
             HostVariant(
                 url=url,
@@ -130,11 +132,11 @@ def clean_site(*, domain: str = "cist.rs", industry: str = "other", **overrides:
     return replace(snapshot, **overrides) if overrides else snapshot
 
 
-PROFIL = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
+PROFILE = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
 
 
 def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapshot:
-    """Nacrtana stranica bez ijednog problema nivoa 2."""
+    """A rendered page without a single level-2 problem."""
     snapshot = BrowserSnapshot(
         domain=domain,
         url=f"https://{domain}/",
@@ -145,7 +147,7 @@ def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapsh
             total_bytes=900_000,
             bytes_by_type={"image": 600_000, "script": 200_000, "css": 100_000},
             unmeasured_responses=0,
-            # Čista stranica ne učitava ništa posle `load`, pa je „do load" isto što i ukupno.
+            # A clean page loads nothing after `load`, so "until load" equals the total.
             requests_at_load=30,
             bytes_at_load=900_000,
             bytes_by_type_at_load={"image": 600_000, "script": 200_000, "css": 100_000},
@@ -161,7 +163,7 @@ def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapsh
             images_unmeasured=0,
         ),
         console=ConsoleStats(errors=0, warnings=2),
-        network_profile=PROFIL,
+        network_profile=PROFILE,
         link_mbps=100.0,
     )
     return replace(snapshot, **overrides) if overrides else snapshot
