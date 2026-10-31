@@ -143,7 +143,9 @@ All defaults, with comments, are in [`sitetriage/sitetriage.toml`](sitetriage/si
 A value must have the type of its default (a number where the default is a number, a whole number
 for counts) and a sensible range (points, timeouts and ratios above 0, `delay_ms` as `[min, max]`,
 severity tiers that grow); otherwise the tool stops before the first request and names the key and
-the value.
+the value. A key or section the defaults do not have is an error too, with the closest known key
+when there is one (`html_size_kbb` → `did you mean thresholds.perf.html_size_kb?`), so a typo
+cannot silently leave a default in place.
 
 ### Profiles
 

@@ -456,3 +456,69 @@ def test_packaged_defaults_and_profiles_pass_their_own_validation():
 
     for name in ["", *available_profiles()]:
         load_config(profile=name)
+
+
+# --------------------------------------------------------------------------- #
+# BUG-09: a key or a section the defaults do not have would be merged and never read, so a typo
+# ran the defaults without a word. It fails and names the key, with the closest known one.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "toml, unknown, suggestion",
+    [
+        pytest.param(
+            "[thresholds.perf]\nhtml_size_kbb = 1",
+            "thresholds.perf.html_size_kbb",
+            "thresholds.perf.html_size_kb",
+            id="nv-mistyped-key",
+        ),
+        pytest.param("[treshold.perf]\nhtml_size_kb = 1", "treshold", "thresholds", id="nv-mistyped-section"),
+        pytest.param(
+            "[industry_multipliers.hotel]\nsco = 1.0",
+            "industry_multipliers.hotel.sco",
+            "industry_multipliers.hotel.seo",
+            id="nv-mistyped-category",
+        ),
+        pytest.param(
+            "[thresholds.perf]\nload_ms = { medium = 6000, high = 9000, critical = 12000 }",
+            "thresholds.perf.load_ms.critical",
+            None,
+            id="nv-tier-the-defaults-do-not-have",
+        ),
+        pytest.param("[http]\nzzz = 1", "http.zzz", None, id="nv-unknown-key-without-suggestion"),
+        pytest.param('colour = "red"', "colour", None, id="nv-unknown-top-level-key"),
+    ],
+)
+def test_unknown_key_fails_and_suggests_the_closest(tmp_path, toml, unknown, suggestion):
+    override = tmp_path / "mine.toml"
+    override.write_text(toml + "\n", encoding="utf-8")
+    with pytest.raises(ConfigError) as error:
+        load_config(override)
+    message = str(error.value)
+    assert f"{unknown}: unknown key in {override}" in message, message
+    if suggestion:
+        assert f"did you mean {suggestion}?" in message, message
+    else:
+        assert "did you mean" not in message, message
+
+
+def test_unknown_key_in_a_profile_fails_and_names_the_profile(tmp_path, monkeypatch):
+    typo = tmp_path / "typo.toml"
+    typo.write_text('[report]\nlnag = "sr"\n', encoding="utf-8")
+    monkeypatch.setattr("sitetriage.config.profile_path", lambda name: typo)
+    expected = r"report\.lnag: unknown key in profile 'typo'; did you mean report\.lang\?"
+    with pytest.raises(ConfigError, match=expected):
+        load_config(profile="typo")
+
+
+def test_renamed_section_wins_over_an_unknown_key(tmp_path):
+    """`[identitet]` is not a typo but a 3.0 rename: its message names the new keys."""
+    override = tmp_path / "old.toml"
+    override.write_text('[http]\nzzz = 1\n[identitet]\nnaziv = "Web studio Primer"\n', encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"\[identitet\] was renamed to \[operator\]"):
+        load_config(override)
+
+
+def test_known_top_level_profile_key_is_not_unknown(tmp_path):
+    override = tmp_path / "mine.toml"
+    override.write_text('profile = "rs"\n', encoding="utf-8")
+    assert load_config(override)["profile"] == "rs"
