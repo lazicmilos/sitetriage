@@ -191,14 +191,14 @@ breaks one of them will not be merged, however useful the feature.
 ## Changing `report.json`
 
 `report.json` is a contract for programs (the web app, `sitetriage diff`, CRMs). Its shape is described by
-`sitetriage/schema/report-2.json`, which ships with the package. The rules are in
+`sitetriage/schema/report-3.json`, which ships with the package. The rules are in
 [ADR-011](docs/adr/ADR-011-json-sema.md):
 
 - The schema rejects unknown fields, so a new field goes into the schema in the **same commit** as the
   model change. The tests validate the output against the schema.
-- An added field raises the minor version (`2.0` → `2.1`), because an older reader can skip it.
+- An added field raises the minor version (`3.0` → `3.1`), because an older reader can skip it.
 - A removed field, a changed type or meaning, or a renamed `check_id` raises the major version
-  (`2.x` → `3.0`), and is listed under breaking changes in `CHANGELOG.md`.
+  (`3.x` → `4.0`), and is listed under breaking changes in `CHANGELOG.md`.
 - Snapshots are internal and may change, as long as `sitetriage recheck` still reads old ones. A check
   that misses a field introduced later returns `unknown` with a reason, never `ok` and never a crash.
 

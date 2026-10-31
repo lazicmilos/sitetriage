@@ -24,9 +24,9 @@ def _premalo_stranica(snapshot: SiteSnapshot, ctx: Context, spec: CheckSpec) -> 
     if sum(1 for p in snapshot.pages if p.status == 200) >= prag:
         return None
     if snapshot.budget.exhausted:
-        return unknown(spec, "pages_budget", prag=prag)
+        return unknown(spec, "pages_budget", threshold=prag)
     if snapshot.scanner_version.startswith("1."):
-        return unknown(spec, "v1_snapshot", verzija=snapshot.scanner_version, polje="home_links")
+        return unknown(spec, "v1_snapshot", version=snapshot.scanner_version, field="home_links")
 
     home = snapshot.home
     base = home.final_url or home.url
@@ -40,11 +40,11 @@ def _premalo_stranica(snapshot: SiteSnapshot, ctx: Context, spec: CheckSpec) -> 
     # Početna je adresa sajta i kad nijedna veza ne vodi na nju.
     adrese = {normalize(base)} | {u for izvor in izvori for u in map(normalize, izvor) if same_site(u, base)}
     if len(adrese) >= prag:
-        return unknown(spec, "pages_sample", prag=prag, adresa=len(adrese))
+        return unknown(spec, "pages_sample", threshold=prag, address_count=len(adrese))
     prazan = home.text_length < ctx.th("escalation.empty_html_text_threshold") or not home.h1_count_raw
     if not nivo2 and prazan:
-        return unknown(spec, "pages_js", prag=prag)
-    return not_applicable(spec, "few_pages", prag=prag, adresa=len(adrese))
+        return unknown(spec, "pages_js", threshold=prag)
+    return not_applicable(spec, "few_pages", threshold=prag, address_count=len(adrese))
 
 
 def _duplicates(
@@ -95,7 +95,7 @@ def canonical_missing(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         canonical_missing.spec,
         ctx,
-        evidence={"stranica": home.final_url or home.url, "broj_canonical_oznaka": 0},
+        evidence={"page": home.final_url or home.url, "canonical_tag_count": 0},
         urls=[home.final_url or home.url],
     )
 
@@ -139,11 +139,11 @@ def canonical_duplicate(snapshot: SiteSnapshot, ctx: Context):
         ctx,
         evidence={
             "canonical": value,
-            "stranica": len(pages),
-            "ukupno": ukupno,
-            "udeo": round(udeo, 4),
-            "grupa_putanja": len(groups),
-            "uzorak": snapshot.sample_source,  # uzorak iz linkova je manje pouzdan (§4.4)
+            "page_count": len(pages),
+            "total": ukupno,
+            "share": round(udeo, 4),
+            "path_groups": len(groups),
+            "sample": snapshot.sample_source,  # uzorak iz linkova je manje pouzdan (§4.4)
         },
         urls=[p.final_url or p.url for p in pages],
         severity=next((s for s in ("critical", "high") if udeo >= pragovi[s]), "medium"),
@@ -170,7 +170,7 @@ def title_missing(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         title_missing.spec,
         ctx,
-        evidence={"stranica": home.final_url or home.url, "duzina_naslova": 0},
+        evidence={"page": home.final_url or home.url, "title_length": 0},
         urls=[home.final_url or home.url],
     )
 
@@ -195,10 +195,10 @@ def title_duplicate(snapshot: SiteSnapshot, ctx: Context):
         title_duplicate.spec,
         ctx,
         evidence={
-            "naslov": value,
-            "stranica": len(pages),
-            "grupa_putanja": len(groups),
-            "uzorak": snapshot.sample_source,  # uzorak iz linkova je manje pouzdan (§4.4)
+            "title": value,
+            "page_count": len(pages),
+            "path_groups": len(groups),
+            "sample": snapshot.sample_source,  # uzorak iz linkova je manje pouzdan (§4.4)
         },
         urls=[p.final_url or p.url for p in pages],
     )
@@ -223,7 +223,7 @@ def description_missing(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         description_missing.spec,
         ctx,
-        evidence={"stranica": home.final_url or home.url, "duzina_opisa": 0},
+        evidence={"page": home.final_url or home.url, "description_length": 0},
         urls=[home.final_url or home.url],
     )
 
@@ -250,10 +250,10 @@ def description_duplicate(snapshot: SiteSnapshot, ctx: Context):
         description_duplicate.spec,
         ctx,
         evidence={
-            "opis": value,
-            "stranica": len(pages),
-            "grupa_putanja": len(groups),
-            "uzorak": snapshot.sample_source,  # uzorak iz linkova je manje pouzdan (§4.4)
+            "description": value,
+            "page_count": len(pages),
+            "path_groups": len(groups),
+            "sample": snapshot.sample_source,  # uzorak iz linkova je manje pouzdan (§4.4)
         },
         urls=[p.final_url or p.url for p in pages],
     )
@@ -302,7 +302,7 @@ def h1_multiple(snapshot, ctx: Context):
         ctx,
         evidence={
             "h1_count": snapshot.dom.h1_count,
-            "prag": limit,
+            "threshold": limit,
         },
         urls=[snapshot.url],
     )

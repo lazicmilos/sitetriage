@@ -97,7 +97,7 @@ jer sajt možda radi, samo ga alat nije video. Tu je i broj izuzetih domena.
 ### JSON izveštaj
 
 `report.json` je ugovor za web aplikaciju, `sitetriage diff`, CRM i kupca koda. Oblik opisuje šema
-[`sitetriage/schema/report-2.json`](sitetriage/schema/report-2.json), a verzija šeme je prvo polje
+[`sitetriage/schema/report-3.json`](sitetriage/schema/report-3.json), a verzija šeme je prvo polje
 dokumenta (`schema_version`). Uz nju idu verzija alata, vreme prolaza u UTC-u, trajanje po nivou,
 otisak konfiguracije (`config_digest`: sha256 pragova, množilaca i bodova, bez identiteta i
 paralelizma), okruženje (OS, Python, Chromium) i zbir po statusu. Domeni su u tri liste:
@@ -115,9 +115,9 @@ na jeziku onoga ko čita.
 
 Pravila promene šeme ([ADR-011](docs/adr/ADR-011-json-sema.md)):
 
-- dodato polje podiže drugi broj (`2.0` → `2.1`), jer ga stari čitalac može preskočiti;
+- dodato polje podiže drugi broj (`3.0` → `3.1`), jer ga stari čitalac može preskočiti;
 - obrisano polje, promenjen tip ili značenje polja i preimenovan `check_id` podižu prvi broj
-  (`2.x` → `3.0`).
+  (`3.x` → `4.0`).
 
 Šema ne dozvoljava nepoznata polja, pa novo polje mora prvo u šemu. Test pada ako izlaz ne
 prolazi šemu.

@@ -60,12 +60,12 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
         compression_missing.spec,
         ctx,
         evidence={
-            "kodiranje": encoding or None,
-            "bajtova": home.html_bytes,
+            "encoding": encoding or None,
+            "bytes": home.html_bytes,
             "kb": round(home.html_bytes / 1024),
             # gzip i br svode HTML na otprilike četvrtinu; ušteda je ostatak, na sporijoj vezi
-            "usteda_s": round(home.html_bytes * 0.75 / BYTES_PER_MB / _mb_per_s(ctx), 1),
-            "brzina": ctx.th("network_profile.download_mbps"),
+            "saving_s": round(home.html_bytes * 0.75 / BYTES_PER_MB / _mb_per_s(ctx), 1),
+            "speed_mbps": ctx.th("network_profile.download_mbps"),
         },
         urls=[home.final_url or home.url],
     )
@@ -88,7 +88,7 @@ def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         redirect_chain.spec,
         ctx,
-        evidence={"skokova": hops, "lanac": chain},
+        evidence={"hops": hops, "chain": chain},
         urls=chain[:1],
     )
 
@@ -110,7 +110,7 @@ def html_size(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         html_size.spec,
         ctx,
-        evidence={"bajtova": home.html_bytes, "kb": round(home.html_bytes / 1024), "prag_kb": limit_kb},
+        evidence={"bytes": home.html_bytes, "kb": round(home.html_bytes / 1024), "threshold_kb": limit_kb},
         urls=[home.final_url or home.url],
     )
 
@@ -136,7 +136,9 @@ def page_weight(snapshot, ctx: Context):
     if network.unmeasured_at_load > max_unmeasured:
         # Merenje u koje nemaš poverenja gore je od merenja kojeg nema (§7.2).
         nemereno = network.unmeasured_at_load
-        return unknown(page_weight.spec, "unmeasured_responses", nemereno=nemereno, prag=max_unmeasured)
+        return unknown(
+            page_weight.spec, "unmeasured_responses", unmeasured=nemereno, threshold=max_unmeasured
+        )
 
     # Video se skida koliko vreme merenja dozvoli — isti sajt je izmeren jednom 8,5, a
     # drugi put 26,9 MB — pa ne ulazi u prag, nego stoji posebno u poruci (O-2).
@@ -151,18 +153,18 @@ def page_weight(snapshot, ctx: Context):
         ctx,
         severity=severity,
         evidence={
-            "bajtova": network.bytes_at_load,
+            "bytes": network.bytes_at_load,
             "mb": round(mb, 1),
             "video_mb": video_mb,
-            "sekundi": _seconds_on_mobile(mb, ctx),
-            "brzina": ctx.th("network_profile.download_mbps"),
-            "zahteva": network.requests_at_load,
-            "nemereno": network.unmeasured_at_load,
+            "seconds": _seconds_on_mobile(mb, ctx),
+            "speed_mbps": ctx.th("network_profile.download_mbps"),
+            "requests": network.requests_at_load,
+            "unmeasured": network.unmeasured_at_load,
             "reached": snapshot.timing.reached,
-            "po_tipu": network.bytes_by_type_at_load,
+            "bytes_by_type": network.bytes_by_type_at_load,
             # Sa onim što stigne posle `load`, i sa videom: samo informativno, van praga.
-            "ukupno_bajtova": network.total_bytes,
-            "ukupno_zahteva": network.request_count,
+            "total_bytes": network.total_bytes,
+            "total_requests": network.request_count,
         },
         urls=[snapshot.url],
         variant="video" if video else None,
@@ -190,8 +192,8 @@ def request_count(snapshot, ctx: Context):
         ctx,
         severity=severity,
         evidence={
-            "zahteva": count,
-            "ukupno_zahteva": snapshot.network.request_count,
+            "requests": count,
+            "total_requests": snapshot.network.request_count,
             "reached": snapshot.timing.reached,
         },
         urls=[snapshot.url],
@@ -212,7 +214,7 @@ def request_count(snapshot, ctx: Context):
 def load_time(snapshot, ctx: Context):
     potrebno = ctx.th("network_profile.min_link_ratio") * snapshot.network_profile.download_mbps
     if snapshot.link_mbps < potrebno:
-        return unknown(load_time.spec, "link_slow", izmereno=snapshot.link_mbps, potrebno=potrebno)
+        return unknown(load_time.spec, "link_slow", measured_mbps=snapshot.link_mbps, required_mbps=potrebno)
     timing = snapshot.timing
     if timing.reached == "timeout":
         # Stranica koja ne stigne do `load` unutar tvrdog limita je merenje samo po sebi.
@@ -223,8 +225,8 @@ def load_time(snapshot, ctx: Context):
             severity="high",
             evidence={
                 "load_ms": None,
-                "sekundi": limit_s,
-                "brzina": snapshot.network_profile.download_mbps,
+                "seconds": limit_s,
+                "speed_mbps": snapshot.network_profile.download_mbps,
                 "reached": "timeout",
             },
             urls=[snapshot.url],
@@ -242,8 +244,8 @@ def load_time(snapshot, ctx: Context):
         severity=severity,
         evidence={
             "load_ms": timing.load_ms,
-            "sekundi": round(timing.load_ms / 1000, 1),
-            "brzina": snapshot.network_profile.download_mbps,
+            "seconds": round(timing.load_ms / 1000, 1),
+            "speed_mbps": snapshot.network_profile.download_mbps,
             "reached": timing.reached,
         },
         urls=[snapshot.url],
@@ -285,20 +287,20 @@ def img_oversized(snapshot, ctx: Context):
             img_oversized.spec,
             ctx,
             evidence={
-                "broj_slika": len(oversized),
+                "image_count": len(oversized),
                 "kb": waste_kb,
-                "prag_odnosa": ctx.th("thresholds.perf.image_ratio"),
-                "nemereno": dom.images_unmeasured,
-                "najgora": oversized[0].src if oversized else None,
+                "ratio_threshold": ctx.th("thresholds.perf.image_ratio"),
+                "unmeasured": dom.images_unmeasured,
+                "worst_image": oversized[0].src if oversized else None,
             },
             urls=[img.src for img in oversized[:5]],
         )
     if len(rasterske) >= min_count:
-        return unknown(img_oversized.spec, "oversized_unmeasured", broj=len(rasterske) - len(oversized))
+        return unknown(img_oversized.spec, "oversized_unmeasured", count=len(rasterske) - len(oversized))
     # Bez ovoga ne znaš da li je „0 predimenzioniranih slika" nalaz ili neuspelo merenje (§3.3).
     if dom.images_unmeasured and dom.images_unmeasured >= dom.images_total / 2:
         return unknown(
-            img_oversized.spec, "images_unmeasured", nemereno=dom.images_unmeasured, ukupno=dom.images_total
+            img_oversized.spec, "images_unmeasured", unmeasured=dom.images_unmeasured, total=dom.images_total
         )
     return ok(img_oversized.spec)
 
@@ -321,9 +323,9 @@ def console_errors(snapshot, ctx: Context):
         console_errors.spec,
         ctx,
         evidence={
-            "greske": console.errors,
-            "upozorenja": console.warnings,
-            "primer": console.samples[0] if console.samples else None,
+            "errors": console.errors,
+            "warnings": console.warnings,
+            "first_error": console.samples[0] if console.samples else None,
         },
         urls=[snapshot.url],
     )

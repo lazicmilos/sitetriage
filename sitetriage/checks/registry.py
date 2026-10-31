@@ -169,7 +169,7 @@ def unmet(spec: CheckSpec, snapshot: Any) -> Reason | None:
         if name.startswith(NOVO_POLJE):
             verzija = getattr(snapshot, "scanner_version", "")
             if verzija.startswith("1."):
-                return Reason("v1_snapshot", {"verzija": verzija, "polje": name.removeprefix(NOVO_POLJE)})
+                return Reason("v1_snapshot", {"version": verzija, "field": name.removeprefix(NOVO_POLJE)})
             continue
         try:
             ispunjen = REQUIREMENTS[name](snapshot)
@@ -198,7 +198,7 @@ def run(level: int, snapshot: Any, ctx: Context) -> list[CheckResult]:
         try:
             results.append(spec.fn(snapshot, ctx))
         except Exception as exc:  # noqa: BLE001 — granica domena, namerno široka
-            results.append(unknown(spec, "check_crashed", greska=f"{type(exc).__name__}: {exc}"))
+            results.append(unknown(spec, "check_crashed", error=f"{type(exc).__name__}: {exc}"))
     return results
 
 

@@ -265,8 +265,8 @@ def test_soft404_belezi_slicnost_sa_pocetnom():
         ]
     )
     evidence = run_level(1, site)["infra.soft404"].findings[0].evidence
-    assert evidence["slicnost"] == 1.0
-    assert evidence["tvrd_dokaz"] is True
+    assert evidence["similarity"] == 1.0
+    assert evidence["hard_evidence"] is True
 
 
 def test_duplikat_trazi_razlicite_grupe_putanja():
@@ -295,7 +295,7 @@ def test_duplikat_broji_stranicu_jednom_iako_do_nje_vode_dve_adrese():
     site = clean_site()
     _sve_stranice(site, title="Dobrodošli")
     site.pages[1].final_url = site.home.final_url
-    assert run_level(1, site)["seo.title.duplicate"].findings[0].evidence["stranica"] == 4
+    assert run_level(1, site)["seo.title.duplicate"].findings[0].evidence["page_count"] == 4
 
 
 def test_kompresija_se_ne_prijavljuje_za_mali_html():

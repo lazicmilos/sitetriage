@@ -35,7 +35,7 @@ def test_jezik_iz_renderovanog_teksta_kad_sirovog_nema():
     rezultat = provere(js_sajt(), renderovano("en-US"))["i18n.lang.mismatch"]
     assert rezultat.status == "finding"
     assert rezultat.findings[0].evidence["lang"] == "en-US"
-    assert rezultat.findings[0].evidence["duzina_teksta"] == len(SRPSKI_TEKST)
+    assert rezultat.findings[0].evidence["text_length"] == len(SRPSKI_TEKST)
 
 
 def test_bez_nivoa_2_ostaje_unknown():
@@ -56,13 +56,13 @@ def test_lang_postavljen_iz_js_nije_missing_kad_je_nivo_2_radio():
 
 def test_lang_koji_js_ne_postavi_je_missing_i_posle_nivoa_2():
     rezultat = provere(js_sajt(lang=None), renderovano(None))["i18n.lang.missing"]
-    assert rezultat.status == "finding" and rezultat.findings[0].evidence["izvor"] == "nivo2"
+    assert rezultat.status == "finding" and rezultat.findings[0].evidence["source"] == "rendered"
 
 
 def test_dokaz_kaze_izvor_teksta():
     bez = provere(js_sajt(lang="zxx"))["i18n.lang.invalid"].findings[0]
     sa = provere(js_sajt(lang="sr"), renderovano("zxx"))["i18n.lang.invalid"].findings[0]
-    assert (bez.evidence["izvor"], sa.evidence["izvor"]) == ("sirovi_html", "nivo2")
+    assert (bez.evidence["source"], sa.evidence["source"]) == ("raw_html", "rendered")
 
 
 def test_nivo_2_iz_1x_bez_teksta_koristi_sirovi_html():

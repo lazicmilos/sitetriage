@@ -109,11 +109,11 @@ def test_srpske_recenice_iste_kao_pre_refaktora():
 # podatak koji dolazi spolja. Sve ostalo je broj, logička vrednost ili tehnički kod.
 SPOLJNI_TEKST = {
     # URL
-    "stranica", "canonical", "najgora", "lanac",
+    "page", "canonical", "worst_image", "chain",
     # sirova poruka greške
-    "greska", "detalj", "primer",
+    "error", "detail", "first_error",
     # tekst sa sajta
-    "naslov", "opis",
+    "title", "description",
 }
 
 
@@ -208,7 +208,7 @@ def test_usteda_od_kompresije_se_racuna_iz_velicine():
     site.home.headers = {}
     site.home.html_bytes = 80_000
     nalaz = run_level(1, site)["perf.compression.missing"].findings[0]
-    assert nalaz.evidence["usteda_s"] == 0.1
+    assert nalaz.evidence["saving_s"] == 0.1
     assert "0,1 s" in render(nalaz, "sr").client and "0.1 s" in render(nalaz, "en").client
     assert nalaz.severity == "low"
 
@@ -384,8 +384,8 @@ def test_ceo_broj_nema_nulu_iza_zareza(lang, ocekivano):
 def test_sekunde_na_mobilnoj_vezi_se_racunaju_tacno():
     """14,9 MB na 0,6 MB/s = 24,83 s, plus 1 s režije = 25,8 s."""
     nalaz = _tezina(14_900_000, {"image": 14_900_000})
-    assert nalaz.evidence["sekundi"] == 25.8
-    assert nalaz.evidence["brzina"] == 4.8
+    assert nalaz.evidence["seconds"] == 25.8
+    assert nalaz.evidence["speed_mbps"] == 4.8
 
 
 def test_usteda_od_kompresije_tacna_vrednost():
@@ -393,7 +393,7 @@ def test_usteda_od_kompresije_tacna_vrednost():
     site = clean_site()
     site.home.headers = {}
     site.home.html_bytes = 1_200_000
-    assert run_level(1, site)["perf.compression.missing"].findings[0].evidence["usteda_s"] == 1.5
+    assert run_level(1, site)["perf.compression.missing"].findings[0].evidence["saving_s"] == 1.5
 
 
 @pytest.mark.parametrize(
@@ -408,7 +408,7 @@ def test_dokaz_kaze_odakle_je_uzorak(izvor, sr_tekst):
     site = clean_site(sample_source=izvor)
     _isti(site, "canonical_normalized", 3)
     nalaz = run_level(1, site)["seo.canonical.duplicate"].findings[0]
-    assert nalaz.evidence["uzorak"] == izvor, "u dokazu je kod; tekst daje katalog"
+    assert nalaz.evidence["sample"] == izvor, "u dokazu je kod; tekst daje katalog"
     assert sr_tekst in render(nalaz, "sr").tech
 
 

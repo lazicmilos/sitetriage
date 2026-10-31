@@ -20,18 +20,19 @@ def plural(number: int, forms: list[str]) -> str:
 DECIMAL = decimal
 
 CODES: dict[str, dict[object, str]] = {
-    "kodiranje": {None: "none"},
-    "vrsta": {None: "unknown", "dns_temporary": "DNS temporarily unavailable", "blocked": "SSRF protection"},
-    "uzorak": {"sitemap": "sitemap", "links": "internal links from the home page", "none": "home page only"},
-    "izvor": {"sirovi_html": "raw HTML", "nivo2": "the page after JavaScript"},
-    "razlog": {
+    "encoding": {None: "none"},
+    "error": {"unknown": "unknown"},
+    "kind": {None: "unknown", "dns_temporary": "DNS temporarily unavailable", "blocked": "SSRF protection"},
+    "sample": {"sitemap": "sitemap", "links": "internal links from the home page", "none": "home page only"},
+    "source": {"raw_html": "raw HTML", "rendered": "the page after JavaScript"},
+    "cause": {
         "dns": "the domain has no record that connects it to a server",
         "no_response": "the server accepted a connection over neither https nor http",
     },
 }
 
 _WEIGHT = (
-    "On a slower mobile connection ({brzina} Mb/s) that takes about {sekundi} s."
+    "On a slower mobile connection ({speed_mbps} Mb/s) that takes about {seconds} s."
 )
 
 FINDINGS: dict[str, dict] = {
@@ -39,31 +40,31 @@ FINDINGS: dict[str, dict] = {
     "perf.compression.missing": {
         "client": (
             "The server sends the page uncompressed ({kb} kB). Compression would cut the transfer to "
-            "roughly a quarter, which on a slower mobile connection ({brzina} Mb/s) shortens loading "
-            "by about {usteda_s} s."
+            "roughly a quarter, which on a slower mobile connection ({speed_mbps} Mb/s) shortens loading "
+            "by about {saving_s} s."
         ),
-        "tech": "content-encoding={kodiranje}, html_bytes={bajtova} (decoded), saving ≈ {usteda_s} s",
+        "tech": "content-encoding={encoding}, html_bytes={bytes} (decoded), saving ≈ {saving_s} s",
     },
     "perf.redirect.chain": {
         "client": (
-            "Opening the home page goes through {skokova:n:redirect|redirects} before anything is "
+            "Opening the home page goes through {hops:n:redirect|redirects} before anything is "
             "shown. Each of them adds waiting time, especially on a mobile connection."
         ),
-        "tech": "redirect_chain={skokova} hops: {lanac:join: → }",
+        "tech": "redirect_chain={hops} hops: {chain:join: → }",
     },
     "perf.html.size": {
         "client": (
             "The home page code alone weighs {kb} kB, before images and scripts. The browser has to "
             "download and process it in full, which slows down rendering, especially on a phone."
         ),
-        "tech": "html_bytes={bajtova} > {prag_kb} kB",
+        "tech": "html_bytes={bytes} > {threshold_kb} kB",
     },
     "perf.page.weight": {
         "client": "The home page transfers {mb} MB. " + _WEIGHT,
         "tech": (
-            "bytes_at_load={bajtova}, without video {mb} MB, video {video_mb} MB, requests={zahteva}, "
-            "unmeasured={nemereno}, reached={reached}; including what came after load {ukupno_bajtova} B "
-            "and {ukupno_zahteva} requests (informational)"
+            "bytes_at_load={bytes}, without video {mb} MB, video {video_mb} MB, requests={requests}, "
+            "unmeasured={unmeasured}, reached={reached}; including what came after load {total_bytes} B "
+            "and {total_requests} requests (informational)"
         ),
         "variants": {
             "video": {"client": "The home page transfers {mb} MB (plus {video_mb} MB of video). " + _WEIGHT}
@@ -71,21 +72,24 @@ FINDINGS: dict[str, dict] = {
     },
     "perf.request.count": {
         "client": (
-            "Opening the home page starts {zahteva:n:separate download|separate downloads}. Each one "
+            "Opening the home page starts {requests:n:separate download|separate downloads}. Each one "
             "carries its own overhead, which is felt especially on a mobile connection."
         ),
-        "tech": "requests_at_load={zahteva}, {ukupno_zahteva} including those after load (reached={reached})",
+        "tech": (
+            "requests_at_load={requests}, {total_requests} including those after load "
+            "(reached={reached})"
+        ),
     },
     "perf.load.time": {
         "client": (
-            "On a simulated {brzina} Mb/s connection, the home page needs {sekundi} s to load completely."
+            "On a simulated {speed_mbps} Mb/s connection, the home page needs {seconds} s to load completely."
         ),
         "tech": "load_ms={load_ms}, reached={reached}",
         "variants": {
             "timeout": {
                 "client": (
-                    "On a simulated {brzina} Mb/s connection, the home page did not finish loading even "
-                    "in {sekundi} s."
+                    "On a simulated {speed_mbps} Mb/s connection, the home page did not finish loading even "
+                    "in {seconds} s."
                 )
             }
         },
@@ -96,16 +100,16 @@ FINDINGS: dict[str, dict] = {
             "transfer on the first visit."
         ),
         "tech": (
-            "{broj_slika} images with ratio > {prag_odnosa}, estimated excess {kb} kB, "
-            "unmeasured {nemereno}"
+            "{image_count} images with ratio > {ratio_threshold}, estimated excess {kb} kB, "
+            "unmeasured {unmeasured}"
         ),
     },
     "qa.console.errors": {
         "client": (
-            "When the home page opens, Chrome reports {greske:n:error|errors} (parts of the page that "
+            "When the home page opens, Chrome reports {errors:n:error|errors} (parts of the page that "
             "failed to load, or script errors). Part of the page may therefore not work as intended."
         ),
-        "tech": "console errors={greske}, warnings={upozorenja}",
+        "tech": "console errors={errors}, warnings={warnings}",
     },
     # ------------------------------------------------------------------- seo
     "seo.canonical.missing": {
@@ -114,17 +118,17 @@ FINDINGS: dict[str, dict] = {
             "content exists at several addresses (with and without www, with ad parameters), Google "
             "picks which one to show on its own — and it can pick the wrong one."
         ),
-        "tech": "{stranica}: missing <link rel=canonical>",
+        "tech": "{page}: missing <link rel=canonical>",
     },
     "seo.canonical.duplicate": {
         "client": (
-            "{stranica} of the {ukupno:n:checked page|checked pages} on the site report a different "
+            "{page_count} of the {total:n:checked page|checked pages} on the site report a different "
             "address to Google as their official one ({canonical}). Google may therefore treat them as "
             "copies of that address and leave them out of search results."
         ),
         "tech": (
-            "canonical_normalized == {canonical} on {stranica} of {ukupno} pages (share {udeo}) "
-            "from {grupa_putanja} path groups (sample: {uzorak})"
+            "canonical_normalized == {canonical} on {page_count} of {total} pages (share {share}) "
+            "from {path_groups} path groups (sample: {sample})"
         ),
     },
     "seo.title.missing": {
@@ -132,29 +136,29 @@ FINDINGS: dict[str, dict] = {
             "The home page has no title. The browser tab therefore shows a bare part of the address, "
             "and Google makes up a title from the page content in its results."
         ),
-        "tech": "{stranica}: <title> empty or missing (length {duzina_naslova})",
+        "tech": "{page}: <title> empty or missing (length {title_length})",
     },
     "seo.title.duplicate": {
         "client": (
-            "Different pages of the site have the same title (“{naslov}”), {stranica} of them. So the "
+            "Different pages of the site have the same title (“{title}”), {page_count} of them. So the "
             "title tells neither Google nor a visitor how those pages differ."
         ),
-        "tech": "identical normalized <title> on {stranica} pages from {grupa_putanja} path groups",
+        "tech": "identical normalized <title> on {page_count} pages from {path_groups} path groups",
     },
     "seo.description.missing": {
         "client": (
             "The home page has no short description for Google. Google then picks text from the page "
             "to show below the title, and that can be part of the menu or the cookie notice."
         ),
-        "tech": "{stranica}: missing <meta name=description> (length {duzina_opisa})",
+        "tech": "{page}: missing <meta name=description> (length {description_length})",
     },
     "seo.description.duplicate": {
         "client": (
-            "Different pages of the site have the same short description for Google, {stranica} of "
+            "Different pages of the site have the same short description for Google, {page_count} of "
             "them. So the description tells neither Google nor a visitor from search how those pages "
             "differ."
         ),
-        "tech": "identical normalized meta description on {stranica} pages from {grupa_putanja} path groups",
+        "tech": "identical normalized meta description on {page_count} pages from {path_groups} path groups",
     },
     "seo.h1.missing": {
         "client": (
@@ -168,7 +172,7 @@ FINDINGS: dict[str, dict] = {
             "The home page has {h1_count:n:main heading|main headings} (h1) instead of one. Screen reader "
             "users then find it harder to recognize the main topic of the page."
         ),
-        "tech": "h1_count == {h1_count} > {prag}",
+        "tech": "h1_count == {h1_count} > {threshold}",
     },
     # ---------------------------------------------------------------- social
     "social.og.title.missing": {
@@ -176,21 +180,21 @@ FINDINGS: dict[str, dict] = {
             "When someone shares a link to the site in a message or on Facebook, there is no prepared "
             "title for the link preview, so platforms use the plain page title or the address itself."
         ),
-        "tech": "{stranica}: missing og:title (og tags in total: {og_oznaka_ukupno})",
+        "tech": "{page}: missing og:title (og tags in total: {og_tag_count})",
     },
     "social.og.description.missing": {
         "client": (
             "When a link to the site is shared, platforms have no prepared description, so they pick "
             "text from the page themselves or show no description."
         ),
-        "tech": "{stranica}: missing og:description (og tags in total: {og_oznaka_ukupno})",
+        "tech": "{page}: missing og:description (og tags in total: {og_tag_count})",
     },
     "social.og.image.missing": {
         "client": (
             "A shared link to the site has no prepared image, so platforms pick an image from the page "
             "themselves or show none."
         ),
-        "tech": "{stranica}: missing og:image (og tags in total: {og_oznaka_ukupno})",
+        "tech": "{page}: missing og:image (og tags in total: {og_tag_count})",
     },
     # ------------------------------------------------------------------ i18n
     "i18n.lang.missing": {
@@ -198,14 +202,14 @@ FINDINGS: dict[str, dict] = {
             "The home page has no language tag (lang) in its code. Screen readers, used by blind and "
             "visually impaired visitors, therefore do not know which pronunciation to read it with."
         ),
-        "tech": "{stranica}: <html> without a lang attribute (source: {izvor})",
+        "tech": "{page}: <html> without a lang attribute (source: {source})",
     },
     "i18n.lang.invalid": {
         "client": (
             "The site is marked in its code with “{lang}”, which is not a valid tag for any language. "
             "Screen readers therefore cannot rely on it."
         ),
-        "tech": '{stranica}: lang="{lang}" is not a usable BCP-47 code (source: {izvor})',
+        "tech": '{page}: lang="{lang}" is not a usable BCP-47 code (source: {source})',
     },
     "i18n.lang.mismatch": {
         "client": (
@@ -214,9 +218,9 @@ FINDINGS: dict[str, dict] = {
             "rules of that language, which makes it hard to understand."
         ),
         "tech": (
-            '{stranica}: lang="{lang}", content detected as {prepoznat_jezik} '
-            "(Cyrillic {cirilica_udeo}, diacritics {dijakritici_udeo}, {duzina_teksta} characters; "
-            "source: {izvor})"
+            '{page}: lang="{lang}", content detected as {detected_language} '
+            "(Cyrillic {cyrillic_share}, diacritics {diacritic_share}, {text_length} characters; "
+            "source: {source})"
         ),
     },
     # ----------------------------------------------------------------- infra
@@ -225,7 +229,7 @@ FINDINGS: dict[str, dict] = {
             "The site has no page map (sitemap). Google therefore finds new and deeper pages only "
             "through links, more slowly, and may not find pages that no link leads to."
         ),
-        "tech": "sitemap status={status}, urls={broj_urlova}",
+        "tech": "sitemap status={status}, urls={url_count}",
     },
     "infra.robots.missing": {
         "client": (
@@ -242,36 +246,36 @@ FINDINGS: dict[str, dict] = {
             "engines therefore have a harder time telling real pages from nonexistent ones and "
             "spend their crawl of the site on empty addresses."
         ),
-        "tech": "both probes status={status}, similarity to the home page {slicnost}",
+        "tech": "both probes status={status}, similarity to the home page {similarity}",
     },
     "infra.tls.invalid": {
         "client": (
             "The site's certificate is not valid, so the browser shows visitors a warning before they "
             "enter the site."
         ),
-        "tech": "TLS error: {greska}",
+        "tech": "TLS error: {error}",
     },
     "infra.https.redirect.missing": {
         "client": (
-            "The site also opens at the unprotected address {http_adresa}, without a redirect to "
-            "{https_adresa}. Chrome marks such a page as “Not secure”."
+            "The site also opens at the unprotected address {http_url}, without a redirect to "
+            "{https_url}. Chrome marks such a page as “Not secure”."
         ),
         "tech": (
-            "{http_adresa} → {status} without a redirect to https; {https_adresa} → 200 with a valid "
+            "{http_url} → {status} without a redirect to https; {https_url} → 200 with a valid "
             "certificate"
         ),
     },
     "infra.host.duplicate": {
         "client": (
-            "The same site opens at {broj_adresa:n:address|addresses} ({adrese:join:, }), and none of them "
+            "The same site opens at {host_count:n:address|addresses} ({hosts:join:, }), and none of them "
             "redirects to another. Google therefore sees them as different addresses with the same content "
             "and picks by itself which one to show in search."
         ),
-        "tech": "200 without a redirect at: {adrese:join:, }; same canonical on each: {isti_canonical}",
+        "tech": "200 without a redirect at: {hosts:join:, }; same canonical on each: {same_canonical}",
         "variants": {
-            "isti_canonical": {
+            "same_canonical": {
                 "client": (
-                    "The same site opens at {broj_adresa:n:address|addresses} ({adrese:join:, }), and none "
+                    "The same site opens at {host_count:n:address|addresses} ({hosts:join:, }), and none "
                     "of them redirects to another. The canonical tag on each of them points to the same "
                     "address, so Google knows which one to show, but no redirect is set up."
                 )
@@ -280,28 +284,28 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.unreachable": {
         "client": (
-            "The site did not open in any of the {broj_pokusaja:n:attempt|attempts} ({prvi_pokusaj:utc} and "
-            "{drugi_pokusaj:utc} UTC): {razlog}."
+            "The site did not open in any of the {attempt_count:n:attempt|attempts} ({first_attempt:utc} and "
+            "{second_attempt:utc} UTC): {cause}."
         ),
-        "tech": "attempts {prvi_pokusaj} and {drugi_pokusaj}, last error: {detalj}",
+        "tech": "attempts {first_attempt} and {second_attempt}, last error: {detail}",
     },
     # ------------------------------------------------------------------ a11y
     "a11y.img.alt.missing": {
         "client": (
-            "On the home page, {bez_alta} of {ukupno:n:image|images} have no text description (alt). "
+            "On the home page, {without_alt} of {total:n:image|images} have no text description (alt). "
             "Visitors who use screen readers do not learn what is on them, and Google has less data "
             "for image search."
         ),
         "tech": (
-            "images_without_alt_attr={bez_alta}/{ukupno} (share {udeo}), "
-            "images_empty_alt={prazan_alt} deliberately not counted, unmeasured={nemereno}"
+            "images_without_alt_attr={without_alt}/{total} (share {share}), "
+            "images_empty_alt={empty_alt} deliberately not counted, unmeasured={unmeasured}"
         ),
     },
 }
 
 TEXT: dict[str, str] = {
-    "page_title": "Skener — report",
-    "heading": "Website scanner — report",
+    "page_title": "SiteTriage — report",
+    "heading": "SiteTriage — report",
     "run_of": "Run of {generated} · tool version {version}",
     "card_domains": "Domains",
     "card_scanned": "Scanned",
@@ -339,8 +343,8 @@ TEXT: dict[str, str] = {
     "col_reason": "Reason",
     "col_check": "Check",
     "col_share": "Share",
-    "percent": "{udeo} %",
-    "share_budget": "Budget spent: {udeo} % of working domains",
+    "percent": "{share} %",
+    "share_budget": "Budget spent: {share} % of working domains",
     "share_unknown": "Could not be checked, per check (share of working domains)",
     "assumption_html": (
         "<b>Assumption for the loading time estimate:</b> effective speed\n"
@@ -358,7 +362,7 @@ TEXT: dict[str, str] = {
     "copied": "Copied ✓",
     "no_findings": "No findings — the site is in order on the checked points.",
     "unknowns": "Could not be checked ({count})",
-    "not_applicable": "does not apply: {tekst}",
+    "not_applicable": "does not apply: {text}",
     "escalated_because": "Sent to level 2 because: ",
     "finding_meta": "· level {level} · points: {weight}",
     "draft_clean": "I did not find any significant problems on {domain}.",
@@ -367,7 +371,7 @@ TEXT: dict[str, str] = {
         "\n\nIf you are interested, I can send a detailed review with a suggestion of what to fix first.\n"
     ),
     "draft_unreachable": (
-        "Hello,\n\nI am writing about the site {domain}. {recenica}\n\n"
+        "Hello,\n\nI am writing about the site {domain}. {sentence}\n\n"
         "If you need help with the site, I would be glad to help.\n"
     ),
     "severity_critical": "CRITICAL",
@@ -386,8 +390,8 @@ REASONS: dict[str, str] = {
     "requires.soft404": "at least one of the two soft 404 probes did not complete",
     "requires.browser": "the page was not opened in the browser",
     "requires.network": "network traffic was not measured",
-    "v1_snapshot": "a snapshot from version {verzija} has no {polje}",
-    "check_crashed": "the check crashed: {greska}",
+    "v1_snapshot": "a snapshot from version {version} has no {field}",
+    "check_crashed": "the check crashed: {error}",
     "sitemap_status": (
         "the server answered the sitemap request with status {status}; that does not show whether it exists"
     ),
@@ -396,48 +400,49 @@ REASONS: dict[str, str] = {
         "exists"
     ),
     "probe_status": (
-        "the probes got status {statusi:join:, }; that does not show how the site answers a nonexistent "
+        "the probes got status {statuses:join:, }; that does not show how the site answers a nonexistent "
         "address"
     ),
-    "tls_no_connection": "no connection was established ({vrsta}), the certificate was not checked",
+    "tls_no_connection": "no connection was established ({kind}), the certificate was not checked",
     "tls_incomplete_chain": (
         "the server does not send the full certificate chain; a browser can complete the chain on its "
         "own, so it is unknown whether visitors see a warning"
     ),
     "tls_over_http": (
-        "https failed ({vrsta}: {detalj}); the site was fetched over http, the certificate was not checked"
+        "https failed ({kind}: {detail}); the site was fetched over http, the certificate was not checked"
     ),
-    "unmeasured_responses": "{nemereno} responses were not measured (threshold {prag})",
+    "unmeasured_responses": "{unmeasured} responses were not measured (threshold {threshold})",
     "load_incomplete": "loading was cut off before the end, the measurement is incomplete",
     "load_not_measured": "the loading time was not measured",
-    "images_unmeasured": "{nemereno} of {ukupno} images were not measured",
+    "images_unmeasured": "{unmeasured} of {total} images were not measured",
     "oversized_unmeasured": (
-        "{broj:n:oversized image has|oversized images have} no measured transfer, so the waste is unknown"
+        "{count:n:oversized image has|oversized images have} no measured transfer, so the waste is unknown"
     ),
     "h1_timeout": "the page did not finish loading, the h1 may arrive later",
     "images_timeout": "the page did not finish loading, the images were not counted",
-    "text_too_short": "too little text in the raw HTML ({duzina} < {prag} characters)",
+    "text_too_short": "too little text in the raw HTML ({length} < {threshold} characters)",
     "text_too_short_rendered": (
-        "too little text even on the page after JavaScript ({duzina} < {prag} characters)"
+        "too little text even on the page after JavaScript ({length} < {threshold} characters)"
     ),
     "unreachable_unsure": (
-        "the home page returned no response ({vrsta}, attempts: {pokusaja}); that does not show that the "
+        "the home page returned no response ({kind}, attempts: {attempts}); that does not show that the "
         "site is down"
     ),
     # duplicate checks when the sample has fewer pages than the threshold (Z-21)
     "pages_budget": (
-        "the sample has fewer than {prag:n:page|pages}, because the budget ran out before the end"
+        "the sample has fewer than {threshold:n:page|pages}, because the budget ran out before the end"
     ),
     "pages_sample": (
-        "the sample has fewer than {prag:n:page|pages}, but the site has at least "
-        "{adresa:n:internal address|internal addresses}"
+        "the sample has fewer than {threshold:n:page|pages}, but the site has at least "
+        "{address_count:n:internal address|internal addresses}"
     ),
     "pages_js": (
-        "the sample has fewer than {prag:n:page|pages}, and links drawn by JavaScript were not seen "
+        "the sample has fewer than {threshold:n:page|pages}, and links drawn by JavaScript were not seen "
         "(level 2 did not run, and the raw HTML of the home page is empty or has no h1)"
     ),
     "few_pages": (
-        "the site has {adresa:n:internal address|internal addresses}, and a comparison needs at least {prag}"
+        "the site has {address_count:n:internal address|internal addresses}, and a comparison "
+        "needs at least {threshold}"
     ),
     # host variants: http/https × www/without www (Z-26)
     "requires.host_variants": (
@@ -458,24 +463,24 @@ REASONS: dict[str, str] = {
         "under the profile"
     ),
     "link_slow": (
-        "the real connection was {izmereno} Mb/s, and measuring under the profile needs at least "
-        "{potrebno} Mb/s, so the time would be overstated"
+        "the real connection was {measured_mbps} Mb/s, and measuring under the profile needs at least "
+        "{required_mbps} Mb/s, so the time would be overstated"
     ),
     "variant_unchecked": (
-        "{adresa} was not seen the way a browser sees it ({vrsta}), so it is unknown whether it serves "
+        "{url} was not seen the way a browser sees it ({kind}), so it is unknown whether it serves "
         "the site"
     ),
-    "no_https": "https on {adresa} does not return a page, so there is nothing to redirect to",
+    "no_https": "https on {url} does not return a page, so there is nothing to redirect to",
     # why a domain was not scanned (the „Not scanned" list)
     "entry_missing": "the snapshot has no home page (fetching crashed, see the log)",
     "entry_status": "the home page returned status {status}",
-    "entry_error": "{vrsta}: {detalj}",
+    "entry_error": "{kind}: {detail}",
     # escalation to level 2
-    "raw_text_short": "the raw HTML has {znakova} characters of text (< {prag})",
+    "raw_text_short": "the raw HTML has {chars} characters of text (< {threshold})",
     "no_h1_raw": "the raw HTML has no h1 — level 2 checks whether JavaScript draws it",
     "medium_finding": "there is at least one level 1 finding of severity ≥ medium",
-    "html_large": "the home page HTML is {bajtova} B (> {prag})",
+    "html_large": "the home page HTML is {bytes} B (> {threshold})",
     "html_uncompressed": "the HTML is not sent compressed",
-    "slow_entry": "the home page responds in {ms} ms (> {prag})",
+    "slow_entry": "the home page responds in {ms} ms (> {threshold})",
     "forced_level2": "explicitly requested with --level 2",
 }

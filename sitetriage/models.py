@@ -27,7 +27,7 @@ Industry = Literal[
 DomainStatus = Literal["scanned", "partial", "failed", "unreachable", "excluded"]
 
 # JSON izveštaj: dodato polje podiže drugi broj, a obrisano ili promenjeno prvi (README).
-SCHEMA_VERSION = "2.0"
+SCHEMA_VERSION = "3.0"
 SEVERITY_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 INDUSTRIES: tuple[str, ...] = typing.get_args(Industry)
 CATEGORIES: tuple[str, ...] = typing.get_args(Category)
@@ -456,7 +456,7 @@ class ScanResult:
     """Ceo prolaz: metapodaci, zbir po statusu i rangirani izveštaji.
 
     Serijalizovan je to JSON izveštaj, pa redosled polja određuje i redosled ključeva, a
-    šema je u `sitetriage/schema/report-2.json`.
+    šema je u `sitetriage/schema/report-3.json`.
     """
 
     schema_version: str = SCHEMA_VERSION

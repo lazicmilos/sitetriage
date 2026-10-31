@@ -118,8 +118,8 @@ def test_ne_radi_samo_kad_je_sigurno(monkeypatch, tabela, status, razlog, pokusa
         return
     [nalaz] = nalazi
     assert nalaz.severity == "critical" and nalaz.category == "infra"
-    assert nalaz.evidence["razlog"] == razlog and nalaz.evidence["broj_pokusaja"] == 2
-    assert [nalaz.evidence["prvi_pokusaj"], nalaz.evidence["drugi_pokusaj"]] == snapshot.entry_attempts
+    assert nalaz.evidence["cause"] == razlog and nalaz.evidence["attempt_count"] == 2
+    assert [nalaz.evidence["first_attempt"], nalaz.evidence["second_attempt"]] == snapshot.entry_attempts
     assert all(t.endswith("Z") for t in snapshot.entry_attempts)
 
 
@@ -309,7 +309,7 @@ def test_razlog_greske_nosi_detalj():
     site = clean_site(pages=[])
     site.entry.status = None
     site.entry.error_kind, site.entry.error_detail = "tls_handshake", "EOF occurred in violation of protocol"
-    assert analyze(site, load_config()).reason.evidence["detalj"] == "EOF occurred in violation of protocol"
+    assert analyze(site, load_config()).reason.evidence["detail"] == "EOF occurred in violation of protocol"
 
 
 def test_unreachable_nije_u_rangiranju(tmp_path):

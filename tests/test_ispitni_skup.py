@@ -132,16 +132,16 @@ def test_restoran_centar_meri_preko_14_mb_i_daje_critical(izvestaji):
     report = izvestaji["restoran-centar.example"]
     tezina = next(f for f in report.findings if f.check_id == "perf.page.weight")
     assert tezina.severity == "critical"
-    assert tezina.evidence["bajtova"] > 14_000_000
+    assert tezina.evidence["bytes"] > 14_000_000
     assert tezina.evidence["mb"] > 14
     # Merenje preko mrežnih događaja, ne Performance API-ja (§7.2).
-    assert tezina.evidence["bajtova"] != 2048
+    assert tezina.evidence["bytes"] != 2048
 
 
 def test_prodavnica_ima_oko_175_zahteva(izvestaji):
     report = izvestaji["prodavnica.example"]
     zahtevi = next(f for f in report.findings if f.check_id == "perf.request.count")
-    assert zahtevi.evidence["zahteva"] >= 150 and zahtevi.severity == "high"
+    assert zahtevi.evidence["requests"] >= 150 and zahtevi.severity == "high"
     tezina = next(f for f in report.findings if f.check_id == "perf.page.weight")
     assert SEVERITY_ORDER[tezina.severity] >= SEVERITY_ORDER["medium"]
 
@@ -150,9 +150,9 @@ def test_ordinacija_dokaz_razlikuje_stanja_alt_atributa(izvestaji):
     """§12.4: dokaz mora reći 28/30 i razlikovati „nema atribut" od `alt=""`."""
     report = izvestaji["ordinacija.example"]
     alt = next(f for f in report.findings if f.check_id == "a11y.img.alt.missing")
-    assert alt.evidence["bez_alta"] == 28
-    assert alt.evidence["ukupno"] == 30
-    assert alt.evidence["prazan_alt"] == 1
+    assert alt.evidence["without_alt"] == 28
+    assert alt.evidence["total"] == 30
+    assert alt.evidence["empty_alt"] == 1
     assert alt.severity == "high", "udeo > 0,8 uz ≥ 15 slika prelazi u high (§7.4)"
 
 

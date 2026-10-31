@@ -37,7 +37,7 @@ def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         sitemap_missing.spec,
         ctx,
-        evidence={"status": info.status, "broj_urlova": len(info.urls)},
+        evidence={"status": info.status, "url_count": len(info.urls)},
         urls=[info.url] if info.url else [],
     )
 
@@ -79,7 +79,7 @@ def soft404(snapshot: SiteSnapshot, ctx: Context):
     if not all(s == 200 for s in statuses):
         odbijene = [s for s in statuses if s != 200 and s not in NE_POSTOJI]
         if odbijene:
-            return unknown(soft404.spec, "probe_status", statusi=odbijene)
+            return unknown(soft404.spec, "probe_status", statuses=odbijene)
         # Jedna sonda 200 a druga 404 → `ok`, ne nalaz (§5.2).
         return ok(soft404.spec)
 
@@ -94,9 +94,9 @@ def soft404(snapshot: SiteSnapshot, ctx: Context):
         )
     evidence = {
         "status": 200,
-        "broj_sondi": len(probes),
-        "slicnost": round(similarity, 3),
-        "tvrd_dokaz": similarity >= ctx.th("thresholds.soft404.text_similarity"),
+        "probe_count": len(probes),
+        "similarity": round(similarity, 3),
+        "hard_evidence": similarity >= ctx.th("thresholds.soft404.text_similarity"),
     }
     return finding(soft404.spec, ctx, evidence=evidence, urls=[p.url for p in probes])
 
@@ -117,11 +117,11 @@ def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
         # Veza koja nije ni uspostavljena ne dokazuje da je sertifikat ispravan.
         # `ok` bi ovde bio tvrdnja koju nismo proverili (§3.4).
         if entry.status is None:
-            return unknown(tls_invalid.spec, "tls_no_connection", vrsta=entry.error_kind)
+            return unknown(tls_invalid.spec, "tls_no_connection", kind=entry.error_kind)
         # Https nije uspeo, pa je sajt dohvaćen preko http-a: sertifikat nije ni viđen (BUG-004).
         https = next((e for e in snapshot.errors if e.stage == "entry"), None)
         if https is not None and entry.requested_url.startswith("http://"):
-            return unknown(tls_invalid.spec, "tls_over_http", vrsta=https.kind, detalj=https.detail[:120])
+            return unknown(tls_invalid.spec, "tls_over_http", kind=https.kind, detail=https.detail[:120])
         return ok(tls_invalid.spec)
     # Server ne šalje međusertifikat: Python odbija, a browser ga ume dopuniti sam, pa
     # „posetilac vidi upozorenje" nije dokazano.
@@ -130,7 +130,7 @@ def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         tls_invalid.spec,
         ctx,
-        evidence={"greska": tls.error or "nepoznata", "valid": 0},
+        evidence={"error": tls.error or "unknown", "valid": 0},
         urls=[snapshot.entry.requested_url],
     )
 
@@ -172,11 +172,11 @@ def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
     for url, varijanta in ((f"https://{host}/", https), (f"http://{host}/", http)):
         if varijanta is None or varijanta.error_kind in NEPROVERENA:
             vrsta = varijanta.error_kind if varijanta else "—"
-            return unknown(spec, "variant_unchecked", adresa=url, vrsta=vrsta)
+            return unknown(spec, "variant_unchecked", url=url, kind=vrsta)
     if https.status != 200 or not (https.final_url or "").startswith("https://"):
-        return not_applicable(spec, "no_https", adresa=https.url)
+        return not_applicable(spec, "no_https", url=https.url)
     if http.status == 200 and (http.final_url or "").startswith("http://"):
-        dokaz = {"http_adresa": http.url, "status": http.status, "https_adresa": https.url}
+        dokaz = {"http_url": http.url, "status": http.status, "https_url": https.url}
         return finding(spec, ctx, evidence=dokaz, urls=[http.url])
     return ok(spec)
 
@@ -208,7 +208,7 @@ def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
     if len(hostovi) < 2:
         for v in snapshot.host_variants:
             if v.error_kind in NEPROVERENA and host_of(v.url) not in hostovi:
-                return unknown(spec, "variant_unchecked", adresa=v.url, vrsta=v.error_kind)
+                return unknown(spec, "variant_unchecked", url=v.url, kind=v.error_kind)
         return ok(spec)
     canonical = {_poreklo(v.canonical) for v in sluze}
     isti = len(canonical) == 1 and "" not in canonical
@@ -217,13 +217,13 @@ def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
         ctx,
         evidence={
             # Hostovi, ne poreklo: uz http bez preusmerenja spisak je imao četiri adrese (BUG-017).
-            "adrese": sorted(hostovi),
-            "broj_adresa": len(hostovi),
-            "isti_canonical": int(isti),
+            "hosts": sorted(hostovi),
+            "host_count": len(hostovi),
+            "same_canonical": int(isti),
         },
         urls=sorted({v.url for v in sluze}),
         severity="low" if isti else None,
-        variant="isti_canonical" if isti else None,
+        variant="same_canonical" if isti else None,
     )
 
 
@@ -248,21 +248,21 @@ def unreachable(snapshot: SiteSnapshot, ctx: Context):
         return ok(unreachable.spec)
     if snapshot.scanner_version.startswith("1."):
         verzija = snapshot.scanner_version
-        return unknown(unreachable.spec, "v1_snapshot", verzija=verzija, polje="entry_attempts")
+        return unknown(unreachable.spec, "v1_snapshot", version=verzija, field="entry_attempts")
     razlog = snapshot.entry_unreachable()
     pokusaji = snapshot.entry_attempts
     # Jedan pokušaj, privremen DNS, prekinuto TLS rukovanje ili blokada ne dokazuju da sajt ne radi.
     if razlog is None or len(pokusaji) < 2:
-        return unknown(unreachable.spec, "unreachable_unsure", vrsta=entry.error_kind, pokusaja=len(pokusaji))
+        return unknown(unreachable.spec, "unreachable_unsure", kind=entry.error_kind, attempts=len(pokusaji))
     return finding(
         unreachable.spec,
         ctx,
         evidence={
-            "razlog": razlog,
-            "broj_pokusaja": len(pokusaji),
-            "prvi_pokusaj": pokusaji[0],
-            "drugi_pokusaj": pokusaji[-1],
-            "detalj": entry.error_detail or "",
+            "cause": razlog,
+            "attempt_count": len(pokusaji),
+            "first_attempt": pokusaji[0],
+            "second_attempt": pokusaji[-1],
+            "detail": entry.error_detail or "",
         },
         urls=[entry.requested_url],
     )

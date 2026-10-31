@@ -31,7 +31,7 @@ def stranica(lang: str) -> str:
         level=1,
         category="seo",
         severity="medium",
-        evidence={"stranica": "https://d.rs/", "duzina_naslova": 0},
+        evidence={"page": "https://d.rs/", "title_length": 0},
         weight=10.4,
     )
     izvestaji = [

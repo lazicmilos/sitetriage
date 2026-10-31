@@ -32,7 +32,7 @@ def nalaz(check_id: str, category: str, severity: str, level: int = 1) -> CheckR
                 level=level,
                 category=category,
                 severity=severity,
-                evidence={"broj": 1},
+                evidence={"count": 1},
             )
         ],
     )

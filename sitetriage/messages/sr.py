@@ -33,22 +33,23 @@ DECIMAL = decimalni
 
 # Tehnički kodovi iz dokaza, onako kako se čitaju u rečenici.
 CODES: dict[str, dict[object, str]] = {
-    "kodiranje": {None: "nema"},
-    "vrsta": {
+    "encoding": {None: "nema"},
+    "error": {"unknown": "nepoznata"},
+    "kind": {
         None: "nepoznato",
         "dns_temporary": "DNS privremeno nedostupan",
         "blocked": "zaštita od SSRF-a",
     },
-    "uzorak": {"sitemap": "sitemap", "links": "interni linkovi sa početne", "none": "samo početna"},
-    "izvor": {"sirovi_html": "sirovi HTML", "nivo2": "stranica posle JavaScript-a"},
-    "razlog": {
+    "sample": {"sitemap": "sitemap", "links": "interni linkovi sa početne", "none": "samo početna"},
+    "source": {"raw_html": "sirovi HTML", "rendered": "stranica posle JavaScript-a"},
+    "cause": {
         "dns": "domen nema zapis koji ga povezuje sa serverom",
         "no_response": "server nije prihvatio vezu ni preko https ni preko http",
     },
 }
 
 _TEZINA = (
-    "Na sporijoj mobilnoj vezi ({brzina} Mb/s) za to je potrebno oko {sekundi} s."
+    "Na sporijoj mobilnoj vezi ({speed_mbps} Mb/s) za to je potrebno oko {seconds} s."
 )
 
 FINDINGS: dict[str, dict] = {
@@ -56,31 +57,31 @@ FINDINGS: dict[str, dict] = {
     "perf.compression.missing": {
         "client": (
             "Server šalje stranicu nesažetu ({kb} kB). Sažimanje bi prenos smanjilo na otprilike "
-            "četvrtinu, što na sporijoj mobilnoj vezi ({brzina} Mb/s) skraćuje učitavanje za oko "
-            "{usteda_s} s."
+            "četvrtinu, što na sporijoj mobilnoj vezi ({speed_mbps} Mb/s) skraćuje učitavanje za oko "
+            "{saving_s} s."
         ),
-        "tech": "content-encoding={kodiranje}, html_bytes={bajtova} (dekodirano), ušteda ≈ {usteda_s} s",
+        "tech": "content-encoding={encoding}, html_bytes={bytes} (dekodirano), ušteda ≈ {saving_s} s",
     },
     "perf.redirect.chain": {
         "client": (
-            "Otvaranje početne strane prolazi kroz {skokova} preusmerenja pre nego što se nešto "
+            "Otvaranje početne strane prolazi kroz {hops} preusmerenja pre nego što se nešto "
             "prikaže. Svako od njih dodaje čekanje, najviše na mobilnoj vezi."
         ),
-        "tech": "redirect_chain={skokova} skokova: {lanac:join: → }",
+        "tech": "redirect_chain={hops} skokova: {chain:join: → }",
     },
     "perf.html.size": {
         "client": (
             "Sam kod početne strane teži {kb} kB, pre slika i skripti. Pretraživač mora sve to "
             "da preuzme i obradi, što usporava prikaz, najviše na telefonu."
         ),
-        "tech": "html_bytes={bajtova} > {prag_kb} kB",
+        "tech": "html_bytes={bytes} > {threshold_kb} kB",
     },
     "perf.page.weight": {
         "client": "Početna strana prenosi {mb} MB. " + _TEZINA,
         "tech": (
-            "bytes_at_load={bajtova}, bez videa {mb} MB, video {video_mb} MB, zahteva={zahteva}, "
-            "nemereno={nemereno}, reached={reached}; sa onim posle load {ukupno_bajtova} B i "
-            "{ukupno_zahteva} zahteva (informativno)"
+            "bytes_at_load={bytes}, bez videa {mb} MB, video {video_mb} MB, zahteva={requests}, "
+            "nemereno={unmeasured}, reached={reached}; sa onim posle load {total_bytes} B i "
+            "{total_requests} zahteva (informativno)"
         ),
         "variants": {
             "video": {"client": "Početna strana prenosi {mb} MB (video dodatno {video_mb} MB). " + _TEZINA}
@@ -89,21 +90,21 @@ FINDINGS: dict[str, dict] = {
     "perf.request.count": {
         "client": (
             "Otvaranje početne strane pokreće "
-            "{zahteva:n:odvojeno preuzimanje|odvojena preuzimanja|odvojenih preuzimanja}. Svako ima "
+            "{requests:n:odvojeno preuzimanje|odvojena preuzimanja|odvojenih preuzimanja}. Svako ima "
             "svoju režiju, što se najviše oseti na mobilnoj vezi."
         ),
-        "tech": "requests_at_load={zahteva}, sa onim posle load {ukupno_zahteva} (reached={reached})",
+        "tech": "requests_at_load={requests}, sa onim posle load {total_requests} (reached={reached})",
     },
     "perf.load.time": {
         "client": (
-            "Na simuliranoj vezi od {brzina} Mb/s početnoj strani treba {sekundi} s da se do kraja "
+            "Na simuliranoj vezi od {speed_mbps} Mb/s početnoj strani treba {seconds} s da se do kraja "
             "učita."
         ),
         "tech": "load_ms={load_ms}, reached={reached}",
         "variants": {
             "timeout": {
                 "client": (
-                    "Na simuliranoj vezi od {brzina} Mb/s početna strana se ni za {sekundi} s nije "
+                    "Na simuliranoj vezi od {speed_mbps} Mb/s početna strana se ni za {seconds} s nije "
                     "do kraja učitala."
                 )
             }
@@ -114,14 +115,17 @@ FINDINGS: dict[str, dict] = {
             "Sajt šalje slike znatno veće nego što se prikazuju — oko {kb} kB nepotrebnog prenosa "
             "pri prvoj poseti."
         ),
-        "tech": "{broj_slika} slika sa ratio > {prag_odnosa}, procenjen višak {kb} kB, nemereno {nemereno}",
+        "tech": (
+            "{image_count} slika sa ratio > {ratio_threshold}, procenjen višak {kb} kB, "
+            "nemereno {unmeasured}"
+        ),
     },
     "qa.console.errors": {
         "client": (
-            "Pri otvaranju početne strane Chrome prijavljuje {greske:n:grešku|greške|grešaka} (delovi "
+            "Pri otvaranju početne strane Chrome prijavljuje {errors:n:grešku|greške|grešaka} (delovi "
             "strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba."
         ),
-        "tech": "console errors={greske}, warnings={upozorenja}",
+        "tech": "console errors={errors}, warnings={warnings}",
     },
     # ------------------------------------------------------------------- seo
     "seo.canonical.missing": {
@@ -130,17 +134,17 @@ FINDINGS: dict[str, dict] = {
             "postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira "
             "koju će prikazati — i ume da izabere pogrešnu."
         ),
-        "tech": "{stranica}: nedostaje <link rel=canonical>",
+        "tech": "{page}: nedostaje <link rel=canonical>",
     },
     "seo.canonical.duplicate": {
         "client": (
-            "{stranica} od {ukupno:n:proverene stranice|proverene stranice|proverenih stranica} sajta "
+            "{page_count} od {total:n:proverene stranice|proverene stranice|proverenih stranica} sajta "
             "prijavljuje Google-u drugu adresu kao zvaničnu ({canonical}). Google ih zato može smatrati "
             "kopijama te adrese i izostaviti iz pretrage."
         ),
         "tech": (
-            "canonical_normalized == {canonical} na {stranica} od {ukupno} stranica (udeo {udeo}) "
-            "iz {grupa_putanja} grupa putanja (uzorak: {uzorak})"
+            "canonical_normalized == {canonical} na {page_count} od {total} stranica (udeo {share}) "
+            "iz {path_groups} grupa putanja (uzorak: {sample})"
         ),
     },
     "seo.title.missing": {
@@ -148,28 +152,28 @@ FINDINGS: dict[str, dict] = {
             "Početna strana nema naslov. U kartici pretraživača zato stoji goli deo adrese, a "
             "Google u rezultatima sam smišlja naslov iz sadržaja strane."
         ),
-        "tech": "{stranica}: <title> prazan ili nedostaje (dužina {duzina_naslova})",
+        "tech": "{page}: <title> prazan ili nedostaje (dužina {title_length})",
     },
     "seo.title.duplicate": {
         "client": (
-            "Različite stranice sajta imaju isti naslov („{naslov}”), njih {stranica}. Naslov tako ni "
+            "Različite stranice sajta imaju isti naslov („{title}”), njih {page_count}. Naslov tako ni "
             "Google-u ni posetiocu ne govori po čemu se te stranice razlikuju."
         ),
-        "tech": "identičan normalizovan <title> na {stranica} stranica iz {grupa_putanja} grupa putanja",
+        "tech": "identičan normalizovan <title> na {page_count} stranica iz {path_groups} grupa putanja",
     },
     "seo.description.missing": {
         "client": (
             "Početna strana nema kratak opis za Google. Google tada sam bira tekst sa strane za "
             "prikaz ispod naslova, a to ume da bude deo menija ili obaveštenja o kolačićima."
         ),
-        "tech": "{stranica}: nedostaje <meta name=description> (dužina {duzina_opisa})",
+        "tech": "{page}: nedostaje <meta name=description> (dužina {description_length})",
     },
     "seo.description.duplicate": {
         "client": (
-            "Različite stranice sajta imaju isti kratak opis za Google, njih {stranica}. Opis tako ni "
+            "Različite stranice sajta imaju isti kratak opis za Google, njih {page_count}. Opis tako ni "
             "Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju."
         ),
-        "tech": "identičan normalizovan meta opis na {stranica} stranica iz {grupa_putanja} grupa putanja",
+        "tech": "identičan normalizovan meta opis na {page_count} stranica iz {path_groups} grupa putanja",
     },
     "seo.h1.missing": {
         "client": (
@@ -183,7 +187,7 @@ FINDINGS: dict[str, dict] = {
             "Početna strana ima {h1_count:n:glavni naslov|glavna naslova|glavnih naslova} (h1) umesto "
             "jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane."
         ),
-        "tech": "h1_count == {h1_count} > {prag}",
+        "tech": "h1_count == {h1_count} > {threshold}",
     },
     # ---------------------------------------------------------------- social
     "social.og.title.missing": {
@@ -191,21 +195,21 @@ FINDINGS: dict[str, dict] = {
             "Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova "
             "za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu."
         ),
-        "tech": "{stranica}: nedostaje og:title (ukupno og oznaka: {og_oznaka_ukupno})",
+        "tech": "{page}: nedostaje og:title (ukupno og oznaka: {og_tag_count})",
     },
     "social.og.description.missing": {
         "client": (
             "Kad se link sajta podeli, platforme nemaju pripremljen opis, pa same biraju tekst sa "
             "strane ili ne prikazuju nijedan."
         ),
-        "tech": "{stranica}: nedostaje og:description (ukupno og oznaka: {og_oznaka_ukupno})",
+        "tech": "{page}: nedostaje og:description (ukupno og oznaka: {og_tag_count})",
     },
     "social.og.image.missing": {
         "client": (
             "Podeljen link sajta nema pripremljenu sliku, pa platforme same biraju sliku sa strane "
             "ili je ne prikazuju."
         ),
-        "tech": "{stranica}: nedostaje og:image (ukupno og oznaka: {og_oznaka_ukupno})",
+        "tech": "{page}: nedostaje og:image (ukupno og oznaka: {og_tag_count})",
     },
     # ------------------------------------------------------------------ i18n
     "i18n.lang.missing": {
@@ -213,14 +217,14 @@ FINDINGS: dict[str, dict] = {
             "Početna strana u kodu nema oznaku jezika (lang). Čitači ekrana, koje koriste slepi i "
             "slabovidi posetioci, zato ne znaju kojim izgovorom da je čitaju."
         ),
-        "tech": "{stranica}: <html> bez lang atributa (izvor: {izvor})",
+        "tech": "{page}: <html> bez lang atributa (izvor: {source})",
     },
     "i18n.lang.invalid": {
         "client": (
             "Sajt je u kodu označen oznakom „{lang}”, koja nije ispravna oznaka nijednog jezika. "
             "Čitači ekrana zato ne mogu da se oslone na nju."
         ),
-        "tech": '{stranica}: lang="{lang}" nije upotrebljiv BCP-47 kod (izvor: {izvor})',
+        "tech": '{page}: lang="{lang}" nije upotrebljiv BCP-47 kod (izvor: {source})',
     },
     "i18n.lang.mismatch": {
         "client": (
@@ -229,9 +233,9 @@ FINDINGS: dict[str, dict] = {
             "jezika, pa je teško razumljiv."
         ),
         "tech": (
-            '{stranica}: lang="{lang}", sadržaj prepoznat kao {prepoznat_jezik} '
-            "(ćirilica {cirilica_udeo}, dijakritici {dijakritici_udeo}, {duzina_teksta} znakova; "
-            "izvor: {izvor})"
+            '{page}: lang="{lang}", sadržaj prepoznat kao {detected_language} '
+            "(ćirilica {cyrillic_share}, dijakritici {diacritic_share}, {text_length} znakova; "
+            "izvor: {source})"
         ),
     },
     # ----------------------------------------------------------------- infra
@@ -240,7 +244,7 @@ FINDINGS: dict[str, dict] = {
             "Sajt nema mapu stranica (sitemap). Google zato nove i dublje stranice pronalazi samo "
             "preko linkova, sporije, a stranice do kojih ne vodi nijedan link može i da ne pronađe."
         ),
-        "tech": "sitemap status={status}, urls={broj_urlova}",
+        "tech": "sitemap status={status}, urls={url_count}",
     },
     "infra.robots.missing": {
         "client": (
@@ -255,36 +259,36 @@ FINDINGS: dict[str, dict] = {
             "izmišljene adrese otvorile su stranicu sa statusom {status}. Pretraživači zato teže "
             "razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese."
         ),
-        "tech": "obe sonde status={status}, sličnost sa početnom {slicnost}",
+        "tech": "obe sonde status={status}, sličnost sa početnom {similarity}",
     },
     "infra.tls.invalid": {
         "client": (
             "Sertifikat sajta nije valjan, pa pretraživač posetiocima prikazuje upozorenje pre nego "
             "što uđu na sajt."
         ),
-        "tech": "TLS greška: {greska}",
+        "tech": "TLS greška: {error}",
     },
     "infra.https.redirect.missing": {
         "client": (
-            "Sajt se otvara i na nezaštićenoj adresi {http_adresa}, bez preusmerenja na {https_adresa}. "
+            "Sajt se otvara i na nezaštićenoj adresi {http_url}, bez preusmerenja na {https_url}. "
             "Chrome takvu stranicu označava sa „Nije bezbedno”."
         ),
         "tech": (
-            "{http_adresa} → {status} bez preusmerenja na https; {https_adresa} → 200 sa ispravnim "
+            "{http_url} → {status} bez preusmerenja na https; {https_url} → 200 sa ispravnim "
             "sertifikatom"
         ),
     },
     "infra.host.duplicate": {
         "client": (
-            "Isti sajt se otvara na {broj_adresa:n:adresi|adrese|adresa} ({adrese:join:, }), a nijedna ne "
+            "Isti sajt se otvara na {host_count:n:adresi|adrese|adresa} ({hosts:join:, }), a nijedna ne "
             "preusmerava na drugu. Google ih zato vidi kao različite adrese sa istim sadržajem i sam bira "
             "koju da prikaže u pretrazi."
         ),
-        "tech": "200 bez preusmerenja na: {adrese:join:, }; isti canonical na svima: {isti_canonical}",
+        "tech": "200 bez preusmerenja na: {hosts:join:, }; isti canonical na svima: {same_canonical}",
         "variants": {
-            "isti_canonical": {
+            "same_canonical": {
                 "client": (
-                    "Isti sajt se otvara na {broj_adresa:n:adresi|adrese|adresa} ({adrese:join:, }), a "
+                    "Isti sajt se otvara na {host_count:n:adresi|adrese|adresa} ({hosts:join:, }), a "
                     "nijedna ne preusmerava na drugu. Oznaka canonical na svima upućuje na istu adresu, "
                     "pa Google zna koju da prikaže, ali preusmerenje nije podešeno."
                 )
@@ -293,29 +297,29 @@ FINDINGS: dict[str, dict] = {
     },
     "infra.unreachable": {
         "client": (
-            "Sajt se nije otvorio ni u jednom od {broj_pokusaja} pokušaja ({prvi_pokusaj:utc} i "
-            "{drugi_pokusaj:utc} UTC): {razlog}."
+            "Sajt se nije otvorio ni u jednom od {attempt_count} pokušaja ({first_attempt:utc} i "
+            "{second_attempt:utc} UTC): {cause}."
         ),
-        "tech": "pokušaji {prvi_pokusaj} i {drugi_pokusaj}, poslednja greška: {detalj}",
+        "tech": "pokušaji {first_attempt} i {second_attempt}, poslednja greška: {detail}",
     },
     # ------------------------------------------------------------------ a11y
     "a11y.img.alt.missing": {
         "client": (
-            "Na početnoj strani {bez_alta} od {ukupno:n:slike|slike|slika} nema tekstualni opis "
+            "Na početnoj strani {without_alt} od {total:n:slike|slike|slika} nema tekstualni opis "
             "(alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima "
             "manje podataka za pretragu slika."
         ),
         "tech": (
-            "images_without_alt_attr={bez_alta}/{ukupno} (udeo {udeo}), "
-            "images_empty_alt={prazan_alt} se namerno ne broji, nemereno={nemereno}"
+            "images_without_alt_attr={without_alt}/{total} (udeo {share}), "
+            "images_empty_alt={empty_alt} se namerno ne broji, nemereno={unmeasured}"
         ),
     },
 }
 
 # Oznake u HTML izveštaju i nacrt mejla. Ključevi sa `_html` smeju da sadrže oznake.
 TEXT: dict[str, str] = {
-    "page_title": "Skener — izveštaj",
-    "heading": "Skener sajtova — izveštaj",
+    "page_title": "SiteTriage — izveštaj",
+    "heading": "SiteTriage — izveštaj",
     "run_of": "Prolaz od {generated} · verzija alata {version}",
     "card_domains": "Domena",
     "card_scanned": "Skenirano",
@@ -353,8 +357,8 @@ TEXT: dict[str, str] = {
     "col_reason": "Razlog",
     "col_check": "Provera",
     "col_share": "Udeo",
-    "percent": "{udeo} %",
-    "share_budget": "Potrošen budžet: {udeo} % domena koji rade",
+    "percent": "{share} %",
+    "share_budget": "Potrošen budžet: {share} % domena koji rade",
     "share_unknown": "Nije moglo da se proveri, po proveri (udeo domena koji rade)",
     "assumption_html": (
         "<b>Pretpostavka za procenu vremena učitavanja:</b> efektivna brzina\n"
@@ -374,7 +378,7 @@ TEXT: dict[str, str] = {
     "copied": "Kopirano ✓",
     "no_findings": "Nijedan nalaz — sajt je na proverenim tačkama uredan.",
     "unknowns": "Nije moglo da se proveri ({count})",
-    "not_applicable": "ne primenjuje se: {tekst}",
+    "not_applicable": "ne primenjuje se: {text}",
     "escalated_because": "Na nivo 2 poslat jer: ",
     "finding_meta": "· nivo {level} · bodovi: {weight}",
     "draft_clean": "Na sajtu {domain} nisam našao značajnije probleme.",
@@ -383,7 +387,7 @@ TEXT: dict[str, str] = {
         "\n\nAko vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo popraviti.\n"
     ),
     "draft_unreachable": (
-        "Poštovani,\n\npišem u vezi sa sajtom {domain}. {recenica}\n\n"
+        "Poštovani,\n\npišem u vezi sa sajtom {domain}. {sentence}\n\n"
         "Ako vam je potrebna pomoć oko sajta, rado ću pomoći.\n"
     ),
     "severity_critical": "KRITIČNO",
@@ -404,56 +408,60 @@ REASONS: dict[str, str] = {
     "requires.soft404": "bar jedna od dve sonde za lažni 404 nije izvršena",
     "requires.browser": "stranica nije otvorena u browseru",
     "requires.network": "mrežni saobraćaj nije izmeren",
-    "v1_snapshot": "snapshot iz verzije {verzija} nema {polje}",
-    "check_crashed": "provera je pukla: {greska}",
+    "v1_snapshot": "snapshot iz verzije {version} nema {field}",
+    "check_crashed": "provera je pukla: {error}",
     "sitemap_status": "server je na sitemap odgovorio statusom {status}; iz toga se ne vidi da li postoji",
     "robots_status": "server je na robots.txt odgovorio statusom {status}; iz toga se ne vidi da li postoji",
     "probe_status": (
-        "sonde su dobile status {statusi:join:, }; iz toga se ne vidi kako sajt odgovara na "
+        "sonde su dobile status {statuses:join:, }; iz toga se ne vidi kako sajt odgovara na "
         "nepostojeću adresu"
     ),
-    "tls_no_connection": "veza nije uspostavljena ({vrsta}), sertifikat nije proveren",
+    "tls_no_connection": "veza nije uspostavljena ({kind}), sertifikat nije proveren",
     "tls_incomplete_chain": (
         "server ne šalje ceo lanac sertifikata; browser ume sam da dopuni lanac, pa se ne zna da li "
         "posetilac vidi upozorenje"
     ),
     "tls_over_http": (
-        "https nije uspeo ({vrsta}: {detalj}); sajt je dohvaćen preko http-a, sertifikat nije proveren"
+        "https nije uspeo ({kind}: {detail}); sajt je dohvaćen preko http-a, sertifikat nije proveren"
     ),
-    "unmeasured_responses": "{nemereno} odgovora nije izmereno (prag {prag})",
+    "unmeasured_responses": "{unmeasured} odgovora nije izmereno (prag {threshold})",
     "load_incomplete": "učitavanje prekinuto pre kraja, izmereno je nepotpuno",
     "load_not_measured": "vreme učitavanja nije izmereno",
-    "images_unmeasured": "{nemereno} od {ukupno:n:slike|slike|slika} nije izmereno",
+    "images_unmeasured": "{unmeasured} od {total:n:slike|slike|slika} nije izmereno",
     "oversized_unmeasured": (
-        "{broj:n:prevelika slika nema|prevelike slike nemaju|prevelikih slika nema} izmeren prenos, "
+        "{count:n:prevelika slika nema|prevelike slike nemaju|prevelikih slika nema} izmeren prenos, "
         "pa višak nije poznat"
     ),
     "h1_timeout": "stranica nije dovršila učitavanje, h1 može da stigne kasnije",
     "images_timeout": "stranica nije dovršila učitavanje, slike nisu prebrojane",
-    "text_too_short": "premalo teksta u sirovom HTML-u ({duzina} < {prag} znakova)",
-    "text_too_short_rendered": "premalo teksta i na stranici posle JavaScript-a ({duzina} < {prag} znakova)",
+    "text_too_short": "premalo teksta u sirovom HTML-u ({length} < {threshold} znakova)",
+    "text_too_short_rendered": (
+        "premalo teksta i na stranici posle JavaScript-a ({length} < {threshold} "
+        "znakova)"
+    ),
     "unreachable_unsure": (
-        "početna nije vratila odgovor ({vrsta}, pokušaja: {pokusaja}); iz toga se ne vidi da sajt ne radi"
+        "početna nije vratila odgovor ({kind}, pokušaja: {attempts}); iz toga se ne vidi da sajt ne radi"
     ),
     # provere duplikata kad uzorak ima manje stranica od praga (Z-21)
     "pages_budget": (
-        "uzorak ima manje od {prag:n:stranice|stranice|stranica}, jer je budžet potrošen pre kraja"
+        "uzorak ima manje od {threshold:n:stranice|stranice|stranica}, jer je budžet potrošen pre kraja"
     ),
     "pages_sample": (
-        "uzorak ima manje od {prag:n:stranice|stranice|stranica}, a sajt ima bar "
-        "{adresa:n:internu adresu|interne adrese|internih adresa}"
+        "uzorak ima manje od {threshold:n:stranice|stranice|stranica}, a sajt ima bar "
+        "{address_count:n:internu adresu|interne adrese|internih adresa}"
     ),
     "pages_js": (
-        "uzorak ima manje od {prag:n:stranice|stranice|stranica}, a veze koje crta JavaScript nisu "
+        "uzorak ima manje od {threshold:n:stranice|stranice|stranica}, a veze koje crta JavaScript nisu "
         "viđene (nivo 2 nije radio, a sirovi HTML početne je prazan ili bez h1)"
     ),
     "few_pages": (
-        "sajt ima {adresa:n:internu adresu|interne adrese|internih adresa}, a za poređenje treba bar {prag}"
+        "sajt ima {address_count:n:internu adresu|interne adrese|internih adresa}, a za "
+        "poređenje treba bar {threshold}"
     ),
     # varijante hosta: http/https × www/bez www (Z-26)
     "requires.host_variants": "varijante adrese (http/https, sa i bez www) nisu dohvaćene u ovom snimku",
-    "variant_unchecked": "{adresa} nije viđena kao u pretraživaču ({vrsta}), pa se ne zna da li služi sajt",
-    "no_https": "https na {adresa} ne vraća stranicu, pa nema na šta da se preusmerava",
+    "variant_unchecked": "{url} nije viđena kao u pretraživaču ({kind}), pa se ne zna da li služi sajt",
+    "no_https": "https na {url} ne vraća stranicu, pa nema na šta da se preusmerava",
     # lagani nivo 2 za sajtove van limita (BUG-020)
     "requires.level2_full": (
         "sajt je meren lagano, bez mrežnog profila, jer nije bio među sajtovima izabranim za pun "
@@ -468,19 +476,20 @@ REASONS: dict[str, str] = {
         "stvarna veza nije izmerena pre nivoa 2, pa se ne zna da li je vreme mereno pod profilom"
     ),
     "link_slow": (
-        "stvarna veza je bila {izmereno} Mb/s, a za merenje pod profilom treba bar {potrebno} Mb/s, "
+        "stvarna veza je bila {measured_mbps} Mb/s, a za merenje pod profilom treba bar "
+        "{required_mbps} Mb/s, "
         "pa bi vreme bilo precenjeno"
     ),
     # zašto domen nije skeniran (lista „Nije skenirano")
     "entry_missing": "snapshot nema početnu (dohvatanje je puklo, vidi log)",
     "entry_status": "početna je vratila status {status}",
-    "entry_error": "{vrsta}: {detalj}",
+    "entry_error": "{kind}: {detail}",
     # eskalacija na nivo 2
-    "raw_text_short": "sirovi HTML ima {znakova:n:znak|znaka|znakova} teksta (< {prag})",
+    "raw_text_short": "sirovi HTML ima {chars:n:znak|znaka|znakova} teksta (< {threshold})",
     "no_h1_raw": "sirovi HTML nema nijedan h1 — nivo 2 proverava da li ga crta JavaScript",
     "medium_finding": "ima bar jedan nalaz nivoa 1 ozbiljnosti ≥ medium",
-    "html_large": "HTML početne je {bajtova} B (> {prag})",
+    "html_large": "HTML početne je {bytes} B (> {threshold})",
     "html_uncompressed": "HTML se ne šalje kompresovan",
-    "slow_entry": "početna odgovara za {ms} ms (> {prag})",
+    "slow_entry": "početna odgovara za {ms} ms (> {threshold})",
     "forced_level2": "izričito traženo preko --level 2",
 }

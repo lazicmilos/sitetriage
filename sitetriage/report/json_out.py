@@ -1,7 +1,7 @@
 """JSON izveštaj: ugovor za programe koji čitaju izlaz (web aplikacija, `diff`, `outcomes`, CRM).
 
 Serijalizovan `ScanResult`, bez rečenica: rečenica se pravi iz dokaza na jeziku onoga ko
-čita. Oblik opisuje `sitetriage/schema/report-2.json`, a pravila promene su u README-u.
+čita. Oblik opisuje `sitetriage/schema/report-3.json`, a pravila promene su u README-u.
 """
 
 from __future__ import annotations
