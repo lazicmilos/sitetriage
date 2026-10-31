@@ -77,7 +77,7 @@ U odnosu na merenje posle F0 (25.09.) nijedan modul nije pao. Najniža pokriveno
 
 Jedan slučaj namerno pada: `test_browser_ne_prati_preusmerenje_na_privatnu_adresu` (`xfail`,
 strogo). Playwright-ov `route` ne vidi cilj preusmerenja, pa nivo 2 ovu zaštitu nema. Ograničenje
-je opisano u [ADR-006](adr/ADR-006-ssrf.md), a u web fazi tu štiti egress filter.
+je opisano u [ADR-006](../adr/ADR-006-ssrf.md), a u web fazi tu štiti egress filter.
 
 ### 3.2 Mutaciono testiranje
 
@@ -136,7 +136,7 @@ Dva ograničenja ovog broja:
 ### 3.3 Statičko testiranje: katalog poruka
 
 Od Z-12 rečenice za klijenta žive u katalogu, odvojene od provera, na srpskom i engleskom
-([ADR-009](adr/ADR-009-katalog-poruka.md)). Po jeziku katalog ima 33 rečenice za klijenta (30
+([ADR-009](../adr/ADR-009-katalog-poruka.md)). Po jeziku katalog ima 33 rečenice za klijenta (30
 provera, tri sa varijantom), 46 razloga za „ne zna se” i 52 oznake izveštaja i nacrta mejla, ukupno
 131 stavku.
 
@@ -446,7 +446,7 @@ STATUS      Ispravljen 05.10. (greška `http_status`, provere nivoa 2 `unknown`;
 | 1 | BUG-021: glavni dokument nivoa 2 sa statusom ≥ 400 je neuspelo snimanje, pa su provere nivoa 2 `unknown`. UA gubi „Headless”, a identitet operatera ostaje | ispravljeno; UA potvrđen na B (06.10.), status ≥ 400 samo testom |
 | 2 | BUG-022: nivo 1 prati preusmerenje samo JavaScript-om ili meta-refresh-om na isti sajt kao HTTP preusmerenje. Strana „u pripremi” i parkiran domen bez preusmerenja ostaju zapažanje (O-16) | ispravljeno; potvrđeno na B (06.10.) |
 | 3 | Nova provera „početna skoro bez sadržaja” (O-15), kalibrisana na A i B | u README-u, „Planirano, nije u v2” |
-| 4 | [ADR-011](adr/ADR-011-json-sema.md) (`report.json` kao ugovor sa šemom i verzijom) postaje „Prihvaćeno” | urađeno |
+| 4 | [ADR-011](../adr/ADR-011-json-sema.md) (`report.json` kao ugovor sa šemom i verzijom) postaje „Prihvaćeno” | urađeno |
 | 5 | Kriterijum „`diff` istog izveštaja je prazan” prelazi u F4, pa izdanje v2.0.0 ne čeka na njega | urađeno (plan testiranja v2.2) |
 | 6 | Z-32 na preporučenoj mašini meri se pri prvom prolazu na VPS-u, pre prvog plaćenog izveštaja | otvoreno |
 | 7 | Recenzija kataloga: 15 ispravki; rečenice o ponašanju ljudi bez izvora se izbacuju; BUG-023 do BUG-026 se ispravljaju odmah | urađeno |

@@ -7,9 +7,9 @@ Author:  Milos Lazic
 Covers:  Z-52 (with O-17, O-21)
 ```
 
-Recorded on 2026-10-31 from `docs/obrazac-rucne-provere.md`, `docs/plan-testiranja.md` (§3, §4),
-`docs/izvestaj-testiranja-3.md` §3.6 and §4, `docs/kalibracija.md` (2026-10-04 to 2026-10-06),
-`docs/provera-na-pravim-sajtovima.md` §3 and the commit history.
+Recorded on 2026-10-31 from `docs/manual-check-form.md`, `docs/sr/plan-testiranja.md` (§3, §4),
+`docs/sr/izvestaj-testiranja-3.md` §3.6 and §4, `docs/sr/kalibracija.md` (2026-10-04 to 2026-10-06),
+`docs/real-site-verification.md` §3 and the commit history.
 
 ## Context
 
@@ -21,7 +21,7 @@ test, done by the product owner over the report of the run on list B (the valida
 
 ## Decision
 
-The protocol is the form in `docs/obrazac-rucne-provere.md`:
+The protocol is the form in `docs/manual-check-form.md`:
 
 - The check is done as soon as possible after the run, at the latest within 3 days. Sites change, and a
   finding is judged against the state of the site at scan time. If the site changed in between, the
@@ -74,7 +74,7 @@ Three rounds were run on list B:
   missing `<meta name="viewport">` (O-20) were reasons for "would send"; one "no" was an association,
   not a business, although all its findings were correct (O-17). Conclusion: choosing the domains is
   the job of the operator who builds the list, not of the tool.
-- Unclear from the record: `docs/kalibracija.md` (2026-10-06) and O-21 say that "the 80 % rule of
+- Unclear from the record: `docs/sr/kalibracija.md` (2026-10-06) and O-21 say that "the 80 % rule of
   Z-52" covers a site whose weight sat right at the 7 MB threshold and moved between modes. The rule
   itself is not written down anywhere in the repository; it is presumably part of the unpublished
   text of Z-52.

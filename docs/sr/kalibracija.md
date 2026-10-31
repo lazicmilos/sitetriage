@@ -1,7 +1,7 @@
 # Kalibracija
 
 Dnevnik odluka iz provera na pravim sajtovima. Oblik: **zapažanje — uzrok — odluka**.
-Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
+Kako se provera radi, piše u [`provera-na-pravim-sajtovima.md`](../real-site-verification.md).
 
 ## 2026-10-06 — novi pun prolaz nad listom B posle BUG-021 do BUG-026
 
@@ -295,7 +295,7 @@ uporedo. Pre svakog prolaza izmerena je stvarna veza, preuzimanjem 25 MB: 3,2, 3
 - **Uzrok:** mreža se nije simulirala, a profil postavljen na stranicu ne važi za poseban proces
   iframe-a.
 - **Odluka:** nivo 2 meri pod `[network_profile]` (4,8 / 1,5 Mb/s, 150 ms), a Chromium radi bez
-  izolacije sajtova ([ADR-010](adr/ADR-010-mrezni-profil.md)). Pragovi `load_ms` (4 / 8 s),
+  izolacije sajtova ([ADR-010](../adr/ADR-010-mrezni-profil.md)). Pragovi `load_ms` (4 / 8 s),
   `browser.timeout_s` (25 s) i `browser.max_seconds_per_domain` (60 s) ostaju do Z-50, kad se
   određuju iz raspodele izmerene pod profilom. Do tada očekuj više nalaza za vreme. Na 0,6 MB/s
   medijana prenete težine sa liste A (oko 3 MB) traje oko 5 s, a p90 (oko 8 MB) oko 13 s, pa

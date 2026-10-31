@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-50, Z-51 (with Z-23, O-1, O-9, O-14; test-plan risk R5)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md`, `docs/plan-testiranja.md` (§3, §4, §7),
-`docs/izvestaj-testiranja-2.md`, `docs/izvestaj-testiranja-3.md` (§3.4, §3.5), `docs/kvalitet.md`,
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md`, `docs/sr/plan-testiranja.md` (§3, §4, §7),
+`docs/sr/izvestaj-testiranja-2.md`, `docs/sr/izvestaj-testiranja-3.md` (§3.4, §3.5), `docs/sr/kvalitet.md`,
 `skener.toml`, `README.md` and the commit history.
 
 ## Context
@@ -41,7 +41,7 @@ per-domain results stay out of the repository (`rad/`).
 ### Z-50: percentiles of list A (owner decision, 2026-09-28)
 
 Input is run H (list A, fast link,
-107 Mb/s), without a new scan. `scripts/raspodela.py` prints the distribution from the snapshots.
+107 Mb/s), without a new scan. `scripts/distribution.py` prints the distribution from the snapshots.
 60 sites were measured under the profile, 58 reached `load`, and 2 timeouts were counted as 25 s.
 
 | | p50 | p75 | p90 | p95 | max |
@@ -98,6 +98,6 @@ put 6 working sites into "not working" because their hosting refuses data-centre
   been done (IT-SKENER-003 §1).
 - Lists A and B are small businesses and associations from one country. For other industries and
   markets the distribution may differ, so calibration should be repeated on the operator's own lists
-  (`docs/kvalitet.md`). `skener recheck --config` over saved snapshots exists for this.
+  (`docs/sr/kvalitet.md`). `skener recheck --config` over saved snapshots exists for this.
 - Unclear from the record: why weight has a third (`critical`) level at p90 while requests and time
   have only two. The documents state only "the same procedure as in v1".

@@ -1,10 +1,11 @@
 # Architecture decision records
 
 Each record describes one decision: the context, what was decided, and the consequences. ADR-006
-to ADR-011 are written in Serbian; ADR-012 onward are in English. ADR-013 to ADR-022 were written
-on 2026-10-31, after the fact. They reconstruct owner decisions that the code cites as `Z-nn`
-requirements of the unpublished v2 specification, using the calibration log, the test reports and
-the changelog.
+to ADR-011 were written in Serbian and translated to English for v3; ADR-012 onward were written in
+English. ADR-013 to ADR-022 were written on 2026-10-31, after the fact. They reconstruct owner
+decisions that the code cites as `Z-nn` requirements of the unpublished v2 specification, using the
+calibration log, the test reports and the changelog. The Serbian test reports and the calibration
+log they draw on are in [docs/sr/](../sr/README.md).
 
 | ADR | Title | Status | Date | Covers |
 |---|---|---|---|---|
@@ -12,7 +13,7 @@ the changelog.
 | [ADR-008](ADR-008-pipeline.md) | A scan is a core function, not a command-line one | Accepted | 2026-09-25 | BUG-007 |
 | [ADR-009](ADR-009-katalog-poruka.md) | Sentences are built at display time, from a catalog | Accepted | 2026-09-25 | Z-12 (inferred) |
 | [ADR-010](ADR-010-mrezni-profil.md) | Level 2 measures under a fixed network profile, without site isolation | Accepted | 2026-09-27 | Z-30 |
-| [ADR-011](ADR-011-json-sema.md) | `report.json` is a contract with a schema and a version | Accepted | 2026-09-30 | Z-13 |
+| [ADR-011](ADR-011-json-sema.md) | `report.json` is a contract with a schema and a version | Accepted; schema file superseded by ADR-012 | 2026-09-30 | Z-13 |
 | [ADR-012](ADR-012-english-public-interface.md) | English public interface: package, config, environment and report schema 3.0 | Accepted | 2026-10-31 | supersedes parts of ADR-011 |
 | [ADR-013](ADR-013-unreachable-after-second-attempt.md) | A site is "unreachable" only when that is certain, and only after a second attempt | Accepted | 2026-09-27 | Z-20, O-5, O-8, O-14 |
 | [ADR-014](ADR-014-host-canonicalization.md) | Host canonicalization is two ordinary checks, paid for with a 19-request budget | Accepted | 2026-09-26 | Z-26, O-12, R-2 |

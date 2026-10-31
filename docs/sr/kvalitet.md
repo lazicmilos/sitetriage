@@ -87,7 +87,7 @@ na brzoj vezi i bez ijednog WARNING-a ili ERROR-a u logu ([`kalibracija.md`](kal
 | Potkarakteristika | Kako | Dokaz |
 |---|---|---|
 | integritet | domen iz CSV-a ne može da izađe iz izlaznog foldera | `test_ime_direktorijuma_ne_izlazi_iz_izlaznog_foldera` |
-| poverljivost | privatne adrese se ne otvaraju, ni posle DNS-a ni posle preusmerenja (SSRF) | `test_ssrf.py`, `test_addresses.py`, [ADR-006](adr/ADR-006-ssrf.md) |
+| poverljivost | privatne adrese se ne otvaraju, ni posle DNS-a ni posle preusmerenja (SSRF) | `test_ssrf.py`, `test_addresses.py`, [ADR-006](../adr/ADR-006-ssrf.md) |
 | integritet | tuđ sadržaj je granica poverenja: prevelik sitemap se odbija, HTML sa sajta se escape-uje u izveštaju | `test_prevelik_sitemap_se_odbija`, `test_html_bezi_od_html_a_iz_sadrzaja_sajta` |
 | odgovornost | User-Agent nosi ime i kontakt operatera, ne autora; bez njih nema nijednog zahteva | `test_scan_bez_identiteta_odbija_pre_ijednog_zahteva` |
 | integritet | ime operatera ne može da ubaci novo HTTP zaglavlje | `test_identitet_ne_moze_da_ubaci_novo_zaglavlje` |
@@ -118,7 +118,7 @@ pri importu modula, pa se takvi preživeli proveravaju ručno.
 | instalabilnost | `pip install -e .`; nivo 2 opcion (`.[browser]`) | `pyproject.toml` |
 | instalabilnost | Docker slika zaključana digest-om, sa Chromium-om za tačnu verziju Playwright-a; radi bez root-a | `Dockerfile`, `compose.yaml`, CI posao `docker` |
 | prilagodljivost | sistemski Chromium preko `SITETRIAGE_CHROMIUM` / `browser.executable_path` | `browser._launch_options` |
-| prilagodljivost | nivo 2 meri pod istim simuliranim mrežnim profilom na svakoj mašini; kad je stvarna veza sporija od dvostrukog profila, vreme je `unknown`, a ne precenjeno | `test_profil_je_u_snapshotu_i_jsonu`, `test_vreme_na_vezi_sporijoj_od_profila_je_unknown`, [ADR-010](adr/ADR-010-mrezni-profil.md) |
+| prilagodljivost | nivo 2 meri pod istim simuliranim mrežnim profilom na svakoj mašini; kad je stvarna veza sporija od dvostrukog profila, vreme je `unknown`, a ne precenjeno | `test_profil_je_u_snapshotu_i_jsonu`, `test_vreme_na_vezi_sporijoj_od_profila_je_unknown`, [ADR-010](../adr/ADR-010-mrezni-profil.md) |
 | prilagodljivost | browser testovi se preskaču uz razlog kad Chromium ne može da se pokrene | `chromium_se_pokrece` u `test_fetch_browser.py` |
 | zamenljivost | Playwright je zakucan u `dev`, jer paket traži tačno svoju reviziju Chromium-a | `pyproject.toml` |
 
