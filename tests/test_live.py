@@ -1,20 +1,21 @@
-"""Kalibracioni testovi nad pravim sajtovima (§12.1).
+"""Calibration tests against real sites.
 
-Isključeni po defaultu: `pytest -m live`. Traže mrežu i listu domena, a padaju kad
-nekom sajtu istekne sertifikat ili kad ga vlasnik popravi — nijedno nije greška u
-alatu, pa nemaju šta da traže u CI-ju.
+Excluded by default: `pytest -m live`. They need the network and a domain list, and they fail
+when a site's certificate expires or when its owner fixes it. Neither is a bug in the tool,
+so they have no place in CI.
 
-Repozitorijum ne imenuje nijedan pravi sajt. Listu daješ ti, kroz promenljivu
-okruženja `SKENER_LIVE_CSV` koja pokazuje na CSV u formatu `domains.example.csv`:
+The repository names no real site. You provide the list, through the environment variable
+`SITETRIAGE_LIVE_CSV` that points to a CSV in the `domains.example.csv` format:
 
-    SKENER_LIVE_CSV=moji-domeni.csv pytest -m live
+    SITETRIAGE_LIVE_CSV=my-domains.csv pytest -m live
 
-Opciona kolona `ocekivano` navodi `check_id`-eve razdvojene razmakom koje alat mora
-da nađe na nivou 1; vrednost `cist` označava kontrolni čist sajt (U4 iz §1.2). Bez
-promenljive se testovi preskaču.
+The optional column `expected` lists space-separated `check_id`s the tool must find on
+level 1; the value `clean` marks the control clean site (a deliberately clean site must get
+no findings). Without the variable the tests are skipped. `SITETRIAGE_LIVE_PROFILE` names a
+profile (ADR-023), e.g. `rs` for a list of Serbian sites that expects `i18n.lang.mismatch`.
 
-Ovo je jedini test koji proverava da su pravi sajtovi u stanju koje očekuješ.
-Fixture-i to ne rade: oni su ručno napisani, nad izmišljenim domenima (vidi
+This is the only test that checks that real sites are in the state you expect.
+Fixtures do not do that: they are hand-written, over made-up domains (see
 `make_fixtures.py`).
 """
 
@@ -26,85 +27,86 @@ from pathlib import Path
 
 import pytest
 
-from skener.checks import registry
-from skener.config import load_config
-from skener.inputs import read_domain_list, read_excel_csv
-from skener.models import DomainInput
-from skener.score import analyze
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.inputs import read_domain_list, read_excel_csv
+from sitetriage.models import DomainInput
+from sitetriage.score import analyze
 
 pytestmark = pytest.mark.live
 
-CIST = "cist"
+# The value of the `expected` column that marks the control clean site.
+CLEAN_MARKER = "clean"
 
 
-def _lista() -> tuple[list[DomainInput], dict[str, set[str]]]:
-    """Domeni i očekivani nalazi iz `SKENER_LIVE_CSV`; prazno kad promenljiva nije zadata."""
-    putanja = os.environ.get("SKENER_LIVE_CSV")
-    if not putanja:
+def _domain_list() -> tuple[list[DomainInput], dict[str, set[str]]]:
+    """Domains and expected findings from `SITETRIAGE_LIVE_CSV`; empty when the variable is not set."""
+    path = os.environ.get("SITETRIAGE_LIVE_CSV")
+    if not path:
         return [], {}
-    data = Path(putanja).read_bytes()
-    domeni, _ = read_domain_list(data, putanja)
-    ocekivano = {
-        (row.get("domain") or "").strip(): set((row.get("ocekivano") or "").split())
-        for _, row in read_excel_csv(data, putanja).rows
+    data = Path(path).read_bytes()
+    domains, _ = read_domain_list(data, path)
+    expected = {
+        (row.get("domain") or "").strip(): set((row.get("expected") or "").split())
+        for _, row in read_excel_csv(data, path).rows
     }
-    return domeni, {d.domain: ocekivano.get(d.domain, set()) for d in domeni}
+    return domains, {d.domain: expected.get(d.domain, set()) for d in domains}
 
 
-DOMENI, OCEKIVANO = _lista()
+DOMAINS, EXPECTED = _domain_list()
 
 
 @pytest.fixture(scope="module")
-def prolaz():
-    """Jedan pravi prolaz nivoa 1 nad listom iz `SKENER_LIVE_CSV`."""
-    if not DOMENI:
-        pytest.skip("SKENER_LIVE_CSV nije zadat: nema liste pravih domena")
-    from skener.fetch.http import scan_domains
+def live_run():
+    """One real level 1 run over the list from `SITETRIAGE_LIVE_CSV`."""
+    if not DOMAINS:
+        pytest.skip("SITETRIAGE_LIVE_CSV is not set: there is no list of real domains")
+    from sitetriage.fetch.http import scan_domains
 
-    config = load_config()
+    config = load_config(profile=os.environ.get("SITETRIAGE_LIVE_PROFILE") or None)
     registry.load_all()
-    sites = asyncio.run(scan_domains(DOMENI, config))
+    sites = asyncio.run(scan_domains(DOMAINS, config))
     return config, {site.domain: site for site in sites}
 
 
-def _izvestaj(domain, prolaz):
-    config, sites = prolaz
+def _report(domain, live_run):
+    config, sites = live_run
     site = sites[domain]
     if site.home is None or site.home.status != 200:
-        pytest.skip(f"{domain} nije dostupan: {site.entry.error_kind if site.entry else 'nepoznato'}")
+        pytest.skip(f"{domain} is not reachable: {site.entry.error_kind if site.entry else 'unknown'}")
     return analyze(site, config)
 
 
-def test_nijedan_domen_ne_ruši_prolaz(prolaz):
-    """U2 iz §1.2: koliko domena uđe, toliko redova izađe."""
-    _config, sites = prolaz
-    assert set(sites) == set(OCEKIVANO)
+def test_no_domain_crashes_the_run(live_run):
+    """As many rows come out as domains go in."""
+    _config, sites = live_run
+    assert set(sites) == set(EXPECTED)
 
 
-@pytest.mark.parametrize("domain", sorted(d for d, o in OCEKIVANO.items() if o - {CIST}))
-def test_nalazi_nivoa_1_nad_pravim_sajtom(domain, prolaz):
-    found = {f.check_id for f in _izvestaj(domain, prolaz).findings}
+@pytest.mark.parametrize("domain", sorted(d for d, o in EXPECTED.items() if o - {CLEAN_MARKER}))
+def test_level1_findings_on_real_site(domain, live_run):
+    found = {f.check_id for f in _report(domain, live_run).findings}
     expected_level1 = {
         check_id
-        for check_id in OCEKIVANO[domain] - {CIST}
+        for check_id in EXPECTED[domain] - {CLEAN_MARKER}
         if registry.REGISTRY[check_id].level == 1
     }
     missing = expected_level1 - found
     assert not missing, (
-        f"{domain}: lista očekuje {sorted(missing)}, a alat ih ne nalazi. "
-        f"Ili je sajt popravljen, ili prag treba kalibrisati. Pronađeno: {sorted(found)}"
+        f"{domain}: the list expects {sorted(missing)}, but the tool does not find them. "
+        f"Either the site was fixed, or the threshold needs calibrating. Found: {sorted(found)}"
     )
 
 
-@pytest.mark.parametrize("domain", sorted(d for d, o in OCEKIVANO.items() if CIST in o))
-def test_kontrolni_sajt_ostaje_cist(domain, prolaz):
-    """U4 iz §1.2 — ograničenje, ne poželjna osobina."""
-    report = _izvestaj(domain, prolaz)
-    assert len(report.findings) <= 2, f"lažni pozitivi: {[f.check_id for f in report.findings]}"
+@pytest.mark.parametrize("domain", sorted(d for d, o in EXPECTED.items() if CLEAN_MARKER in o))
+def test_control_site_stays_clean(domain, live_run):
+    """A deliberately clean control site gets no findings: a constraint, not a nice-to-have."""
+    report = _report(domain, live_run)
+    assert len(report.findings) <= 2, f"false positives: {[f.check_id for f in report.findings]}"
 
 
-def test_prolaz_je_unutar_budzeta(prolaz):
-    """§4.2: najviše 19 zahteva po domenu (Z-26)."""
-    _config, sites = prolaz
+def test_run_stays_within_budget(live_run):
+    """At most 19 requests per domain (ADR-014)."""
+    _config, sites = live_run
     for domain, site in sites.items():
-        assert site.budget.requests_made <= 19, f"{domain}: {site.budget.requests_made} zahteva"
+        assert site.budget.requests_made <= 19, f"{domain}: {site.budget.requests_made} requests"

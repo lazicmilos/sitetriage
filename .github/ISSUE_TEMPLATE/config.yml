@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/lazicmilos/skener/security/advisories/new
+    url: https://github.com/lazicmilos/sitetriage/security/advisories/new
     about: Report vulnerabilities privately, not in a public issue. See SECURITY.md for the scope.
   - name: Security policy
-    url: https://github.com/lazicmilos/skener/blob/main/SECURITY.md
+    url: https://github.com/lazicmilos/sitetriage/blob/main/SECURITY.md
     about: Supported versions, scope and how reports are handled.

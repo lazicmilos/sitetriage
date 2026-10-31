@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="sr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skener — izveštaj</title>
+<title>SiteTriage — izveštaj</title>
 <style>
 :root { color-scheme: light dark;
   --bg:#ffffff; --fg:#111827; --muted:#6b7280; --line:#e5e7eb; --card:#f9fafb; --accent:#1d4ed8; }
@@ -48,8 +48,8 @@ footer { margin-top:40px; padding-top:16px; border-top:1px solid var(--line);
   color:var(--muted); font-size:13px; }
 </style></head>
 <body><div class="wrap">
-<h1>Skener sajtova — izveštaj</h1>
-<p class="sub">Prolaz od 2026-09-22T09:00:00Z · verzija alata 2.0.0</p>
+<h1>SiteTriage — izveštaj</h1>
+<p class="sub">Prolaz od 2026-09-22T09:00:00Z · verzija alata 3.0.0.dev0 · profil rs</p>
 
 <div class="cards">
 <div class="card"><b>8</b><span>Domena</span></div><div class="card"><b>8</b><span>Skenirano</span></div><div class="card"><b>0</b><span>Delimično</span></div><div class="card"><b>0</b><span>Ne rade</span></div><div class="card"><b>0</b><span>Neuspešno</span></div><div class="card"><b>7</b><span>Na nivou 2</span></div><div class="card"><b>0 s</b><span>Trajanje</span></div>
@@ -66,13 +66,13 @@ jednom katastrofom je bolji lead od sajta sa deset sitnica.</p>
 <th>Najteži nalaz</th><th class="num">Nalaza</th><th>Nivo 2</th><th>Stanje</th>
 </tr></thead>
 <tbody>
-<tr><td class="num">1</td><td><b>restoran-centar.example</b></td><td>restoran</td><td class="num">96</td><td><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ KRITIČNO</span> perf.page.weight</td><td class="num">3</td><td>da</td><td>scanned</td></tr><tr><td class="num">2</td><td><b>institucija.example</b></td><td>institucija</td><td class="num">80</td><td><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ KRITIČNO</span> seo.canonical.duplicate</td><td class="num">3</td><td>da</td><td>scanned</td></tr><tr><td class="num">3</td><td><b>hotel-planina.example</b></td><td>hotel</td><td class="num">99,4</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> social.og.title.missing</td><td class="num">6</td><td>da</td><td>scanned</td></tr><tr><td class="num">4</td><td><b>prodavnica.example</b></td><td>ecommerce</td><td class="num">80</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> perf.request.count</td><td class="num">4</td><td>da</td><td>scanned</td></tr><tr><td class="num">5</td><td><b>restoran-ugao.example</b></td><td>restoran</td><td class="num">75,6</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> social.og.title.missing</td><td class="num">4</td><td>da</td><td>scanned</td></tr><tr><td class="num">6</td><td><b>ordinacija.example</b></td><td>zdravstvo</td><td class="num">40,4</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> a11y.img.alt.missing</td><td class="num">2</td><td>da</td><td>scanned</td></tr><tr><td class="num">7</td><td><b>b2b-firma.example</b></td><td>b2b</td><td class="num">14,4</td><td><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> perf.load.time</td><td class="num">2</td><td>da</td><td>scanned</td></tr><tr><td class="num">8</td><td><b>klinika.example</b></td><td>zdravstvo</td><td class="num">3</td><td><span class="tag" style="color:#1e3a8a;background:#dbeafe">▪ NISKO</span> infra.robots.missing</td><td class="num">1</td><td>ne</td><td>scanned</td></tr>
+<tr><td class="num">1</td><td><b>restoran-centar.example</b></td><td>restaurant</td><td class="num">96</td><td><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ KRITIČNO</span> perf.page.weight</td><td class="num">3</td><td>da</td><td>scanned</td></tr><tr><td class="num">2</td><td><b>institucija.example</b></td><td>institution</td><td class="num">80</td><td><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ KRITIČNO</span> seo.canonical.duplicate</td><td class="num">3</td><td>da</td><td>scanned</td></tr><tr><td class="num">3</td><td><b>hotel-planina.example</b></td><td>hotel</td><td class="num">99,4</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> social.og.title.missing</td><td class="num">6</td><td>da</td><td>scanned</td></tr><tr><td class="num">4</td><td><b>prodavnica.example</b></td><td>ecommerce</td><td class="num">80</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> perf.request.count</td><td class="num">4</td><td>da</td><td>scanned</td></tr><tr><td class="num">5</td><td><b>restoran-ugao.example</b></td><td>restaurant</td><td class="num">75,6</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> social.og.title.missing</td><td class="num">4</td><td>da</td><td>scanned</td></tr><tr><td class="num">6</td><td><b>ordinacija.example</b></td><td>healthcare</td><td class="num">40,4</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> a11y.img.alt.missing</td><td class="num">2</td><td>da</td><td>scanned</td></tr><tr><td class="num">7</td><td><b>b2b-firma.example</b></td><td>b2b</td><td class="num">14,4</td><td><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> perf.load.time</td><td class="num">2</td><td>da</td><td>scanned</td></tr><tr><td class="num">8</td><td><b>klinika.example</b></td><td>healthcare</td><td class="num">3</td><td><span class="tag" style="color:#1e3a8a;background:#dbeafe">▪ NISKO</span> infra.robots.missing</td><td class="num">1</td><td>ne</td><td>scanned</td></tr>
 </tbody></table>
 
 <h2>Po domenu</h2>
 <details>
 <summary><span class="domain">#1 restoran-centar.example</span>
-<span class="meta">restoran · skor 96 ·
+<span class="meta">restaurant · skor 96 ·
 najteži 60 · 3 nalaza</span></summary>
 <div class="body">
 <p><button data-draft="Poštovani,
@@ -92,23 +92,23 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 2 · bodovi: 60</span></p>
 <p>Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s.</p>
 <p class="tech">bytes_at_load=14903221, bez videa 14.9 MB, video 0.0 MB, zahteva=87, nemereno=0, reached=load; sa onim posle load 14903221 B i 87 zahteva (informativno)</p>
-<pre class="evidence">{&quot;bajtova&quot;: 14903221, &quot;mb&quot;: 14.9, &quot;video_mb&quot;: 0.0, &quot;sekundi&quot;: 25.8, &quot;brzina&quot;: 4.8, &quot;zahteva&quot;: 87, &quot;nemereno&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;po_tipu&quot;: {&quot;image&quot;: 11922576, &quot;script&quot;: 2235483}, &quot;ukupno_bajtova&quot;: 14903221, &quot;ukupno_zahteva&quot;: 87}</pre>
+<pre class="evidence">{&quot;bytes&quot;: 14903221, &quot;mb&quot;: 14.9, &quot;video_mb&quot;: 0.0, &quot;seconds&quot;: 25.8, &quot;speed_mbps&quot;: 4.8, &quot;requests&quot;: 87, &quot;unmeasured&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;bytes_by_type&quot;: {&quot;image&quot;: 11922576, &quot;script&quot;: 2235483}, &quot;total_bytes&quot;: 14903221, &quot;total_requests&quot;: 87}</pre>
 <div><a href="https://restoran-centar.example/" rel="noopener noreferrer nofollow">https://restoran-centar.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>seo.canonical.missing</code>
 <span class="tech">· nivo 1 · bodovi: 24</span></p>
 <p>Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.</p>
 <p class="tech">https://restoran-centar.example/: nedostaje &lt;link rel=canonical&gt;</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://restoran-centar.example/&quot;, &quot;broj_canonical_oznaka&quot;: 0}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-centar.example/&quot;, &quot;canonical_tag_count&quot;: 0}</pre>
 <div><a href="https://restoran-centar.example/" rel="noopener noreferrer nofollow">https://restoran-centar.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>perf.request.count</code>
 <span class="tech">· nivo 2 · bodovi: 12</span></p>
 <p>Otvaranje početne strane pokreće 87 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.</p>
 <p class="tech">requests_at_load=87, sa onim posle load 87 (reached=load)</p>
-<pre class="evidence">{&quot;zahteva&quot;: 87, &quot;ukupno_zahteva&quot;: 87, &quot;reached&quot;: &quot;load&quot;}</pre>
+<pre class="evidence">{&quot;requests&quot;: 87, &quot;total_requests&quot;: 87, &quot;reached&quot;: &quot;load&quot;}</pre>
 <div><a href="https://restoran-centar.example/" rel="noopener noreferrer nofollow">https://restoran-centar.example/</a></div></div>
 </div></details><details>
 <summary><span class="domain">#2 institucija.example</span>
-<span class="meta">institucija · skor 80 ·
+<span class="meta">institution · skor 80 ·
 najteži 40 · 3 nalaza</span></summary>
 <div class="body">
 <p><button data-draft="Poštovani,
@@ -128,13 +128,13 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 1 · bodovi: 40</span></p>
 <p>6 od 7 proverenih stranica sajta prijavljuje Google-u drugu adresu kao zvaničnu (https://institucija.example/). Google ih zato može smatrati kopijama te adrese i izostaviti iz pretrage.</p>
 <p class="tech">canonical_normalized == https://institucija.example/ na 6 od 7 stranica (udeo 0.8571) iz 6 grupa putanja (uzorak: sitemap)</p>
-<pre class="evidence">{&quot;canonical&quot;: &quot;https://institucija.example/&quot;, &quot;stranica&quot;: 6, &quot;ukupno&quot;: 7, &quot;udeo&quot;: 0.8571, &quot;grupa_putanja&quot;: 6, &quot;uzorak&quot;: &quot;sitemap&quot;}</pre>
+<pre class="evidence">{&quot;canonical&quot;: &quot;https://institucija.example/&quot;, &quot;page_count&quot;: 6, &quot;total&quot;: 7, &quot;share&quot;: 0.8571, &quot;path_groups&quot;: 6, &quot;sample&quot;: &quot;sitemap&quot;}</pre>
 <div><a href="https://institucija.example/o-nama" rel="noopener noreferrer nofollow">https://institucija.example/o-nama</a></div><div><a href="https://institucija.example/usluge/prva" rel="noopener noreferrer nofollow">https://institucija.example/usluge/prva</a></div><div><a href="https://institucija.example/vesti/nesto" rel="noopener noreferrer nofollow">https://institucija.example/vesti/nesto</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>infra.soft404</code>
 <span class="tech">· nivo 1 · bodovi: 20</span></p>
 <p>Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.</p>
 <p class="tech">obe sonde status=200, sličnost sa početnom 1.0</p>
-<pre class="evidence">{&quot;status&quot;: 200, &quot;broj_sondi&quot;: 2, &quot;slicnost&quot;: 1.0, &quot;tvrd_dokaz&quot;: true}</pre>
+<pre class="evidence">{&quot;status&quot;: 200, &quot;probe_count&quot;: 2, &quot;similarity&quot;: 1.0, &quot;hard_evidence&quot;: true}</pre>
 <div><a href="https://institucija.example/abc123" rel="noopener noreferrer nofollow">https://institucija.example/abc123</a></div><div><a href="https://institucija.example/abc123.html" rel="noopener noreferrer nofollow">https://institucija.example/abc123.html</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>seo.h1.missing</code>
 <span class="tech">· nivo 2 · bodovi: 20</span></p>
@@ -164,13 +164,13 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 1 · bodovi: 30</span></p>
 <p>Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.</p>
 <p class="tech">https://hotel-planina.example/: nedostaje og:title (ukupno og oznaka: 2)</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://hotel-planina.example/&quot;, &quot;og_oznaka_ukupno&quot;: 2}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://hotel-planina.example/&quot;, &quot;og_tag_count&quot;: 2}</pre>
 <div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>seo.canonical.missing</code>
 <span class="tech">· nivo 1 · bodovi: 24</span></p>
 <p>Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.</p>
 <p class="tech">https://hotel-planina.example/: nedostaje &lt;link rel=canonical&gt;</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://hotel-planina.example/&quot;, &quot;broj_canonical_oznaka&quot;: 0}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://hotel-planina.example/&quot;, &quot;canonical_tag_count&quot;: 0}</pre>
 <div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>seo.h1.missing</code>
 <span class="tech">· nivo 2 · bodovi: 24</span></p>
@@ -182,13 +182,13 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 1 · bodovi: 10,4</span></p>
 <p>Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.</p>
 <p class="tech">https://hotel-planina.example/: lang=&quot;zxx&quot; nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://hotel-planina.example/&quot;, &quot;lang&quot;: &quot;zxx&quot;, &quot;duzina_koda&quot;: 3, &quot;izvor&quot;: &quot;sirovi_html&quot;}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://hotel-planina.example/&quot;, &quot;lang&quot;: &quot;zxx&quot;, &quot;code_length&quot;: 3, &quot;source&quot;: &quot;raw_html&quot;}</pre>
 <div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>infra.sitemap.missing</code>
 <span class="tech">· nivo 1 · bodovi: 8</span></p>
 <p>Sajt nema mapu stranica (sitemap). Google zato nove i dublje stranice pronalazi samo preko linkova, sporije, a stranice do kojih ne vodi nijedan link može i da ne pronađe.</p>
 <p class="tech">sitemap status=404, urls=0</p>
-<pre class="evidence">{&quot;status&quot;: 404, &quot;broj_urlova&quot;: 0}</pre>
+<pre class="evidence">{&quot;status&quot;: 404, &quot;url_count&quot;: 0}</pre>
 <div><a href="https://hotel-planina.example/sitemap.xml" rel="noopener noreferrer nofollow">https://hotel-planina.example/sitemap.xml</a></div></div><div class="finding">
 <p><span class="tag" style="color:#1e3a8a;background:#dbeafe">▪ NISKO</span> <code>infra.robots.missing</code>
 <span class="tech">· nivo 1 · bodovi: 3</span></p>
@@ -218,7 +218,7 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 2 · bodovi: 30</span></p>
 <p>Otvaranje početne strane pokreće 175 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.</p>
 <p class="tech">requests_at_load=175, sa onim posle load 175 (reached=load)</p>
-<pre class="evidence">{&quot;zahteva&quot;: 175, &quot;ukupno_zahteva&quot;: 175, &quot;reached&quot;: &quot;load&quot;}</pre>
+<pre class="evidence">{&quot;requests&quot;: 175, &quot;total_requests&quot;: 175, &quot;reached&quot;: &quot;load&quot;}</pre>
 <div><a href="https://prodavnica.example/" rel="noopener noreferrer nofollow">https://prodavnica.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>seo.h1.missing</code>
 <span class="tech">· nivo 2 · bodovi: 26</span></p>
@@ -230,17 +230,17 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 2 · bodovi: 12</span></p>
 <p>Sajt šalje slike znatno veće nego što se prikazuju — oko 2400 kB nepotrebnog prenosa pri prvoj poseti.</p>
 <p class="tech">4 slika sa ratio &gt; 2.5, procenjen višak 2400 kB, nemereno 0</p>
-<pre class="evidence">{&quot;broj_slika&quot;: 4, &quot;kb&quot;: 2400, &quot;prag_odnosa&quot;: 2.5, &quot;nemereno&quot;: 0, &quot;najgora&quot;: &quot;https://prodavnica.example/slika0.jpg&quot;}</pre>
+<pre class="evidence">{&quot;image_count&quot;: 4, &quot;kb&quot;: 2400, &quot;ratio_threshold&quot;: 2.5, &quot;unmeasured&quot;: 0, &quot;worst_image&quot;: &quot;https://prodavnica.example/slika0.jpg&quot;}</pre>
 <div><a href="https://prodavnica.example/slika0.jpg" rel="noopener noreferrer nofollow">https://prodavnica.example/slika0.jpg</a></div><div><a href="https://prodavnica.example/slika1.jpg" rel="noopener noreferrer nofollow">https://prodavnica.example/slika1.jpg</a></div><div><a href="https://prodavnica.example/slika2.jpg" rel="noopener noreferrer nofollow">https://prodavnica.example/slika2.jpg</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>perf.page.weight</code>
 <span class="tech">· nivo 2 · bodovi: 12</span></p>
 <p>Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s.</p>
 <p class="tech">bytes_at_load=2600000, bez videa 2.6 MB, video 0.0 MB, zahteva=175, nemereno=0, reached=load; sa onim posle load 2600000 B i 175 zahteva (informativno)</p>
-<pre class="evidence">{&quot;bajtova&quot;: 2600000, &quot;mb&quot;: 2.6, &quot;video_mb&quot;: 0.0, &quot;sekundi&quot;: 5.3, &quot;brzina&quot;: 4.8, &quot;zahteva&quot;: 175, &quot;nemereno&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;po_tipu&quot;: {&quot;image&quot;: 2080000, &quot;script&quot;: 390000}, &quot;ukupno_bajtova&quot;: 2600000, &quot;ukupno_zahteva&quot;: 175}</pre>
+<pre class="evidence">{&quot;bytes&quot;: 2600000, &quot;mb&quot;: 2.6, &quot;video_mb&quot;: 0.0, &quot;seconds&quot;: 5.3, &quot;speed_mbps&quot;: 4.8, &quot;requests&quot;: 175, &quot;unmeasured&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;bytes_by_type&quot;: {&quot;image&quot;: 2080000, &quot;script&quot;: 390000}, &quot;total_bytes&quot;: 2600000, &quot;total_requests&quot;: 175}</pre>
 <div><a href="https://prodavnica.example/" rel="noopener noreferrer nofollow">https://prodavnica.example/</a></div></div>
 </div></details><details>
 <summary><span class="domain">#5 restoran-ugao.example</span>
-<span class="meta">restoran · skor 75,6 ·
+<span class="meta">restaurant · skor 75,6 ·
 najteži 30 · 4 nalaza</span></summary>
 <div class="body">
 <p><button data-draft="Poštovani,
@@ -260,29 +260,29 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 1 · bodovi: 30</span></p>
 <p>Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.</p>
 <p class="tech">https://restoran-ugao.example/: nedostaje og:title (ukupno og oznaka: 1)</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;og_oznaka_ukupno&quot;: 1}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;og_tag_count&quot;: 1}</pre>
 <div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#9a3412;background:#ffedd5">● VISOKO</span> <code>seo.canonical.missing</code>
 <span class="tech">· nivo 1 · bodovi: 24</span></p>
 <p>Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.</p>
 <p class="tech">https://restoran-ugao.example/: nedostaje &lt;link rel=canonical&gt;</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;broj_canonical_oznaka&quot;: 0}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;canonical_tag_count&quot;: 0}</pre>
 <div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>social.og.description.missing</code>
 <span class="tech">· nivo 1 · bodovi: 12</span></p>
 <p>Kad se link sajta podeli, platforme nemaju pripremljen opis, pa same biraju tekst sa strane ili ne prikazuju nijedan.</p>
 <p class="tech">https://restoran-ugao.example/: nedostaje og:description (ukupno og oznaka: 1)</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;og_oznaka_ukupno&quot;: 1}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;og_tag_count&quot;: 1}</pre>
 <div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>seo.description.missing</code>
 <span class="tech">· nivo 1 · bodovi: 9,6</span></p>
 <p>Početna strana nema kratak opis za Google. Google tada sam bira tekst sa strane za prikaz ispod naslova, a to ume da bude deo menija ili obaveštenja o kolačićima.</p>
 <p class="tech">https://restoran-ugao.example/: nedostaje &lt;meta name=description&gt; (dužina 0)</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;duzina_opisa&quot;: 0}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;description_length&quot;: 0}</pre>
 <div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div>
 </div></details><details>
 <summary><span class="domain">#6 ordinacija.example</span>
-<span class="meta">zdravstvo · skor 40,4 ·
+<span class="meta">healthcare · skor 40,4 ·
 najteži 30 · 2 nalaza</span></summary>
 <div class="body">
 <p><button data-draft="Poštovani,
@@ -300,13 +300,13 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 2 · bodovi: 30</span></p>
 <p>Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.</p>
 <p class="tech">images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=1 se namerno ne broji, nemereno=0</p>
-<pre class="evidence">{&quot;bez_alta&quot;: 28, &quot;ukupno&quot;: 30, &quot;prazan_alt&quot;: 1, &quot;udeo&quot;: 0.933, &quot;nemereno&quot;: 0}</pre>
+<pre class="evidence">{&quot;without_alt&quot;: 28, &quot;total&quot;: 30, &quot;empty_alt&quot;: 1, &quot;share&quot;: 0.933, &quot;unmeasured&quot;: 0}</pre>
 <div><a href="https://ordinacija.example/" rel="noopener noreferrer nofollow">https://ordinacija.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>i18n.lang.mismatch</code>
 <span class="tech">· nivo 1 · bodovi: 10,4</span></p>
 <p>Sadržaj sajta je na srpskom, ali je u kodu označen kao „en-US”. Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato srpski tekst izgovaraju po pravilima tog jezika, pa je teško razumljiv.</p>
 <p class="tech">https://ordinacija.example/: lang=&quot;en-US&quot;, sadržaj prepoznat kao sr (ćirilica 0.0, dijakritici 0.0197, 918 znakova; izvor: sirovi HTML)</p>
-<pre class="evidence">{&quot;stranica&quot;: &quot;https://ordinacija.example/&quot;, &quot;lang&quot;: &quot;en-US&quot;, &quot;prepoznat_jezik&quot;: &quot;sr&quot;, &quot;cirilica_udeo&quot;: 0.0, &quot;dijakritici_udeo&quot;: 0.0197, &quot;duzina_teksta&quot;: 918, &quot;izvor&quot;: &quot;sirovi_html&quot;}</pre>
+<pre class="evidence">{&quot;page&quot;: &quot;https://ordinacija.example/&quot;, &quot;lang&quot;: &quot;en-US&quot;, &quot;detected_language&quot;: &quot;sr&quot;, &quot;cyrillic_share&quot;: 0.0, &quot;diacritic_share&quot;: 0.0197, &quot;text_length&quot;: 918, &quot;source&quot;: &quot;raw_html&quot;}</pre>
 <div><a href="https://ordinacija.example/" rel="noopener noreferrer nofollow">https://ordinacija.example/</a></div></div>
 </div></details><details>
 <summary><span class="domain">#7 b2b-firma.example</span>
@@ -328,17 +328,17 @@ Ako vas zanima, mogu da pošaljem detaljan pregled sa predlogom šta prvo poprav
 <span class="tech">· nivo 2 · bodovi: 7,2</span></p>
 <p>Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita.</p>
 <p class="tech">load_ms=6100, reached=load</p>
-<pre class="evidence">{&quot;load_ms&quot;: 6100, &quot;sekundi&quot;: 6.1, &quot;brzina&quot;: 4.8, &quot;reached&quot;: &quot;load&quot;}</pre>
+<pre class="evidence">{&quot;load_ms&quot;: 6100, &quot;seconds&quot;: 6.1, &quot;speed_mbps&quot;: 4.8, &quot;reached&quot;: &quot;load&quot;}</pre>
 <div><a href="https://b2b-firma.example/" rel="noopener noreferrer nofollow">https://b2b-firma.example/</a></div></div><div class="finding">
 <p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ SREDNJE</span> <code>perf.page.weight</code>
 <span class="tech">· nivo 2 · bodovi: 7,2</span></p>
 <p>Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s.</p>
 <p class="tech">bytes_at_load=2100000, bez videa 2.1 MB, video 0.0 MB, zahteva=60, nemereno=0, reached=load; sa onim posle load 2100000 B i 60 zahteva (informativno)</p>
-<pre class="evidence">{&quot;bajtova&quot;: 2100000, &quot;mb&quot;: 2.1, &quot;video_mb&quot;: 0.0, &quot;sekundi&quot;: 4.5, &quot;brzina&quot;: 4.8, &quot;zahteva&quot;: 60, &quot;nemereno&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;po_tipu&quot;: {&quot;image&quot;: 1680000, &quot;script&quot;: 315000}, &quot;ukupno_bajtova&quot;: 2100000, &quot;ukupno_zahteva&quot;: 60}</pre>
+<pre class="evidence">{&quot;bytes&quot;: 2100000, &quot;mb&quot;: 2.1, &quot;video_mb&quot;: 0.0, &quot;seconds&quot;: 4.5, &quot;speed_mbps&quot;: 4.8, &quot;requests&quot;: 60, &quot;unmeasured&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;bytes_by_type&quot;: {&quot;image&quot;: 1680000, &quot;script&quot;: 315000}, &quot;total_bytes&quot;: 2100000, &quot;total_requests&quot;: 60}</pre>
 <div><a href="https://b2b-firma.example/" rel="noopener noreferrer nofollow">https://b2b-firma.example/</a></div></div>
 </div></details><details>
 <summary><span class="domain">#8 klinika.example</span>
-<span class="meta">zdravstvo · skor 3 ·
+<span class="meta">healthcare · skor 3 ·
 najteži 3 · 1 nalaz</span></summary>
 <div class="body">
 <p><button data-draft="Poštovani,

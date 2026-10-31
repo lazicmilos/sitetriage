@@ -6,8 +6,8 @@ Security fixes go into the latest release line only. Older lines do not get back
 
 | Version | Supported |
 |---|---|
-| 2.x (latest) | yes |
-| < 2.0 | no |
+| 3.x (`main`, first release pending) | yes |
+| < 3.0 | no |
 
 ## Reporting a vulnerability
 
@@ -18,7 +18,7 @@ vulnerability** (GitHub private vulnerability reporting). Only the maintainer ca
 
 Please include:
 
-- the version (`skener --version`) and how you run it (Docker image, `pip install`, web app on top of
+- the version (`sitetriage --version`) and how you run it (Docker image, `pip install`, web app on top of
   the library);
 - what an attacker controls (the domain list, a scanned site's responses, DNS, the config file);
 - steps or a minimal reproduction, for example a small local server or a snapshot, without real
@@ -67,6 +67,6 @@ everything a scanned site or a user-supplied domain can influence is in scope. I
   (egress) so the scanning process can only reach public addresses. Reports that show a way around
   that egress requirement, or a new gap not in the list, are in scope.
 - Deliberate configuration by the operator, such as adding hosts to `[net] allowed_private` or
-  pointing `SKENER_CHROMIUM` at a different browser.
+  pointing `SITETRIAGE_CHROMIUM` at a different browser.
 - Findings that are wrong or missed. Those are bugs, not vulnerabilities: use the "Wrong or missed
   finding" issue template.

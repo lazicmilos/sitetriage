@@ -1,5 +1,5 @@
-"""Zaštita od SSRF-a (ADR-006): skener ne otvara privatne adrese, ni posle DNS-a ni posle
-preusmerenja. Lokalni server je na 127.0.0.1, pa je dozvoljen samo kad test to traži.
+"""SSRF protection (ADR-006): the scanner does not open private addresses, neither after DNS nor
+after a redirect. The local server is on 127.0.0.1, so it is allowed only when a test asks for it.
 """
 
 from __future__ import annotations
@@ -10,226 +10,230 @@ import socket
 import pytest
 from localserver import FakeSite, Response, html
 
-from skener.config import load_config
-from skener.fetch import http
-from skener.fetch.http import Fetcher, fetch_site
-from skener.models import DomainInput
-from skener.score import analyze
+from sitetriage.config import load_config
+from sitetriage.fetch import http
+from sitetriage.fetch.http import Fetcher, fetch_site
+from sitetriage.models import DomainInput
+from sitetriage.score import analyze
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 1 protiv lokalnog servera
+# Level 1 against the local server
 # --------------------------------------------------------------------------- #
-def _skeniraj(domen: str, config: dict | None = None):
+def _scan(domain: str, config: dict | None = None):
     cfg = config or load_config()
     cfg["http"]["delay_ms"] = [0, 0]
 
     async def run():
         async with Fetcher(cfg) as fetcher:
-            return await fetch_site(fetcher, DomainInput(domain=domen))
+            return await fetch_site(fetcher, DomainInput(domain=domain))
 
     return asyncio.run(run())
 
 
-def test_lokalni_server_bez_dozvole_ne_dobija_nijedan_zahtev():
-    with FakeSite(dozvoljen=False) as site:
-        snapshot = _skeniraj(site.base_url)
+def test_local_server_without_permission_gets_no_request():
+    with FakeSite(allowed=False) as site:
+        snapshot = _scan(site.base_url)
     assert site.requests == []
     assert snapshot.entry.error_kind == "blocked"
 
 
-def test_izricita_dozvola_otvara_tacno_taj_host_i_port():
-    with FakeSite(dozvoljen=False) as site:
+def test_explicit_permission_opens_exactly_that_host_and_port():
+    with FakeSite(allowed=False) as site:
         cfg = load_config()
         host, port = site.address
         cfg["net"]["allowed_private"] = [f"{host}:{port}"]
-        snapshot = _skeniraj(site.base_url, cfg)
+        snapshot = _scan(site.base_url, cfg)
     assert snapshot.entry.status == 200 and site.requests
 
 
-def test_preusmerenje_na_privatnu_adresu_se_odbija():
-    """Dozvoljen server preusmerava na drugi port; provera je pri otvaranju svake veze."""
-    with FakeSite(dozvoljen=False) as cilj:
-        preusmerenje = Response(b"", status=302, headers={"location": f"{cilj.base_url}/"})
-        with FakeSite(extra={"/": preusmerenje}) as site:
-            snapshot = _skeniraj(site.base_url)
-    assert cilj.requests == [], "cilj preusmerenja ne sme da dobije nijedan zahtev"
+def test_redirect_to_private_address_is_refused():
+    """An allowed server redirects to another port; the check runs when every connection is opened."""
+    with FakeSite(allowed=False) as target:
+        redirect = Response(b"", status=302, headers={"location": f"{target.base_url}/"})
+        with FakeSite(extra={"/": redirect}) as site:
+            snapshot = _scan(site.base_url)
+    assert target.requests == [], "the redirect target must not get a single request"
     assert snapshot.entry.error_kind == "blocked"
     assert "127.0.0.1 → 127.0.0.1" in snapshot.entry.error_detail
 
 
-def test_ime_koje_se_razresava_u_privatnu_adresu_se_odbija(monkeypatch):
-    razreseno = []
+def test_name_that_resolves_to_private_address_is_refused(monkeypatch):
+    resolved = []
 
-    async def lazni_dns(host, port):
-        razreseno.append(host)
+    async def fake_dns(host, port):
+        resolved.append(host)
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", port))]
 
-    monkeypatch.setattr(http, "_razresi", lazni_dns)
-    snapshot = _skeniraj("privatno.test")
-    assert razreseno and set(razreseno) == {"privatno.test"}
+    monkeypatch.setattr(http, "_resolve", fake_dns)
+    snapshot = _scan("privatno.test")
+    assert resolved and set(resolved) == {"privatno.test"}
     assert snapshot.entry.error_kind == "blocked"
-    assert snapshot.entry.error_detail == "adresa nije javna: privatno.test → 10.0.0.5"
-    assert snapshot.pages == [], "posle blokade nema ni robots.txt ni mape sajta"
+    assert snapshot.entry.error_detail == "address is not public: privatno.test → 10.0.0.5"
+    assert snapshot.pages == [], "after a block there is neither robots.txt nor a sitemap"
 
 
-def test_odbijena_veza_na_dozvoljenoj_adresi_nije_blokada():
-    """Dozvoljena adresa na kojoj niko ne sluša je obična mrežna greška, ne zaštita."""
+def test_refused_connection_on_allowed_address_is_not_a_block():
+    """An allowed address where nobody listens is an ordinary network error, not the protection."""
     cfg = load_config()
     cfg["net"]["allowed_private"] = ["127.0.0.1:1"]
-    snapshot = _skeniraj("http://127.0.0.1:1", cfg)
+    snapshot = _scan("http://127.0.0.1:1", cfg)
     assert snapshot.entry.error_kind == "no_connection"
 
 
-def test_zastita_ne_nestaje_tiho_kad_se_httpx_promeni(monkeypatch):
-    """Backend se postavlja kroz interno polje httpx-a; bez njega alat odbija da radi."""
+def test_protection_does_not_vanish_silently_when_httpx_changes(monkeypatch):
+    """The backend is installed through an internal httpx field; without it the tool refuses to run."""
     import types
 
     import httpx
 
-    class BezBackenda(httpx.AsyncHTTPTransport):
+    class WithoutBackend(httpx.AsyncHTTPTransport):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             self._pool = types.SimpleNamespace()
 
-    monkeypatch.setattr(httpx, "AsyncHTTPTransport", BezBackenda)
+    monkeypatch.setattr(httpx, "AsyncHTTPTransport", WithoutBackend)
     with pytest.raises(RuntimeError, match="SSRF"):
         Fetcher(load_config())._make_client(verify=True)
 
 
-def test_ime_bez_dns_zapisa_ostaje_dns_greska(monkeypatch):
-    async def nema_zapisa(host, port):
+def test_name_without_dns_records_stays_a_dns_error(monkeypatch):
+    async def no_records(host, port):
         raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
 
-    monkeypatch.setattr(http, "_razresi", nema_zapisa)
-    assert _skeniraj("nepostoji.test").entry.error_kind == "dns_nxdomain"
+    monkeypatch.setattr(http, "_resolve", no_records)
+    assert _scan("nepostoji.test").entry.error_kind == "dns_nxdomain"
 
 
-def test_blokiran_domen_nije_unreachable():
-    """Sajt možda radi — samo ga mi namerno nismo otvorili. To je `failed`, ne „ne radi"."""
-    with FakeSite(dozvoljen=False) as site:
-        snapshot = _skeniraj(site.base_url)
-    izvestaj = analyze(snapshot, load_config())
-    assert izvestaj.status == "failed"
+def test_blocked_domain_is_not_unreachable():
+    """The site may work; we just chose not to open it. That is `failed`, not "unreachable"."""
+    with FakeSite(allowed=False) as site:
+        snapshot = _scan(site.base_url)
+    report = analyze(snapshot, load_config())
+    assert report.status == "failed"
     assert snapshot.entry.error_kind == "blocked"
 
 
-def test_ulaz_sa_ip_adresom_ne_salje_nijedan_zahtev():
-    with FakeSite(dozvoljen=False) as site:
+def test_input_with_ip_address_sends_no_request():
+    with FakeSite(allowed=False) as site:
         _, port = site.address
-        snapshot = _skeniraj(f"127.0.0.1:{port}")
+        snapshot = _scan(f"127.0.0.1:{port}")
     assert site.requests == []
-    assert snapshot.entry.error_kind == "blocked" and "portom" in snapshot.entry.error_detail
+    assert snapshot.entry.error_kind == "blocked" and "with a port" in snapshot.entry.error_detail
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 2: log kaže zašto je zahtev odbijen. Chromium za oba slučaja javlja isto,
-# ERR_BLOCKED_BY_CLIENT, a neuspeo DNS nije privatna adresa.
+# Level 2: the log says why a request was refused. Chromium reports the same for both
+# cases, ERR_BLOCKED_BY_CLIENT, and a failed DNS lookup is not a private address.
 # --------------------------------------------------------------------------- #
-class LaznaRuta:
+class FakeRoute:
     def __init__(self, url: str) -> None:
-        self.request = type("Zahtev", (), {"url": url})()
-        self.ishod: str | None = None
+        self.request = type("Request", (), {"url": url})()
+        self.outcome: str | None = None
 
     async def continue_(self) -> None:
-        self.ishod = "continue"
+        self.outcome = "continue"
 
-    async def abort(self, kod: str) -> None:
-        self.ishod = kod
+    async def abort(self, code: str) -> None:
+        self.outcome = code
+
+
+NO_DNS = "DNS did not resolve the name"
 
 
 @pytest.mark.parametrize(
-    "razresi, razlog",
+    "resolution, reason",
     [
-        pytest.param(socket.gaierror(socket.EAI_AGAIN, "privremeno"), "DNS nije razrešio ime", id="ke-dns"),
-        # Ime koje ne postoji se ne ponavlja: odgovor DNS-a je konačan.
-        pytest.param(socket.gaierror(socket.EAI_NONAME, "nema"), "DNS nije razrešio ime", id="ke-nema-imena"),
+        pytest.param(socket.gaierror(socket.EAI_AGAIN, "temporary"), NO_DNS, id="ke-dns"),
+        # A name that does not exist is not retried: the DNS answer is final.
+        pytest.param(socket.gaierror(socket.EAI_NONAME, "none"), NO_DNS, id="ke-no-name"),
         pytest.param(
             [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", 443))],
-            "adresa nije javna: 10.0.0.5",
-            id="ke-privatna",
+            "address is not public: 10.0.0.5",
+            id="ke-private",
         ),
     ],
 )
-def test_nivo_2_upisuje_zasto_odbija_zahtev(monkeypatch, caplog, razresi, razlog):
-    from skener.fetch.browser import _cuvar
+def test_level_2_logs_why_it_refuses_a_request(monkeypatch, caplog, resolution, reason):
+    from sitetriage.fetch.browser import _address_guard
 
-    def lazni_dns(*_args, **_kwargs):
-        if isinstance(razresi, Exception):
-            raise razresi
-        return razresi
+    def fake_dns(*_args, **_kwargs):
+        if isinstance(resolution, Exception):
+            raise resolution
+        return resolution
 
-    monkeypatch.setattr(socket, "getaddrinfo", lazni_dns)
-    ruta = LaznaRuta("https://primer.rs/")
-    caplog.set_level("INFO", logger="skener")
-    asyncio.run(_cuvar(frozenset(), RuntimeError, "primer.rs")(ruta))
-    assert ruta.ishod == "blockedbyclient"
-    [zapis] = [r for r in caplog.records if "odbija" in r.getMessage()]
-    assert razlog in zapis.getMessage() and "primer.rs:443" in zapis.getMessage()
-    assert zapis.domain == "primer.rs"
+    monkeypatch.setattr(socket, "getaddrinfo", fake_dns)
+    route = FakeRoute("https://primer.rs/")
+    caplog.set_level("INFO", logger="sitetriage")
+    asyncio.run(_address_guard(frozenset(), RuntimeError, "primer.rs")(route))
+    assert route.outcome == "blockedbyclient"
+    [record] = [r for r in caplog.records if "refuses" in r.getMessage()]
+    assert reason in record.getMessage() and "primer.rs:443" in record.getMessage()
+    assert record.domain == "primer.rs"
 
 
-def test_nivo_2_ponavlja_privremenu_dns_gresku(monkeypatch):
-    """Presuda važi za ceo domen, pa bi jedna privremena greška blokirala sve zahteve ka hostu."""
-    from skener.fetch.browser import _cuvar
+def test_level_2_retries_a_temporary_dns_error(monkeypatch):
+    """The verdict holds for the whole domain, so one temporary error would block all requests to the host."""
+    from sitetriage.fetch.browser import _address_guard
 
-    javna = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 443))]
-    odgovori = [socket.gaierror(socket.EAI_AGAIN, "privremeno"), javna]
+    public = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 443))]
+    answers = [socket.gaierror(socket.EAI_AGAIN, "temporary"), public]
 
-    def lazni_dns(*_args, **_kwargs):
-        odgovor = odgovori.pop(0)
-        if isinstance(odgovor, Exception):
-            raise odgovor
-        return odgovor
+    def fake_dns(*_args, **_kwargs):
+        answer = answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
 
-    monkeypatch.setattr(socket, "getaddrinfo", lazni_dns)
-    ruta = LaznaRuta("https://primer.rs/")
-    asyncio.run(_cuvar(frozenset(), RuntimeError, "primer.rs")(ruta))
-    assert ruta.ishod == "continue" and not odgovori
+    monkeypatch.setattr(socket, "getaddrinfo", fake_dns)
+    route = FakeRoute("https://primer.rs/")
+    asyncio.run(_address_guard(frozenset(), RuntimeError, "primer.rs")(route))
+    assert route.outcome == "continue" and not answers
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 2: `route` proverava svaki zahtev browsera
+# Level 2: `route` checks every browser request
 # --------------------------------------------------------------------------- #
-def _nivo2(site: FakeSite):
-    from skener.fetch.browser import capture_all
-    from skener.models import Entry, PageSnapshot, SiteSnapshot
+def _level2(site: FakeSite):
+    from sitetriage.fetch.browser import capture_all
+    from sitetriage.models import Entry, PageSnapshot, SiteSnapshot
 
-    snimak = SiteSnapshot(
+    snapshot = SiteSnapshot(
         domain=site.base_url,
         pages=[PageSnapshot(url=site.base_url + "/", final_url=site.base_url + "/", status=200)],
         entry=Entry(requested_url=site.base_url + "/", final_url=site.base_url + "/", status=200),
     )
-    return asyncio.run(capture_all([snimak], load_config()))[site.base_url]
+    return asyncio.run(capture_all([snapshot], load_config()))[site.base_url]
 
 
 @pytest.mark.browser
-def test_browser_ne_ucitava_resurs_sa_privatne_adrese():
-    with FakeSite(dozvoljen=False) as privatni:
-        strana = html("Strana", body=f"<img src='{privatni.base_url}/slika.png'>")
-        with FakeSite(extra={"/": Response(strana)}) as site:
-            snimak = _nivo2(site)
-    assert snimak.status == "ok", snimak.errors
-    assert privatni.requests == [], "browser ne sme da dohvati resurs sa privatne adrese"
+def test_browser_does_not_load_resource_from_private_address():
+    with FakeSite(allowed=False) as private:
+        page = html("Strana", body=f"<img src='{private.base_url}/slika.png'>")
+        with FakeSite(extra={"/": Response(page)}) as site:
+            snapshot = _level2(site)
+    assert snapshot.status == "ok", snapshot.errors
+    assert private.requests == [], "the browser must not fetch a resource from a private address"
 
 
 @pytest.mark.browser
-def test_browser_ne_otvara_stranicu_na_privatnoj_adresi():
-    with FakeSite(dozvoljen=False) as privatni:
-        snimak = _nivo2(privatni)
-    assert snimak.status == "failed" and snimak.errors[0].stage == "goto"
-    assert privatni.requests == []
+def test_browser_does_not_open_page_on_private_address():
+    with FakeSite(allowed=False) as private:
+        snapshot = _level2(private)
+    assert snapshot.status == "failed" and snapshot.errors[0].stage == "goto"
+    assert private.requests == []
 
 
 @pytest.mark.browser
 @pytest.mark.xfail(
-    strict=True, reason="ADR-006: Playwright `route` ne vidi cilj preusmerenja; štiti egress filter"
+    strict=True,
+    reason="ADR-006: Playwright `route` does not see the redirect target; an egress filter covers it",
 )
-def test_browser_ne_prati_preusmerenje_na_privatnu_adresu():
-    """Poznato ograničenje nivoa 2. Kad Playwright počne da vidi preusmerenja, test prolazi
-    i `strict` ga obara, pa se ograničenje briše iz ADR-006."""
-    with FakeSite(dozvoljen=False) as cilj:
-        preusmerenje = Response(b"", status=302, headers={"location": f"{cilj.base_url}/"})
-        with FakeSite(extra={"/": preusmerenje}) as site:
-            _nivo2(site)
-    assert cilj.requests == []
+def test_browser_does_not_follow_redirect_to_private_address():
+    """A known limitation of level 2. When Playwright starts seeing redirects, the test passes and
+    `strict` fails it, so the limitation is removed from ADR-006."""
+    with FakeSite(allowed=False) as target:
+        redirect = Response(b"", status=302, headers={"location": f"{target.base_url}/"})
+        with FakeSite(extra={"/": redirect}) as site:
+            _level2(site)
+    assert target.requests == []

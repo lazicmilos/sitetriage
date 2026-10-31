@@ -14,7 +14,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +35,8 @@ jobs:
 
   pypi:
     needs: build
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
     environment: pypi
     permissions:
       id-token: write
@@ -47,7 +49,8 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   docker:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write

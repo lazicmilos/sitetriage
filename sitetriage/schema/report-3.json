@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/lazicmilos/sitetriage/main/sitetriage/schema/report-3.json",
+  "title": "SiteTriage: run report",
+  "description": "A serialized ScanResult. An added field raises the minor schema version; a removed field, a changed type or meaning, a renamed check_id or a renamed evidence key raises the major version (ADR-011, ADR-012).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "scanner_version", "started_at", "finished_at", "duration_s",
+    "config_digest", "profile", "environment", "summary", "budget_share", "unknown_share", "ranked",
+    "unreachable", "not_scanned"
+  ],
+  "properties": {
+    "schema_version": {"const": "3.0"},
+    "scanner_version": {"type": "string", "minLength": 1},
+    "started_at": {"$ref": "#/$defs/utc"},
+    "finished_at": {"$ref": "#/$defs/utc"},
+    "duration_s": {
+      "description": "Duration in seconds: level1, level2, level2_light and total for scan, only total for recheck.",
+      "type": "object",
+      "required": ["total"],
+      "propertyNames": {"enum": ["level1", "level2", "level2_light", "total"]},
+      "additionalProperties": {"type": "number", "minimum": 0}
+    },
+    "config_digest": {
+      "description": "sha256 of the configuration that affects the result, without the operator identity, concurrency and browser path.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "profile": {
+      "description": "The profile merged over the defaults (--profile or profile in the config, ADR-023), e.g. \"rs\"; null when the run used none.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "python", "chromium", "network_profile", "link_mbps"],
+      "properties": {
+        "os": {"type": "string"},
+        "python": {"type": "string"},
+        "chromium": {"type": ["string", "null"], "description": "null when level 2 did not run"},
+        "network_profile": {
+          "description": "The simulated connection level 2 measures under (ADR-010); null when level 2 did not run or the snapshot predates the profile",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["download_mbps", "upload_mbps", "latency_ms"],
+          "properties": {
+            "download_mbps": {"type": "number", "exclusiveMinimum": 0},
+            "upload_mbps": {"type": "number", "exclusiveMinimum": 0},
+            "latency_ms": {"type": "number", "minimum": 0}
+          }
+        },
+        "link_mbps": {
+          "description": "The real connection measured before level 2, in Mb/s (ADR-018); null when the measurement failed or level 2 did not run",
+          "type": ["number", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "summary": {
+      "description": "Number of domains per status and per partial cause; excluded domains are only a count, without names.",
+      "type": "object",
+      "required": [
+        "scanned", "partial", "failed", "unreachable", "excluded", "partial_budget", "partial_unknown"
+      ],
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "budget_share": {
+      "description": "Share of working domains (scanned, partial) that exhausted their budget.",
+      "type": "number", "minimum": 0, "maximum": 1
+    },
+    "unknown_share": {
+      "description": "Per check_id: share of unknown among working domains on which the check ran.",
+      "type": "object",
+      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+    },
+    "ranked": {"type": "array", "items": {"$ref": "#/$defs/domain_report"}},
+    "unreachable": {
+      "description": "Sites that did not open on the second attempt either; the reason is the infra.unreachable finding.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/domain_report"}
+    },
+    "not_scanned": {
+      "description": "Domains with status failed, with a reason. Excluded domains are only a count in summary.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/domain_report"}
+    }
+  },
+  "$defs": {
+    "utc": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "severity": {"enum": ["critical", "high", "medium", "low"]},
+    "reason": {
+      "description": "A reason without a sentence: a catalog code and data. sitetriage.messages builds the sentence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "evidence"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "evidence": {"type": "object", "description": "Data for the sentence, with English snake_case keys (ADR-012)."}
+      }
+    },
+    "check_reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "reason"],
+      "properties": {"check_id": {"type": "string"}, "reason": {"$ref": "#/$defs/reason"}}
+    },
+    "domain_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain", "industry", "final_url", "status", "partial_causes", "level2_ran", "escalation_reasons",
+        "findings", "unknowns", "not_applicable", "total_score", "max_finding_weight", "rank", "scanned_at", "reason"
+      ],
+      "properties": {
+        "domain": {"type": "string"},
+        "industry": {"enum": ["hotel", "restaurant", "healthcare", "ecommerce", "b2b", "institution", "other"]},
+        "final_url": {"type": ["string", "null"]},
+        "status": {"enum": ["scanned", "partial", "failed", "unreachable"]},
+        "partial_causes": {"type": "array", "items": {"enum": ["budget", "unknown"]}, "uniqueItems": true},
+        "level2_ran": {"type": "boolean"},
+        "escalation_reasons": {"type": "array", "items": {"$ref": "#/$defs/reason"}},
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+        "unknowns": {"type": "array", "items": {"$ref": "#/$defs/check_reason"}},
+        "not_applicable": {
+          "description": "Checks that have nothing to check on this site; they do not make the domain partial.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/check_reason"}
+        },
+        "total_score": {"type": "number", "minimum": 0},
+        "max_finding_weight": {"type": "number", "minimum": 0},
+        "rank": {"type": "integer", "minimum": 0, "description": "0 = not ranked (unreachable, failed)"},
+        "scanned_at": {"type": "string"},
+        "reason": {
+          "description": "Why the domain failed; null for the others.",
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/reason"}]
+        }
+      }
+    },
+    "finding": {
+      "description": "A finding without a sentence: sitetriage.messages builds the sentence from the evidence, in the reader's language.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain", "check_id", "level", "category", "severity", "evidence", "evidence_urls", "weight", "variant"
+      ],
+      "properties": {
+        "domain": {"type": "string"},
+        "check_id": {"type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9]+)+$"},
+        "level": {"enum": [1, 2]},
+        "category": {"enum": ["seo", "social", "i18n", "infra", "perf", "a11y", "qa"]},
+        "severity": {"$ref": "#/$defs/severity"},
+        "evidence": {
+          "description": "Numbers, booleans, URLs, technical codes, raw error messages and text taken from the site, with English snake_case keys per check_id (ADR-012). Never a sentence.",
+          "type": "object"
+        },
+        "evidence_urls": {"type": "array", "items": {"type": "string"}},
+        "weight": {"type": "number", "minimum": 0},
+        "variant": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

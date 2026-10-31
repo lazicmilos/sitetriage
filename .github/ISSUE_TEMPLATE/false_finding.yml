@@ -13,12 +13,12 @@ body:
         prospective clients. Attach a minimal reproduction (for example a small HTML file) or a
         snapshot from `snapshots/<domain>/` with the domain and identifying URLs replaced by
         `example.com`. You can check that the anonymized snapshot still shows the problem with
-        `skener recheck <snapshots> --out <dir>`.
+        `sitetriage recheck <snapshots> --out <dir>`.
   - type: input
     id: check-id
     attributes:
       label: check_id
-      description: The check involved. `skener explain <check_id>` shows its threshold.
+      description: The check involved. `sitetriage explain <check_id>` shows its threshold.
       placeholder: seo.canonical.duplicate
     validations:
       required: true
@@ -73,15 +73,15 @@ body:
     id: version
     attributes:
       label: Version
-      description: Output of `skener --version`.
-      placeholder: skener 2.0.0
+      description: Output of `sitetriage --version`.
+      placeholder: sitetriage 3.0.0
     validations:
       required: true
   - type: textarea
     id: config
     attributes:
       label: Configuration changes
-      description: Thresholds or other settings you changed from the default `skener.toml`, and the `industry` of the domain.
+      description: Thresholds or other settings you changed from the default `sitetriage.toml`, and the `industry` of the domain.
       render: toml
   - type: checkboxes
     id: privacy
