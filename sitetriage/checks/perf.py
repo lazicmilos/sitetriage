@@ -1,7 +1,7 @@
-"""Provere performansi (§5, §7.3) i jedna QA provera koja se meri istim prolazom.
+"""Performance checks, and one QA check measured in the same run.
 
-Pragovi su **stepenasti**: prijavljuje se jedan nalaz po `check_id`, sa najvišom
-ozbiljnošću koja važi — ne tri nalaza za istu stranicu (§7.3).
+Thresholds are **tiered**: one finding is reported per `check_id`, at the highest
+severity that applies, not three findings for the same page (ADR-020).
 """
 
 from __future__ import annotations
@@ -12,43 +12,43 @@ from sitetriage.checks.registry import Context, check, finding, ok, unknown
 from sitetriage.models import OversizedImage, SiteSnapshot
 
 COMPRESSED = {"gzip", "br", "zstd", "deflate"}
-BYTES_PER_MB = 1_000_000  # decimalni MB — 14 903 221 B = 14,9 MB, kako se i piše u mejlu
+BYTES_PER_MB = 1_000_000  # decimal MB: 14 903 221 B = 14.9 MB, the way it is written in the email
 
 
 def _tier(value: float, tiers: dict[str, float]) -> str | None:
-    """Najviša ozbiljnost čiji je prag prekoračen, ili `None`."""
+    """The highest severity whose threshold is exceeded, or `None`."""
     for severity in ("critical", "high", "medium"):
         if severity in tiers and value > tiers[severity]:
             return severity
     return None
 
 
-def _vektor_ili_ugradjena(src: str) -> bool:
+def _vector_or_inline(src: str) -> bool:
     return src.startswith("data:") or urlsplit(src).path.lower().endswith(".svg")
 
 
 def _mb_per_s(ctx: Context) -> float:
-    """Sporija mobilna veza: 4,8 Mb/s = 0,6 MB/s (§10.3)."""
+    """A slower mobile connection: 4.8 Mb/s = 0.6 MB/s (ADR-010)."""
     return ctx.th("network_profile.download_mbps") / 8
 
 
 def _seconds_on_mobile(mb: float, ctx: Context) -> float:
-    """0,6 MB/s + režija. Pretpostavka mora da stoji u fusnoti izveštaja (§10.3)."""
+    """0.6 MB/s plus overhead. The assumption must be stated in a report footnote (ADR-010)."""
     return round(mb / _mb_per_s(ctx) + ctx.th("report.mobile_overhead_s"), 1)
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 1
+# Level 1
 # --------------------------------------------------------------------------- #
 @check(
     "perf.compression.missing",
     level=1,
     category="perf",
-    # low, ne medium: ušteda na samom HTML-u je desetinke sekunde (docs/izvestaj-testiranja-100.md).
+    # low, not medium: the saving on the HTML alone is tenths of a second (docs/izvestaj-testiranja-100.md).
     base_severity="low",
     requires=["home"],
-    description="Server ne šalje HTML kompresovan.",
-    threshold="content-encoding ∉ {gzip, br, zstd, deflate} i HTML > 50 kB",
+    description="The server does not send the HTML compressed.",
+    threshold="content-encoding ∉ {gzip, br, zstd, deflate} and HTML > 50 kB",
 )
 def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
@@ -56,7 +56,7 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     min_bytes = ctx.th("thresholds.perf.compression_min_kb") * 1024
     if encoding in COMPRESSED or home.html_bytes <= min_bytes:
         return ok(compression_missing.spec)
-    # Sečen HTML je veći od pročitanog, pa su veličina i ušteda donja granica („više od").
+    # Truncated HTML is larger than what was read, so the size and the saving are a lower bound ("more than").
     return finding(
         compression_missing.spec,
         ctx,
@@ -64,7 +64,7 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
             "encoding": encoding or None,
             "bytes": home.html_bytes,
             "kb": round(home.html_bytes / 1024),
-            # gzip i br svode HTML na otprilike četvrtinu; ušteda je ostatak, na sporijoj vezi
+            # gzip and br shrink HTML to about a quarter; the saving is the rest, on the slower connection
             "saving_s": round(home.html_bytes * 0.75 / BYTES_PER_MB / _mb_per_s(ctx), 1),
             "speed_mbps": ctx.th("network_profile.download_mbps"),
         },
@@ -79,8 +79,8 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     category="perf",
     base_severity="low",
     requires=["entry_response"],
-    description="Početna se otvara kroz niz preusmerenja.",
-    threshold="broj skokova ≥ thresholds.perf.redirect_hops (3)",
+    description="The home page opens through a chain of redirects.",
+    threshold="number of hops ≥ thresholds.perf.redirect_hops (3)",
 )
 def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
     chain = snapshot.entry.redirect_chain
@@ -101,7 +101,7 @@ def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
     category="perf",
     base_severity="low",
     requires=["home"],
-    description="Sam HTML dokument je prevelik.",
+    description="The HTML document itself is too large.",
     threshold="html_bytes > thresholds.perf.html_size_kb (500 kB)",
 )
 def html_size(snapshot: SiteSnapshot, ctx: Context):
@@ -109,7 +109,7 @@ def html_size(snapshot: SiteSnapshot, ctx: Context):
     limit_kb = ctx.th("thresholds.perf.html_size_kb")
     kb = round(home.html_bytes / 1024)
     if home.html_bytes <= limit_kb * 1024:
-        # Sečen HTML je veći od pročitanog: da li je i od praga, ne zna se.
+        # Truncated HTML is larger than what was read: whether it is larger than the threshold is not known.
         if home.truncated:
             return unknown(html_size.spec, "body_truncated", kb=kb)
         return ok(html_size.spec)
@@ -123,7 +123,7 @@ def html_size(snapshot: SiteSnapshot, ctx: Context):
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 2
+# Level 2
 # --------------------------------------------------------------------------- #
 @check(
     "perf.page.weight",
@@ -131,24 +131,25 @@ def html_size(snapshot: SiteSnapshot, ctx: Context):
     category="perf",
     base_severity="critical",
     requires=["network", "v2:network.bytes_at_load"],
-    description="Težina početne strane: šta se prenese za zahteve započete do događaja `load`.",
-    threshold="preneto do load, bez videa: > 2 MB medium · > 4 MB high · > 7 MB critical",
+    description="Weight of the home page: what is transferred for requests started before the `load` event.",
+    threshold="transferred until load, without video: > 2 MB medium · > 4 MB high · > 7 MB critical",
 )
 def page_weight(snapshot, ctx: Context):
     network = snapshot.network
-    # Bez `load` mera „do load" je nepotpuna, pa ni velik broj nije tvrdnja (Z-24).
+    # Without `load` the "until load" measure is incomplete, so even a large number is not a claim (ADR-016).
     if snapshot.timing.reached != "load":
         return unknown(page_weight.spec, "load_incomplete")
     max_unmeasured = ctx.th("browser.max_unmeasured_responses")
     if network.unmeasured_at_load > max_unmeasured:
-        # Merenje u koje nemaš poverenja gore je od merenja kojeg nema (§7.2).
-        nemereno = network.unmeasured_at_load
+        # A measurement you do not trust is worse than none (ADR-016).
+        unmeasured = network.unmeasured_at_load
         return unknown(
-            page_weight.spec, "unmeasured_responses", unmeasured=nemereno, threshold=max_unmeasured
+            page_weight.spec, "unmeasured_responses", unmeasured=unmeasured, threshold=max_unmeasured
         )
 
-    # Video se skida koliko vreme merenja dozvoli — isti sajt je izmeren jednom 8,5, a
-    # drugi put 26,9 MB — pa ne ulazi u prag, nego stoji posebno u poruci (O-2).
+    # Video downloads for as long as the measurement allows (the same site measured 8.5 MB once
+    # and 26.9 MB another time), so it stays out of the threshold and is stated separately in the
+    # message (ADR-016).
     video = network.bytes_by_type_at_load.get("media", 0)
     video_mb = round(video / BYTES_PER_MB, 1)
     mb = (network.bytes_at_load - video) / BYTES_PER_MB
@@ -169,7 +170,7 @@ def page_weight(snapshot, ctx: Context):
             "unmeasured": network.unmeasured_at_load,
             "reached": snapshot.timing.reached,
             "bytes_by_type": network.bytes_by_type_at_load,
-            # Sa onim što stigne posle `load`, i sa videom: samo informativno, van praga.
+            # Including what arrives after `load`, and video: informational only, outside the threshold.
             "total_bytes": network.total_bytes,
             "total_requests": network.request_count,
         },
@@ -184,8 +185,8 @@ def page_weight(snapshot, ctx: Context):
     category="perf",
     base_severity="high",
     requires=["network", "v2:network.requests_at_load"],
-    description="Broj mrežnih zahteva započetih do događaja `load` pri otvaranju početne.",
-    threshold="zahtevi do load: > 60 medium · > 90 high",
+    description="Number of network requests started before the `load` event when opening the home page.",
+    threshold="requests until load: > 60 medium · > 90 high",
 )
 def request_count(snapshot, ctx: Context):
     count = snapshot.network.requests_at_load
@@ -212,19 +213,22 @@ def request_count(snapshot, ctx: Context):
     level=2,
     category="perf",
     base_severity="high",
-    # Sekunde važe za vezu pod kojom su izmerene; snimak bez profila meren je na stvarnoj (Z-30),
-    # a profil ne može da ubrza vezu sporiju od sebe (Z-33).
+    # Seconds hold for the connection they were measured on; a snapshot without a profile was
+    # measured on the real one (ADR-010), and the profile cannot speed up a link slower than itself
+    # (ADR-018).
     requires=["browser", "level2_full", "network_profile", "link"],
-    description="Vreme do potpunog učitavanja početne, na simuliranoj vezi iz `[network_profile]`.",
-    threshold="> 6 s medium · > 9 s high · prekid posle tvrdog limita = high",
+    description=(
+        "Time until the home page has fully loaded, on the simulated connection from `[network_profile]`."
+    ),
+    threshold="> 6 s medium · > 9 s high · cut off after the hard limit = high",
 )
 def load_time(snapshot, ctx: Context):
-    potrebno = ctx.th("network_profile.min_link_ratio") * snapshot.network_profile.download_mbps
-    if snapshot.link_mbps < potrebno:
-        return unknown(load_time.spec, "link_slow", measured_mbps=snapshot.link_mbps, required_mbps=potrebno)
+    required = ctx.th("network_profile.min_link_ratio") * snapshot.network_profile.download_mbps
+    if snapshot.link_mbps < required:
+        return unknown(load_time.spec, "link_slow", measured_mbps=snapshot.link_mbps, required_mbps=required)
     timing = snapshot.timing
     if timing.reached == "timeout":
-        # Stranica koja ne stigne do `load` unutar tvrdog limita je merenje samo po sebi.
+        # A page that does not reach `load` within the hard limit is a measurement in itself.
         limit_s = ctx.th("browser.timeout_s")
         return finding(
             load_time.spec,
@@ -237,7 +241,7 @@ def load_time(snapshot, ctx: Context):
                 "reached": "timeout",
             },
             urls=[snapshot.url],
-            # Ne „treba joj 25 s": ne zna se koliko joj treba, samo da je više od toga.
+            # Not "it takes 25 s": how long it takes is not known, only that it is more than that.
             variant="timeout",
         )
     if timing.load_ms is None:
@@ -265,26 +269,26 @@ def load_time(snapshot, ctx: Context):
     category="perf",
     base_severity="medium",
     requires=["browser"],
-    description="Slike se šalju znatno veće nego što se prikazuju.",
+    description="Images are sent much larger than they are displayed.",
     threshold=(
-        "≥ 3 slike sa odnosom > 2,5 i izmerenim viškom, ili procenjen višak > 700 kB; "
-        "SVG i data: slike se ne broje"
+        "≥ 3 images with a ratio > 2.5 and measured waste, or estimated waste > 700 kB; "
+        "SVG and data: images do not count"
     ),
 )
 def img_oversized(snapshot, ctx: Context):
     dom = snapshot.dom
-    # SVG nema „pravu" veličinu, a data: čuvar mesta za lenje učitavanje nema prenos.
-    # Ista slika više puta na strani (klonirani slajdovi) preuzeta je jednom (BUG-030).
-    po_src: dict[str, OversizedImage] = {}
+    # An SVG has no "real" size, and a data: placeholder for lazy loading has no transfer.
+    # The same image several times on a page (cloned slides) is downloaded once (BUG-030).
+    by_src: dict[str, OversizedImage] = {}
     for img in dom.oversized_images:
-        if _vektor_ili_ugradjena(img.src):
+        if _vector_or_inline(img.src):
             continue
-        ranija = po_src.get(img.src)
-        if ranija is None or img.est_waste_kb > ranija.est_waste_kb:
-            po_src[img.src] = img
-    rasterske = sorted(po_src.values(), key=lambda img: -img.est_waste_kb)
-    # Bez izmerenog prenosa višak je 0, a rečenica bi rekla „oko 0 kB" (BUG-023).
-    oversized = [img for img in rasterske if img.est_waste_kb > 0]
+        earlier = by_src.get(img.src)
+        if earlier is None or img.est_waste_kb > earlier.est_waste_kb:
+            by_src[img.src] = img
+    raster = sorted(by_src.values(), key=lambda img: -img.est_waste_kb)
+    # Without a measured transfer the waste is 0, and the sentence would say "about 0 kB" (BUG-023).
+    oversized = [img for img in raster if img.est_waste_kb > 0]
     waste_kb = round(sum(img.est_waste_kb for img in oversized))
     min_count = ctx.th("thresholds.perf.oversized_min_count")
     max_waste = ctx.th("thresholds.perf.oversized_waste_kb")
@@ -302,9 +306,9 @@ def img_oversized(snapshot, ctx: Context):
             },
             urls=[img.src for img in oversized[:5]],
         )
-    if len(rasterske) >= min_count:
-        return unknown(img_oversized.spec, "oversized_unmeasured", count=len(rasterske) - len(oversized))
-    # Bez ovoga ne znaš da li je „0 predimenzioniranih slika" nalaz ili neuspelo merenje (§3.3).
+    if len(raster) >= min_count:
+        return unknown(img_oversized.spec, "oversized_unmeasured", count=len(raster) - len(oversized))
+    # Without this you cannot tell whether "0 oversized images" is a result or a failed measurement.
     if dom.images_unmeasured and dom.images_unmeasured >= dom.images_total / 2:
         return unknown(
             img_oversized.spec, "images_unmeasured", unmeasured=dom.images_unmeasured, total=dom.images_total
@@ -318,11 +322,11 @@ def img_oversized(snapshot, ctx: Context):
     category="qa",
     base_severity="low",
     requires=["browser"],
-    description="Greške u konzoli: skripte i delovi strane koji se nisu učitali.",
+    description="Console errors: scripts and parts of the page that did not load.",
     threshold="> thresholds.qa.console_errors (3)",
 )
 def console_errors(snapshot, ctx: Context):
-    # Slab prodajni signal — zato ostaje `low` i ne ide u mejl (§15, zamka 9).
+    # A weak sales signal, so it stays `low` and does not go into the email.
     console = snapshot.console
     if console.errors <= ctx.th("thresholds.qa.console_errors"):
         return ok(console_errors.spec)

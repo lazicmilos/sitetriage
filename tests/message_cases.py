@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Any
 
 from factories import CONFIG, clean_browser, clean_site, run_level
-from test_checks_level1 import POZITIVNI as LEVEL1
-from test_checks_level2 import POZITIVNI as LEVEL2
-from test_ispitni_skup import spec_config
+from test_checks_level1 import POSITIVE_CASES as LEVEL1
+from test_checks_level2 import POSITIVE_CASES as LEVEL2
+from test_reference_set import spec_config
 
 from sitetriage import store
 from sitetriage.checks import registry

@@ -105,7 +105,7 @@ pytest -m browser -rs                       # only level 2 tests, and why any we
 - Thresholds get boundary value tests (limit − 1, limit, limit + 1), and rules with several
   conditions get decision tables.
 - The technique is in the test case id: `gv-` boundary value, `ke-` equivalence class, `tab-` decision
-  table, `st-` state transition, `pg-` error guessing. See `tests/test_granice.py` for examples.
+  table, `st-` state transition, `pg-` error guessing. See `tests/test_boundaries.py` for examples.
 - Fixtures in `tests/fixtures/` are hand-written, not recorded from real sites.
 
 ## Lint and pre-commit
@@ -175,10 +175,10 @@ breaks one of them will not be merged, however useful the feature.
    entry with the client and technical sentence, and an entry in `REASONS` for every new reason code.
    The catalog and the registry must have the same keys.
 5. **Test it.**
-   - Add the check to `POZITIVNI` in `tests/test_checks_level1.py` or `tests/test_checks_level2.py`
+   - Add the check to `POSITIVE_CASES` in `tests/test_checks_level1.py` or `tests/test_checks_level2.py`
      (one broken thing, only this check fires). The clean-site tests fail until you do.
    - Add boundary value tests (`gv-`) for every threshold and a decision table (`tab-`) if the rule
-     has several conditions, in `tests/test_granice.py`.
+     has several conditions, in `tests/test_boundaries.py`.
    - Add message cases to `tests/poruke_slucajevi.py`, including the plural forms.
    - Add an `unknown` / `not_applicable` case for each reason the check can give.
 6. **Update the README table.** Run `sitetriage explain --all --markdown` and paste the result over the

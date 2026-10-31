@@ -1,8 +1,8 @@
-"""Open Graph provere (§5).
+"""Open Graph checks.
 
-Hotelski i ugostiteljski link se deli u porukama i grupama; gost koji dobije golu
-adresu bez slike i naslova ne klikne. Zato `social` na hotelu nosi množilac 1,5,
-a na b2b 0,7 (§9.2).
+Hotel and restaurant links get shared in messages and groups; a guest who gets a bare
+URL without an image and a title does not click. That is why `social` carries a
+multiplier of 1.5 for hotels and 0.7 for b2b (`[industry_multipliers]` in `sitetriage.toml`).
 """
 
 from __future__ import annotations
@@ -22,8 +22,8 @@ def _og_count(snapshot: SiteSnapshot) -> int:
     category="social",
     base_severity="high",
     requires=["home", "home_complete"],
-    description="Početna nema og:title.",
-    threshold="nedostaje <meta property=og:title>",
+    description="The home page has no og:title.",
+    threshold="<meta property=og:title> is missing",
 )
 def og_title_missing(snapshot: SiteSnapshot, ctx: Context):
     if snapshot.home.og.title:
@@ -45,8 +45,8 @@ def og_title_missing(snapshot: SiteSnapshot, ctx: Context):
     category="social",
     base_severity="medium",
     requires=["home", "home_complete"],
-    description="Početna nema og:description.",
-    threshold="nedostaje <meta property=og:description>",
+    description="The home page has no og:description.",
+    threshold="<meta property=og:description> is missing",
 )
 def og_description_missing(snapshot: SiteSnapshot, ctx: Context):
     if snapshot.home.og.description:
@@ -68,8 +68,8 @@ def og_description_missing(snapshot: SiteSnapshot, ctx: Context):
     category="social",
     base_severity="medium",
     requires=["home", "home_complete"],
-    description="Početna nema og:image.",
-    threshold="nedostaje <meta property=og:image>",
+    description="The home page has no og:image.",
+    threshold="<meta property=og:image> is missing",
 )
 def og_image_missing(snapshot: SiteSnapshot, ctx: Context):
     if snapshot.home.og.image:
