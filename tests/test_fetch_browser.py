@@ -202,16 +202,16 @@ def test_lagani_nivo_2_bira_broj_konteksta_po_masini(monkeypatch, slobodno_gb, j
     config = load_config()
     config["browser"]["light_concurrency"] = zadato
     kb = None if slobodno_gb is None else int(slobodno_gb * 1_048_576)
-    monkeypatch.setattr(modul, "_slobodno_kb", lambda: kb)
+    monkeypatch.setattr(modul, "_available_kb", lambda: kb)
     monkeypatch.setattr(modul.os, "cpu_count", lambda: jezgara)
-    assert modul._konteksta(config, light=True) == ocekivano
-    assert modul._konteksta(config, light=False) == 3
+    assert modul._context_count(config, light=True) == ocekivano
+    assert modul._context_count(config, light=False) == 3
 
 
 def test_slobodna_memorija_se_cita_iz_proc_meminfo():
     from sitetriage.fetch import browser as modul
 
-    kb = modul._slobodno_kb()
+    kb = modul._available_kb()
     assert kb is None if not Path("/proc/meminfo").exists() else kb > 0
 
 
@@ -463,7 +463,7 @@ def test_tvrdi_limit_po_domenu_prekida_nivo_2():
 
     assert trajanje < 15, f"tvrdi limit od 3 s nije poštovan: {trajanje:.0f} s"
     assert snimak.status == "failed"
-    assert any("tvrdog limita" in e.detail for e in snimak.errors), snimak.errors
+    assert any("hard limit" in e.detail for e in snimak.errors), snimak.errors
     assert snimak.elapsed_ms >= 3000
 
 
@@ -613,13 +613,13 @@ def test_rukovalac_izuzetaka_se_vraca_posle_nivoa_2():
 
 def test_rukovalac_utisava_samo_zatvoren_kontekst():
     """Sve osim greške zatvorenog konteksta ide rukovaocu koji je bio pre nivoa 2."""
-    from sitetriage.fetch.browser import _tiho_za_zatvoren_kontekst
+    from sitetriage.fetch.browser import _quiet_on_closed_context
 
     class TargetClosedError(Exception):
         pass
 
     primljeno = []
-    rukovalac = _tiho_za_zatvoren_kontekst(lambda _loop, context: primljeno.append(context))
+    rukovalac = _quiet_on_closed_context(lambda _loop, context: primljeno.append(context))
     rukovalac(None, {"exception": TargetClosedError()})
     rukovalac(None, {"exception": ValueError("pravi kvar")})
     assert [type(c["exception"]).__name__ for c in primljeno] == ["ValueError"]
