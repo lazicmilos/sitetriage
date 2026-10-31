@@ -470,14 +470,18 @@ def test_snapshot_is_written_to_disk_as_soon_as_the_domain_is_done(tmp_path):
     "domain, expected",
     [
         ("institucija.example", "institucija.example"),
-        ("http://127.0.0.1:8123", "http_127.0.0.1_8123"),
-        ("../../etc/passwd", "etc_passwd"),
-        ("", "unknown-domain"),
+        ("http://127.0.0.1:8123", "http_127.0.0.1_8123~"),
+        ("../../etc/passwd", "etc_passwd~"),
+        ("", "unknown-domain~"),
     ],
 )
 def test_directory_name_does_not_leave_the_output_directory(domain, expected):
-    """The domain comes from the user's CSV: a trust boundary."""
-    assert store.slug(domain) == expected
+    """The domain comes from the user's CSV: a trust boundary. A changed name also gets a hash
+    suffix after `~`, so two domains never share a folder (BUG-03)."""
+    name = store.slug(domain)
+    hash_length = 8 if expected.endswith("~") else 0
+    assert name.startswith(expected) and len(name) == len(expected) + hash_length
+    assert "/" not in name and ".." not in name
 
 
 # --------------------------------------------------------------------------- #
