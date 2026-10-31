@@ -14,7 +14,7 @@ import re
 
 import pytest
 from factories import clean_browser, clean_site, run_level
-from poruke_slucajevi import GOLDEN, slucajevi
+from message_cases import GOLDEN, finding_cases
 
 from sitetriage.checks import registry
 from sitetriage.messages import LANGS, catalog, reason, render
@@ -23,7 +23,7 @@ from sitetriage.messages.sr import sa_brojem
 
 registry.load_all()
 SPECS = sorted(registry.REGISTRY.values(), key=lambda s: s.check_id)
-SLUCAJEVI = list(slucajevi())
+SLUCAJEVI = list(finding_cases())
 
 
 def sabloni(lang: str) -> list[tuple[str, str]]:
@@ -71,19 +71,19 @@ def test_svaki_kod_razloga_iz_koda_postoji_u_katalogu():
 
 def test_srpski_razlozi_isti_kao_pre_prevodjenja():
     """Golden je napravljen kodom u kome su razlozi bili gotove srpske rečenice."""
-    from poruke_slucajevi import GOLDEN_RAZLOZI, razlozi
+    from message_cases import GOLDEN_REASONS, reason_cases
 
-    golden = json.loads(GOLDEN_RAZLOZI.read_text(encoding="utf-8"))
-    sada = [{"slucaj": s, "provera": c, "razlog": reason(r, "sr")} for s, c, r in razlozi()]
+    golden = json.loads(GOLDEN_REASONS.read_text(encoding="utf-8"))
+    sada = [{"case": s, "check": c, "reason": reason(r, "sr")} for s, c, r in reason_cases()]
     assert len(sada) == len(golden)
     for staro, novo in zip(golden, sada, strict=True):
         assert novo == staro
 
 
 def test_razlozi_na_engleskom_nemaju_srpskih_reci():
-    from poruke_slucajevi import razlozi
+    from message_cases import reason_cases
 
-    for slucaj, _, r in razlozi():
+    for slucaj, _, r in reason_cases():
         tekst = reason(r, "en")
         assert not re.search(r"[čćšžđ]|\b(nije|sajt|stranica|početna)\b", tekst), (slucaj, tekst)
 
@@ -97,7 +97,7 @@ def test_srpske_recenice_iste_kao_pre_refaktora():
     """Golden je napravljen kodom pre izdvajanja poruka iz provera (Z-12)."""
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
     sada = [
-        {"slucaj": s, "check_id": f.check_id, "severity": f.severity, **render(f, "sr").__dict__}
+        {"case": s, "check_id": f.check_id, "severity": f.severity, **render(f, "sr").__dict__}
         for s, f in SLUCAJEVI
     ]
     assert len(sada) == len(golden)
