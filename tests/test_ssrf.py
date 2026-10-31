@@ -32,14 +32,14 @@ def _skeniraj(domen: str, config: dict | None = None):
 
 
 def test_lokalni_server_bez_dozvole_ne_dobija_nijedan_zahtev():
-    with FakeSite(dozvoljen=False) as site:
+    with FakeSite(allowed=False) as site:
         snapshot = _skeniraj(site.base_url)
     assert site.requests == []
     assert snapshot.entry.error_kind == "blocked"
 
 
 def test_izricita_dozvola_otvara_tacno_taj_host_i_port():
-    with FakeSite(dozvoljen=False) as site:
+    with FakeSite(allowed=False) as site:
         cfg = load_config()
         host, port = site.address
         cfg["net"]["allowed_private"] = [f"{host}:{port}"]
@@ -49,7 +49,7 @@ def test_izricita_dozvola_otvara_tacno_taj_host_i_port():
 
 def test_preusmerenje_na_privatnu_adresu_se_odbija():
     """Dozvoljen server preusmerava na drugi port; provera je pri otvaranju svake veze."""
-    with FakeSite(dozvoljen=False) as cilj:
+    with FakeSite(allowed=False) as cilj:
         preusmerenje = Response(b"", status=302, headers={"location": f"{cilj.base_url}/"})
         with FakeSite(extra={"/": preusmerenje}) as site:
             snapshot = _skeniraj(site.base_url)
@@ -107,7 +107,7 @@ def test_ime_bez_dns_zapisa_ostaje_dns_greska(monkeypatch):
 
 def test_blokiran_domen_nije_unreachable():
     """Sajt možda radi — samo ga mi namerno nismo otvorili. To je `failed`, ne „ne radi"."""
-    with FakeSite(dozvoljen=False) as site:
+    with FakeSite(allowed=False) as site:
         snapshot = _skeniraj(site.base_url)
     izvestaj = analyze(snapshot, load_config())
     assert izvestaj.status == "failed"
@@ -115,7 +115,7 @@ def test_blokiran_domen_nije_unreachable():
 
 
 def test_ulaz_sa_ip_adresom_ne_salje_nijedan_zahtev():
-    with FakeSite(dozvoljen=False) as site:
+    with FakeSite(allowed=False) as site:
         _, port = site.address
         snapshot = _skeniraj(f"127.0.0.1:{port}")
     assert site.requests == []
@@ -205,7 +205,7 @@ def _nivo2(site: FakeSite):
 
 @pytest.mark.browser
 def test_browser_ne_ucitava_resurs_sa_privatne_adrese():
-    with FakeSite(dozvoljen=False) as privatni:
+    with FakeSite(allowed=False) as privatni:
         strana = html("Strana", body=f"<img src='{privatni.base_url}/slika.png'>")
         with FakeSite(extra={"/": Response(strana)}) as site:
             snimak = _nivo2(site)
@@ -215,7 +215,7 @@ def test_browser_ne_ucitava_resurs_sa_privatne_adrese():
 
 @pytest.mark.browser
 def test_browser_ne_otvara_stranicu_na_privatnoj_adresi():
-    with FakeSite(dozvoljen=False) as privatni:
+    with FakeSite(allowed=False) as privatni:
         snimak = _nivo2(privatni)
     assert snimak.status == "failed" and snimak.errors[0].stage == "goto"
     assert privatni.requests == []
@@ -228,7 +228,7 @@ def test_browser_ne_otvara_stranicu_na_privatnoj_adresi():
 def test_browser_ne_prati_preusmerenje_na_privatnu_adresu():
     """Poznato ograničenje nivoa 2. Kad Playwright počne da vidi preusmerenja, test prolazi
     i `strict` ga obara, pa se ograničenje briše iz ADR-006."""
-    with FakeSite(dozvoljen=False) as cilj:
+    with FakeSite(allowed=False) as cilj:
         preusmerenje = Response(b"", status=302, headers={"location": f"{cilj.base_url}/"})
         with FakeSite(extra={"/": preusmerenje}) as site:
             _nivo2(site)

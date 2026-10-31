@@ -1,7 +1,7 @@
 """Nivo 2 protiv lokalnog servera i pravog Chromiuma (§7).
 
 Označeno `browser`: preskače se ako Playwright ili Chromium nisu instalirani
-(`chromium_se_pokrece` u `conftest.py`).
+(`chromium_starts` u `conftest.py`).
 """
 
 from __future__ import annotations

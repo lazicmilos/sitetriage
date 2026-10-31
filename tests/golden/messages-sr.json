@@ -1,671 +1,671 @@
 [
  {
-  "slucaj": "ispitni/spec/b2b-firma.example",
+  "case": "ispitni/spec/b2b-firma.example",
   "check_id": "perf.load.time",
   "severity": "medium",
   "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita.",
   "tech": "load_ms=6100, reached=load"
  },
  {
-  "slucaj": "ispitni/spec/b2b-firma.example",
+  "case": "ispitni/spec/b2b-firma.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
   "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s.",
   "tech": "bytes_at_load=2100000, bez videa 2.1 MB, video 0.0 MB, zahteva=60, nemereno=0, reached=load; sa onim posle load 2100000 B i 60 zahteva (informativno)"
  },
  {
-  "slucaj": "ispitni/spec/hotel-planina.example",
+  "case": "ispitni/spec/hotel-planina.example",
   "check_id": "social.og.title.missing",
   "severity": "high",
   "client": "Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.",
   "tech": "https://hotel-planina.example/: nedostaje og:title (ukupno og oznaka: 2)"
  },
  {
-  "slucaj": "ispitni/spec/hotel-planina.example",
+  "case": "ispitni/spec/hotel-planina.example",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://hotel-planina.example/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "ispitni/spec/hotel-planina.example",
+  "case": "ispitni/spec/hotel-planina.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "ispitni/spec/hotel-planina.example",
+  "case": "ispitni/spec/hotel-planina.example",
   "check_id": "i18n.lang.invalid",
   "severity": "medium",
   "client": "Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.",
   "tech": "https://hotel-planina.example/: lang=\"zxx\" nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)"
  },
  {
-  "slucaj": "ispitni/spec/hotel-planina.example",
+  "case": "ispitni/spec/hotel-planina.example",
   "check_id": "infra.sitemap.missing",
   "severity": "medium",
   "client": "Sajt nema mapu stranica (sitemap). Google zato nove i dublje stranice pronalazi samo preko linkova, sporije, a stranice do kojih ne vodi nijedan link može i da ne pronađe.",
   "tech": "sitemap status=404, urls=0"
  },
  {
-  "slucaj": "ispitni/spec/hotel-planina.example",
+  "case": "ispitni/spec/hotel-planina.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
   "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
-  "slucaj": "ispitni/spec/institucija.example",
+  "case": "ispitni/spec/institucija.example",
   "check_id": "seo.canonical.duplicate",
   "severity": "critical",
   "client": "6 od 7 proverenih stranica sajta prijavljuje Google-u drugu adresu kao zvaničnu (https://institucija.example/). Google ih zato može smatrati kopijama te adrese i izostaviti iz pretrage.",
   "tech": "canonical_normalized == https://institucija.example/ na 6 od 7 stranica (udeo 0.8571) iz 6 grupa putanja (uzorak: sitemap)"
  },
  {
-  "slucaj": "ispitni/spec/institucija.example",
+  "case": "ispitni/spec/institucija.example",
   "check_id": "infra.soft404",
   "severity": "high",
   "client": "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
   "tech": "obe sonde status=200, sličnost sa početnom 1.0"
  },
  {
-  "slucaj": "ispitni/spec/institucija.example",
+  "case": "ispitni/spec/institucija.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "ispitni/spec/klinika.example",
+  "case": "ispitni/spec/klinika.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
   "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
-  "slucaj": "ispitni/spec/ordinacija.example",
+  "case": "ispitni/spec/ordinacija.example",
   "check_id": "a11y.img.alt.missing",
   "severity": "high",
   "client": "Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
   "tech": "images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=1 se namerno ne broji, nemereno=0"
  },
  {
-  "slucaj": "ispitni/spec/ordinacija.example",
+  "case": "ispitni/spec/ordinacija.example",
   "check_id": "i18n.lang.mismatch",
   "severity": "medium",
   "client": "Sadržaj sajta je na srpskom, ali je u kodu označen kao „en-US”. Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato srpski tekst izgovaraju po pravilima tog jezika, pa je teško razumljiv.",
   "tech": "https://ordinacija.example/: lang=\"en-US\", sadržaj prepoznat kao sr (ćirilica 0.0, dijakritici 0.0197, 918 znakova; izvor: sirovi HTML)"
  },
  {
-  "slucaj": "ispitni/spec/prodavnica.example",
+  "case": "ispitni/spec/prodavnica.example",
   "check_id": "perf.request.count",
   "severity": "high",
   "client": "Otvaranje početne strane pokreće 175 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=175, sa onim posle load 175 (reached=load)"
  },
  {
-  "slucaj": "ispitni/spec/prodavnica.example",
+  "case": "ispitni/spec/prodavnica.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "ispitni/spec/prodavnica.example",
+  "case": "ispitni/spec/prodavnica.example",
   "check_id": "perf.img.oversized",
   "severity": "medium",
   "client": "Sajt šalje slike znatno veće nego što se prikazuju — oko 2400 kB nepotrebnog prenosa pri prvoj poseti.",
   "tech": "4 slika sa ratio > 2.5, procenjen višak 2400 kB, nemereno 0"
  },
  {
-  "slucaj": "ispitni/spec/prodavnica.example",
+  "case": "ispitni/spec/prodavnica.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
   "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s.",
   "tech": "bytes_at_load=2600000, bez videa 2.6 MB, video 0.0 MB, zahteva=175, nemereno=0, reached=load; sa onim posle load 2600000 B i 175 zahteva (informativno)"
  },
  {
-  "slucaj": "ispitni/spec/restoran-centar.example",
+  "case": "ispitni/spec/restoran-centar.example",
   "check_id": "perf.page.weight",
   "severity": "critical",
   "client": "Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s.",
   "tech": "bytes_at_load=14903221, bez videa 14.9 MB, video 0.0 MB, zahteva=87, nemereno=0, reached=load; sa onim posle load 14903221 B i 87 zahteva (informativno)"
  },
  {
-  "slucaj": "ispitni/spec/restoran-centar.example",
+  "case": "ispitni/spec/restoran-centar.example",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://restoran-centar.example/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "ispitni/spec/restoran-centar.example",
+  "case": "ispitni/spec/restoran-centar.example",
   "check_id": "perf.request.count",
   "severity": "medium",
   "client": "Otvaranje početne strane pokreće 87 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=87, sa onim posle load 87 (reached=load)"
  },
  {
-  "slucaj": "ispitni/spec/restoran-ugao.example",
+  "case": "ispitni/spec/restoran-ugao.example",
   "check_id": "social.og.title.missing",
   "severity": "high",
   "client": "Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.",
   "tech": "https://restoran-ugao.example/: nedostaje og:title (ukupno og oznaka: 1)"
  },
  {
-  "slucaj": "ispitni/spec/restoran-ugao.example",
+  "case": "ispitni/spec/restoran-ugao.example",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://restoran-ugao.example/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "ispitni/spec/restoran-ugao.example",
+  "case": "ispitni/spec/restoran-ugao.example",
   "check_id": "social.og.description.missing",
   "severity": "medium",
   "client": "Kad se link sajta podeli, platforme nemaju pripremljen opis, pa same biraju tekst sa strane ili ne prikazuju nijedan.",
   "tech": "https://restoran-ugao.example/: nedostaje og:description (ukupno og oznaka: 1)"
  },
  {
-  "slucaj": "ispitni/spec/restoran-ugao.example",
+  "case": "ispitni/spec/restoran-ugao.example",
   "check_id": "seo.description.missing",
   "severity": "medium",
   "client": "Početna strana nema kratak opis za Google. Google tada sam bira tekst sa strane za prikaz ispod naslova, a to ume da bude deo menija ili obaveštenja o kolačićima.",
   "tech": "https://restoran-ugao.example/: nedostaje <meta name=description> (dužina 0)"
  },
  {
-  "slucaj": "ispitni/toml/b2b-firma.example",
+  "case": "ispitni/toml/b2b-firma.example",
   "check_id": "perf.load.time",
   "severity": "medium",
   "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 6,1 s da se do kraja učita.",
   "tech": "load_ms=6100, reached=load"
  },
  {
-  "slucaj": "ispitni/toml/b2b-firma.example",
+  "case": "ispitni/toml/b2b-firma.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
   "client": "Početna strana prenosi 2,1 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 4,5 s.",
   "tech": "bytes_at_load=2100000, bez videa 2.1 MB, video 0.0 MB, zahteva=60, nemereno=0, reached=load; sa onim posle load 2100000 B i 60 zahteva (informativno)"
  },
  {
-  "slucaj": "ispitni/toml/hotel-planina.example",
+  "case": "ispitni/toml/hotel-planina.example",
   "check_id": "social.og.title.missing",
   "severity": "high",
   "client": "Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.",
   "tech": "https://hotel-planina.example/: nedostaje og:title (ukupno og oznaka: 2)"
  },
  {
-  "slucaj": "ispitni/toml/hotel-planina.example",
+  "case": "ispitni/toml/hotel-planina.example",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://hotel-planina.example/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "ispitni/toml/hotel-planina.example",
+  "case": "ispitni/toml/hotel-planina.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "ispitni/toml/hotel-planina.example",
+  "case": "ispitni/toml/hotel-planina.example",
   "check_id": "i18n.lang.invalid",
   "severity": "medium",
   "client": "Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.",
   "tech": "https://hotel-planina.example/: lang=\"zxx\" nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)"
  },
  {
-  "slucaj": "ispitni/toml/hotel-planina.example",
+  "case": "ispitni/toml/hotel-planina.example",
   "check_id": "infra.sitemap.missing",
   "severity": "medium",
   "client": "Sajt nema mapu stranica (sitemap). Google zato nove i dublje stranice pronalazi samo preko linkova, sporije, a stranice do kojih ne vodi nijedan link može i da ne pronađe.",
   "tech": "sitemap status=404, urls=0"
  },
  {
-  "slucaj": "ispitni/toml/hotel-planina.example",
+  "case": "ispitni/toml/hotel-planina.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
   "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
-  "slucaj": "ispitni/toml/institucija.example",
+  "case": "ispitni/toml/institucija.example",
   "check_id": "seo.canonical.duplicate",
   "severity": "critical",
   "client": "6 od 7 proverenih stranica sajta prijavljuje Google-u drugu adresu kao zvaničnu (https://institucija.example/). Google ih zato može smatrati kopijama te adrese i izostaviti iz pretrage.",
   "tech": "canonical_normalized == https://institucija.example/ na 6 od 7 stranica (udeo 0.8571) iz 6 grupa putanja (uzorak: sitemap)"
  },
  {
-  "slucaj": "ispitni/toml/institucija.example",
+  "case": "ispitni/toml/institucija.example",
   "check_id": "infra.soft404",
   "severity": "high",
   "client": "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
   "tech": "obe sonde status=200, sličnost sa početnom 1.0"
  },
  {
-  "slucaj": "ispitni/toml/institucija.example",
+  "case": "ispitni/toml/institucija.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "ispitni/toml/klinika.example",
+  "case": "ispitni/toml/klinika.example",
   "check_id": "infra.robots.missing",
   "severity": "low",
   "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
-  "slucaj": "ispitni/toml/ordinacija.example",
+  "case": "ispitni/toml/ordinacija.example",
   "check_id": "a11y.img.alt.missing",
   "severity": "high",
   "client": "Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
   "tech": "images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=1 se namerno ne broji, nemereno=0"
  },
  {
-  "slucaj": "ispitni/toml/ordinacija.example",
+  "case": "ispitni/toml/ordinacija.example",
   "check_id": "i18n.lang.mismatch",
   "severity": "medium",
   "client": "Sadržaj sajta je na srpskom, ali je u kodu označen kao „en-US”. Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato srpski tekst izgovaraju po pravilima tog jezika, pa je teško razumljiv.",
   "tech": "https://ordinacija.example/: lang=\"en-US\", sadržaj prepoznat kao sr (ćirilica 0.0, dijakritici 0.0197, 918 znakova; izvor: sirovi HTML)"
  },
  {
-  "slucaj": "ispitni/toml/prodavnica.example",
+  "case": "ispitni/toml/prodavnica.example",
   "check_id": "perf.request.count",
   "severity": "high",
   "client": "Otvaranje početne strane pokreće 175 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=175, sa onim posle load 175 (reached=load)"
  },
  {
-  "slucaj": "ispitni/toml/prodavnica.example",
+  "case": "ispitni/toml/prodavnica.example",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "ispitni/toml/prodavnica.example",
+  "case": "ispitni/toml/prodavnica.example",
   "check_id": "perf.img.oversized",
   "severity": "medium",
   "client": "Sajt šalje slike znatno veće nego što se prikazuju — oko 2400 kB nepotrebnog prenosa pri prvoj poseti.",
   "tech": "4 slika sa ratio > 2.5, procenjen višak 2400 kB, nemereno 0"
  },
  {
-  "slucaj": "ispitni/toml/prodavnica.example",
+  "case": "ispitni/toml/prodavnica.example",
   "check_id": "perf.page.weight",
   "severity": "medium",
   "client": "Početna strana prenosi 2,6 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 5,3 s.",
   "tech": "bytes_at_load=2600000, bez videa 2.6 MB, video 0.0 MB, zahteva=175, nemereno=0, reached=load; sa onim posle load 2600000 B i 175 zahteva (informativno)"
  },
  {
-  "slucaj": "ispitni/toml/restoran-centar.example",
+  "case": "ispitni/toml/restoran-centar.example",
   "check_id": "perf.page.weight",
   "severity": "critical",
   "client": "Početna strana prenosi 14,9 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 25,8 s.",
   "tech": "bytes_at_load=14903221, bez videa 14.9 MB, video 0.0 MB, zahteva=87, nemereno=0, reached=load; sa onim posle load 14903221 B i 87 zahteva (informativno)"
  },
  {
-  "slucaj": "ispitni/toml/restoran-centar.example",
+  "case": "ispitni/toml/restoran-centar.example",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://restoran-centar.example/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "ispitni/toml/restoran-centar.example",
+  "case": "ispitni/toml/restoran-centar.example",
   "check_id": "perf.request.count",
   "severity": "medium",
   "client": "Otvaranje početne strane pokreće 87 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=87, sa onim posle load 87 (reached=load)"
  },
  {
-  "slucaj": "ispitni/toml/restoran-ugao.example",
+  "case": "ispitni/toml/restoran-ugao.example",
   "check_id": "social.og.title.missing",
   "severity": "high",
   "client": "Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.",
   "tech": "https://restoran-ugao.example/: nedostaje og:title (ukupno og oznaka: 1)"
  },
  {
-  "slucaj": "ispitni/toml/restoran-ugao.example",
+  "case": "ispitni/toml/restoran-ugao.example",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://restoran-ugao.example/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "ispitni/toml/restoran-ugao.example",
+  "case": "ispitni/toml/restoran-ugao.example",
   "check_id": "social.og.description.missing",
   "severity": "medium",
   "client": "Kad se link sajta podeli, platforme nemaju pripremljen opis, pa same biraju tekst sa strane ili ne prikazuju nijedan.",
   "tech": "https://restoran-ugao.example/: nedostaje og:description (ukupno og oznaka: 1)"
  },
  {
-  "slucaj": "ispitni/toml/restoran-ugao.example",
+  "case": "ispitni/toml/restoran-ugao.example",
   "check_id": "seo.description.missing",
   "severity": "medium",
   "client": "Početna strana nema kratak opis za Google. Google tada sam bira tekst sa strane za prikaz ispod naslova, a to ume da bude deo menija ili obaveštenja o kolačićima.",
   "tech": "https://restoran-ugao.example/: nedostaje <meta name=description> (dužina 0)"
  },
  {
-  "slucaj": "nivo1/i18n.lang.invalid",
+  "case": "nivo1/i18n.lang.invalid",
   "check_id": "i18n.lang.invalid",
   "severity": "medium",
   "client": "Sajt je u kodu označen oznakom „zxx”, koja nije ispravna oznaka nijednog jezika. Čitači ekrana zato ne mogu da se oslone na nju.",
   "tech": "https://cist.rs/: lang=\"zxx\" nije upotrebljiv BCP-47 kod (izvor: sirovi HTML)"
  },
  {
-  "slucaj": "nivo1/i18n.lang.mismatch",
+  "case": "nivo1/i18n.lang.mismatch",
   "check_id": "i18n.lang.mismatch",
   "severity": "medium",
   "client": "Sadržaj sajta je na srpskom, ali je u kodu označen kao „en-US”. Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato srpski tekst izgovaraju po pravilima tog jezika, pa je teško razumljiv.",
   "tech": "https://cist.rs/: lang=\"en-US\", sadržaj prepoznat kao sr (ćirilica 0.0, dijakritici 0.0269, 1604 znakova; izvor: sirovi HTML)"
  },
  {
-  "slucaj": "nivo1/i18n.lang.missing",
+  "case": "nivo1/i18n.lang.missing",
   "check_id": "i18n.lang.missing",
   "severity": "medium",
   "client": "Početna strana u kodu nema oznaku jezika (lang). Čitači ekrana, koje koriste slepi i slabovidi posetioci, zato ne znaju kojim izgovorom da je čitaju.",
   "tech": "https://cist.rs/: <html> bez lang atributa (izvor: sirovi HTML)"
  },
  {
-  "slucaj": "nivo1/infra.host.duplicate",
+  "case": "nivo1/infra.host.duplicate",
   "check_id": "infra.host.duplicate",
   "severity": "medium",
   "client": "Isti sajt se otvara na 2 adrese (cist.rs, www.cist.rs), a nijedna ne preusmerava na drugu. Google ih zato vidi kao različite adrese sa istim sadržajem i sam bira koju da prikaže u pretrazi.",
   "tech": "200 bez preusmerenja na: cist.rs, www.cist.rs; isti canonical na svima: 0"
  },
  {
-  "slucaj": "nivo1/infra.https.redirect.missing",
+  "case": "nivo1/infra.https.redirect.missing",
   "check_id": "infra.https.redirect.missing",
   "severity": "medium",
   "client": "Sajt se otvara i na nezaštićenoj adresi http://cist.rs/, bez preusmerenja na https://cist.rs/. Chrome takvu stranicu označava sa „Nije bezbedno”.",
   "tech": "http://cist.rs/ → 200 bez preusmerenja na https; https://cist.rs/ → 200 sa ispravnim sertifikatom"
  },
  {
-  "slucaj": "nivo1/infra.robots.missing",
+  "case": "nivo1/infra.robots.missing",
   "check_id": "infra.robots.missing",
   "severity": "low",
   "client": "Sajt nema robots.txt. Ništa se time ne lomi, ali Google taj fajl čita pre nego što obiđe sajt, i njegov izostanak je znak da se sajt nije podešavao za pretragu.",
   "tech": "robots.txt status=404"
  },
  {
-  "slucaj": "nivo1/infra.sitemap.missing",
+  "case": "nivo1/infra.sitemap.missing",
   "check_id": "infra.sitemap.missing",
   "severity": "medium",
   "client": "Sajt nema mapu stranica (sitemap). Google zato nove i dublje stranice pronalazi samo preko linkova, sporije, a stranice do kojih ne vodi nijedan link može i da ne pronađe.",
   "tech": "sitemap status=404, urls=0"
  },
  {
-  "slucaj": "nivo1/infra.soft404",
+  "case": "nivo1/infra.soft404",
   "check_id": "infra.soft404",
   "severity": "high",
   "client": "Na nepostojeću adresu sajt odgovara kao da stranica postoji — obe proverene izmišljene adrese otvorile su stranicu sa statusom 200. Pretraživači zato teže razlikuju prave stranice od nepostojećih i troše obilazak sajta na prazne adrese.",
   "tech": "obe sonde status=200, sličnost sa početnom 0.012"
  },
  {
-  "slucaj": "nivo1/infra.tls.invalid",
+  "case": "nivo1/infra.tls.invalid",
   "check_id": "infra.tls.invalid",
   "severity": "high",
   "client": "Sertifikat sajta nije valjan, pa pretraživač posetiocima prikazuje upozorenje pre nego što uđu na sajt.",
   "tech": "TLS greška: certificate has expired"
  },
  {
-  "slucaj": "nivo1/infra.unreachable",
+  "case": "nivo1/infra.unreachable",
   "check_id": "infra.unreachable",
   "severity": "critical",
   "client": "Sajt se nije otvorio ni u jednom od 2 pokušaja (2026-09-22 09:00 i 2026-09-22 09:01 UTC): domen nema zapis koji ga povezuje sa serverom.",
   "tech": "pokušaji 2026-09-22T09:00:00Z i 2026-09-22T09:01:05Z, poslednja greška: NXDOMAIN"
  },
  {
-  "slucaj": "nivo1/perf.compression.missing",
+  "case": "nivo1/perf.compression.missing",
   "check_id": "perf.compression.missing",
   "severity": "low",
   "client": "Server šalje stranicu nesažetu (117 kB). Sažimanje bi prenos smanjilo na otprilike četvrtinu, što na sporijoj mobilnoj vezi (4,8 Mb/s) skraćuje učitavanje za oko 0,1 s.",
   "tech": "content-encoding=nema, html_bytes=120000 (dekodirano), ušteda ≈ 0.1 s"
  },
  {
-  "slucaj": "nivo1/perf.html.size",
+  "case": "nivo1/perf.html.size",
   "check_id": "perf.html.size",
   "severity": "low",
   "client": "Sam kod početne strane teži 600 kB, pre slika i skripti. Pretraživač mora sve to da preuzme i obradi, što usporava prikaz, najviše na telefonu.",
   "tech": "html_bytes=614400 > 500 kB"
  },
  {
-  "slucaj": "nivo1/perf.redirect.chain",
+  "case": "nivo1/perf.redirect.chain",
   "check_id": "perf.redirect.chain",
   "severity": "low",
   "client": "Otvaranje početne strane prolazi kroz 3 preusmerenja pre nego što se nešto prikaže. Svako od njih dodaje čekanje, najviše na mobilnoj vezi.",
   "tech": "redirect_chain=3 skokova: http://cist.rs/ → https://cist.rs/ → https://www.cist.rs/ → https://www.cist.rs/home"
  },
  {
-  "slucaj": "nivo1/seo.canonical.duplicate",
+  "case": "nivo1/seo.canonical.duplicate",
   "check_id": "seo.canonical.duplicate",
   "severity": "critical",
   "client": "4 od 5 proverenih stranica sajta prijavljuje Google-u drugu adresu kao zvaničnu (https://cist.rs/). Google ih zato može smatrati kopijama te adrese i izostaviti iz pretrage.",
   "tech": "canonical_normalized == https://cist.rs/ na 4 od 5 stranica (udeo 0.8) iz 4 grupa putanja (uzorak: sitemap)"
  },
  {
-  "slucaj": "nivo1/seo.canonical.missing",
+  "case": "nivo1/seo.canonical.missing",
   "check_id": "seo.canonical.missing",
   "severity": "high",
   "client": "Početna strana ne govori Google-u koja joj je zvanična adresa. Kad isti sadržaj postoji na više adresa (sa www i bez, sa parametrima iz reklama), Google sam bira koju će prikazati — i ume da izabere pogrešnu.",
   "tech": "https://cist.rs/: nedostaje <link rel=canonical>"
  },
  {
-  "slucaj": "nivo1/seo.description.duplicate",
+  "case": "nivo1/seo.description.duplicate",
   "check_id": "seo.description.duplicate",
   "severity": "medium",
   "client": "Različite stranice sajta imaju isti kratak opis za Google, njih 5. Opis tako ni Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan meta opis na 5 stranica iz 5 grupa putanja"
  },
  {
-  "slucaj": "nivo1/seo.description.missing",
+  "case": "nivo1/seo.description.missing",
   "check_id": "seo.description.missing",
   "severity": "medium",
   "client": "Početna strana nema kratak opis za Google. Google tada sam bira tekst sa strane za prikaz ispod naslova, a to ume da bude deo menija ili obaveštenja o kolačićima.",
   "tech": "https://cist.rs/: nedostaje <meta name=description> (dužina 0)"
  },
  {
-  "slucaj": "nivo1/seo.title.duplicate",
+  "case": "nivo1/seo.title.duplicate",
   "check_id": "seo.title.duplicate",
   "severity": "high",
   "client": "Različite stranice sajta imaju isti naslov („Dobrodošli”), njih 5. Naslov tako ni Google-u ni posetiocu ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan <title> na 5 stranica iz 5 grupa putanja"
  },
  {
-  "slucaj": "nivo1/seo.title.missing",
+  "case": "nivo1/seo.title.missing",
   "check_id": "seo.title.missing",
   "severity": "high",
   "client": "Početna strana nema naslov. U kartici pretraživača zato stoji goli deo adrese, a Google u rezultatima sam smišlja naslov iz sadržaja strane.",
   "tech": "https://cist.rs/: <title> prazan ili nedostaje (dužina 0)"
  },
  {
-  "slucaj": "nivo1/social.og.description.missing",
+  "case": "nivo1/social.og.description.missing",
   "check_id": "social.og.description.missing",
   "severity": "medium",
   "client": "Kad se link sajta podeli, platforme nemaju pripremljen opis, pa same biraju tekst sa strane ili ne prikazuju nijedan.",
   "tech": "https://cist.rs/: nedostaje og:description (ukupno og oznaka: 3)"
  },
  {
-  "slucaj": "nivo1/social.og.image.missing",
+  "case": "nivo1/social.og.image.missing",
   "check_id": "social.og.image.missing",
   "severity": "medium",
   "client": "Podeljen link sajta nema pripremljenu sliku, pa platforme same biraju sliku sa strane ili je ne prikazuju.",
   "tech": "https://cist.rs/: nedostaje og:image (ukupno og oznaka: 3)"
  },
  {
-  "slucaj": "nivo1/social.og.title.missing",
+  "case": "nivo1/social.og.title.missing",
   "check_id": "social.og.title.missing",
   "severity": "high",
   "client": "Kada neko podeli link sajta u poruci ili na Facebook-u, nema pripremljenog naslova za pregled linka, pa platforme uzimaju običan naslov strane ili samu adresu.",
   "tech": "https://cist.rs/: nedostaje og:title (ukupno og oznaka: 3)"
  },
  {
-  "slucaj": "nivo2/a11y.img.alt.missing",
+  "case": "nivo2/a11y.img.alt.missing",
   "check_id": "a11y.img.alt.missing",
   "severity": "high",
   "client": "Na početnoj strani 28 od 30 slika nema tekstualni opis (alt). Posetioci koji koriste čitače ekrana ne saznaju šta je na njima, a Google ima manje podataka za pretragu slika.",
   "tech": "images_without_alt_attr=28/30 (udeo 0.933), images_empty_alt=0 se namerno ne broji, nemereno=0"
  },
  {
-  "slucaj": "nivo2/perf.img.oversized",
+  "case": "nivo2/perf.img.oversized",
   "check_id": "perf.img.oversized",
   "severity": "medium",
   "client": "Sajt šalje slike znatno veće nego što se prikazuju — oko 1800 kB nepotrebnog prenosa pri prvoj poseti.",
   "tech": "3 slika sa ratio > 2.5, procenjen višak 1800 kB, nemereno 0"
  },
  {
-  "slucaj": "nivo2/perf.load.time",
+  "case": "nivo2/perf.load.time",
   "check_id": "perf.load.time",
   "severity": "medium",
   "client": "Na simuliranoj vezi od 4,8 Mb/s početnoj strani treba 9 s da se do kraja učita.",
   "tech": "load_ms=9000, reached=load"
  },
  {
-  "slucaj": "nivo2/perf.page.weight",
+  "case": "nivo2/perf.page.weight",
   "check_id": "perf.page.weight",
   "severity": "critical",
   "client": "Početna strana prenosi 25 MB. Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 42,7 s.",
   "tech": "bytes_at_load=25000000, bez videa 25.0 MB, video 0.0 MB, zahteva=30, nemereno=0, reached=load; sa onim posle load 25000000 B i 30 zahteva (informativno)"
  },
  {
-  "slucaj": "nivo2/perf.request.count",
+  "case": "nivo2/perf.request.count",
   "check_id": "perf.request.count",
   "severity": "high",
   "client": "Otvaranje početne strane pokreće 175 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=175, sa onim posle load 175 (reached=load)"
  },
  {
-  "slucaj": "nivo2/qa.console.errors",
+  "case": "nivo2/qa.console.errors",
   "check_id": "qa.console.errors",
   "severity": "low",
   "client": "Pri otvaranju početne strane Chrome prijavljuje 5 grešaka (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=5, warnings=2"
  },
  {
-  "slucaj": "nivo2/seo.h1.missing",
+  "case": "nivo2/seo.h1.missing",
   "check_id": "seo.h1.missing",
   "severity": "high",
   "client": "Početna strana nema glavni naslov (h1). Naslovi su jedan od signala po kojima Google razume o čemu je strana, a korisnici čitača ekrana se po njima kreću kroz stranicu.",
   "tech": "h1_count == 0 (mereno u browseru, reached=load)"
  },
  {
-  "slucaj": "nivo2/seo.h1.multiple",
+  "case": "nivo2/seo.h1.multiple",
   "check_id": "seo.h1.multiple",
   "severity": "low",
   "client": "Početna strana ima 5 glavnih naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 5 > 3"
  },
  {
-  "slucaj": "posebno/video",
+  "case": "posebno/video",
   "check_id": "perf.page.weight",
   "severity": "critical",
   "client": "Početna strana prenosi 22 MB (video dodatno 8 MB). Na sporijoj mobilnoj vezi (4,8 Mb/s) za to je potrebno oko 37,7 s.",
   "tech": "bytes_at_load=30000000, bez videa 22.0 MB, video 8.0 MB, zahteva=30, nemereno=0, reached=load; sa onim posle load 30000000 B i 30 zahteva (informativno)"
  },
  {
-  "slucaj": "posebno/prekid-ucitavanja",
+  "case": "posebno/prekid-ucitavanja",
   "check_id": "perf.load.time",
   "severity": "high",
   "client": "Na simuliranoj vezi od 4,8 Mb/s početna strana se ni za 25 s nije do kraja učitala.",
   "tech": "load_ms=None, reached=timeout"
  },
  {
-  "slucaj": "posebno/kompresija-80kB",
+  "case": "posebno/kompresija-80kB",
   "check_id": "perf.compression.missing",
   "severity": "low",
   "client": "Server šalje stranicu nesažetu (78 kB). Sažimanje bi prenos smanjilo na otprilike četvrtinu, što na sporijoj mobilnoj vezi (4,8 Mb/s) skraćuje učitavanje za oko 0,1 s.",
   "tech": "content-encoding=nema, html_bytes=80000 (dekodirano), ušteda ≈ 0.1 s"
  },
  {
-  "slucaj": "posebno/h1-4",
+  "case": "posebno/h1-4",
   "check_id": "seo.h1.multiple",
   "severity": "low",
   "client": "Početna strana ima 4 glavna naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 4 > 3"
  },
  {
-  "slucaj": "posebno/h1-5",
+  "case": "posebno/h1-5",
   "check_id": "seo.h1.multiple",
   "severity": "low",
   "client": "Početna strana ima 5 glavnih naslova (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 5 > 3"
  },
  {
-  "slucaj": "posebno/h1-21",
+  "case": "posebno/h1-21",
   "check_id": "seo.h1.multiple",
   "severity": "low",
   "client": "Početna strana ima 21 glavni naslov (h1) umesto jednog. Korisnicima čitača ekrana je tada teže da prepoznaju glavnu temu strane.",
   "tech": "h1_count == 21 > 3"
  },
  {
-  "slucaj": "posebno/konzola-4",
+  "case": "posebno/konzola-4",
   "check_id": "qa.console.errors",
   "severity": "low",
   "client": "Pri otvaranju početne strane Chrome prijavljuje 4 greške (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=4, warnings=2"
  },
  {
-  "slucaj": "posebno/konzola-7",
+  "case": "posebno/konzola-7",
   "check_id": "qa.console.errors",
   "severity": "low",
   "client": "Pri otvaranju početne strane Chrome prijavljuje 7 grešaka (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=7, warnings=2"
  },
  {
-  "slucaj": "posebno/konzola-21",
+  "case": "posebno/konzola-21",
   "check_id": "qa.console.errors",
   "severity": "low",
   "client": "Pri otvaranju početne strane Chrome prijavljuje 21 grešku (delovi strane koji se nisu učitali ili greške u skriptama). Deo stranice zato možda ne radi kako treba.",
   "tech": "console errors=21, warnings=2"
  },
  {
-  "slucaj": "posebno/zahtevi-101",
+  "case": "posebno/zahtevi-101",
   "check_id": "perf.request.count",
   "severity": "high",
   "client": "Otvaranje početne strane pokreće 101 odvojeno preuzimanje. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=101, sa onim posle load 101 (reached=load)"
  },
  {
-  "slucaj": "posebno/zahtevi-102",
+  "case": "posebno/zahtevi-102",
   "check_id": "perf.request.count",
   "severity": "high",
   "client": "Otvaranje početne strane pokreće 102 odvojena preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=102, sa onim posle load 102 (reached=load)"
  },
  {
-  "slucaj": "posebno/zahtevi-150",
+  "case": "posebno/zahtevi-150",
   "check_id": "perf.request.count",
   "severity": "high",
   "client": "Otvaranje početne strane pokreće 150 odvojenih preuzimanja. Svako ima svoju režiju, što se najviše oseti na mobilnoj vezi.",
   "tech": "requests_at_load=150, sa onim posle load 150 (reached=load)"
  },
  {
-  "slucaj": "posebno/naslov-3",
+  "case": "posebno/naslov-3",
   "check_id": "seo.title.duplicate",
   "severity": "high",
   "client": "Različite stranice sajta imaju isti naslov („Ista vrednost na više stranica”), njih 3. Naslov tako ni Google-u ni posetiocu ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan <title> na 3 stranica iz 3 grupa putanja"
  },
  {
-  "slucaj": "posebno/opis-3",
+  "case": "posebno/opis-3",
   "check_id": "seo.description.duplicate",
   "severity": "medium",
   "client": "Različite stranice sajta imaju isti kratak opis za Google, njih 3. Opis tako ni Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan meta opis na 3 stranica iz 3 grupa putanja"
  },
  {
-  "slucaj": "posebno/naslov-5",
+  "case": "posebno/naslov-5",
   "check_id": "seo.title.duplicate",
   "severity": "high",
   "client": "Različite stranice sajta imaju isti naslov („Ista vrednost na više stranica”), njih 5. Naslov tako ni Google-u ni posetiocu ne govori po čemu se te stranice razlikuju.",
   "tech": "identičan normalizovan <title> na 5 stranica iz 5 grupa putanja"
  },
  {
-  "slucaj": "posebno/opis-5",
+  "case": "posebno/opis-5",
   "check_id": "seo.description.duplicate",
   "severity": "medium",
   "client": "Različite stranice sajta imaju isti kratak opis za Google, njih 5. Opis tako ni Google-u ni posetiocu iz pretrage ne govori po čemu se te stranice razlikuju.",

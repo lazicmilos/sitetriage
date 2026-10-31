@@ -1,9 +1,10 @@
-"""Lažni sajt na `localhost` za integracione testove.
+"""A fake site on `localhost` for integration tests.
 
-Fetcher i browser sloj se ne mogu testirati nad pravim sajtovima: test nad
-pravim domenom zavisi od toga da li je taj sajt jutros online (§2.1). Ovde je sajt koji
-je namerno pokvaren na tačno određene načine, pa su testovi offline i
-deterministički.
+The fetcher and browser layers cannot be tested against real sites: a test against a real
+domain depends on whether that site happens to be online this morning. Network code and the
+code that draws conclusions are separate layers, so checks are tested on snapshots and only
+the fetching layers need a server. This one is broken on purpose in exactly the ways a test
+asks for, so the tests stay offline and deterministic.
 """
 
 from __future__ import annotations
@@ -23,42 +24,45 @@ class Response:
     status: int = 200
     headers: dict[str, str] = field(default_factory=dict)
     delay: float = 0.0
-    # Zaglavlja i prvi bajt odmah, ostatak tek posle `stall` sekundi — kao strim ili
-    # video koji se nikad ne završi. `delay` je pre zaglavlja, ovo je posle njih.
+    # Headers and the first byte at once, the rest only after `stall` seconds, like a stream
+    # or a video that never finishes. `delay` comes before the headers, this after them.
     stall: float = 0.0
-    # Telo je već sažeto prema `content-encoding`, pa se šalje kakvo jeste (bomba od par kB).
+    # The body is already compressed as `content-encoding` says, so it is sent as is (a bomb of
+    # a few kB).
     encoded: bool = False
-    # Telo u delovima, bez Content-Length i do zatvaranja veze: strim koji ne prestaje ili kaplje.
+    # The body in chunks, without Content-Length and until the connection closes: a stream that
+    # never ends or that trickles.
     chunks: Callable[[], Iterable[bytes]] | None = None
 
 
-def bomba(velicina: int, *, encoding: str = "gzip", prefix: bytes = b"") -> bytes:
-    """`prefix` pa razmaci do `velicina` bajtova, sažeto deo po deo: 64 MB postaje ~65 kB.
+def bomb(size: int, *, encoding: str = "gzip", prefix: bytes = b"") -> bytes:
+    """`prefix` followed by spaces up to `size` bytes, compressed chunk by chunk: 64 MB becomes ~65 kB.
 
-    `gzip` je gzip omot, `deflate` zlib omot (kako ga šalje većina servera).
+    `gzip` is the gzip wrapper, `deflate` the zlib wrapper (the way most servers send it).
     """
-    sazimac = zlib.compressobj(9, zlib.DEFLATED, 31 if encoding == "gzip" else 15)
-    delovi = [sazimac.compress(prefix)]
-    ostalo, blok = velicina - len(prefix), b" " * (1 << 20)
-    while ostalo > 0:
-        delovi.append(sazimac.compress(blok[: min(ostalo, len(blok))]))
-        ostalo -= len(blok)
-    return b"".join(delovi) + sazimac.flush()
+    compressor = zlib.compressobj(9, zlib.DEFLATED, 31 if encoding == "gzip" else 15)
+    parts = [compressor.compress(prefix)]
+    remaining, block = size - len(prefix), b" " * (1 << 20)
+    while remaining > 0:
+        parts.append(compressor.compress(block[: min(remaining, len(block))]))
+        remaining -= len(block)
+    return b"".join(parts) + compressor.flush()
 
 
-def beskonacno(deo: bytes = b"x" * 65536, *, pauza: float = 0.0) -> Callable[[], Iterable[bytes]]:
-    """Telo koje ne prestaje: brzo (`pauza=0`) ili kap po kap, taman ispod roka za čitanje."""
+def endless(chunk: bytes = b"x" * 65536, *, pause: float = 0.0) -> Callable[[], Iterable[bytes]]:
+    """A body that never ends: fast (`pause=0`) or drop by drop, just under the read timeout."""
 
-    def delovi() -> Iterable[bytes]:
+    def chunks() -> Iterable[bytes]:
         while True:
-            yield deo
-            if pauza:
-                time.sleep(pauza)
+            yield chunk
+            if pause:
+                time.sleep(pause)
 
-    return delovi
+    return chunks
 
 
 def html(title: str, *, body: str = "", head: str = "") -> bytes:
+    """A Serbian page. The text is test data, long enough and with diacritics for the language check."""
     return (
         f"<!doctype html><html lang='sr'><head><title>{title}</title>{head}</head>"
         f"<body><h1>{title}</h1><p>Sadržaj stranice o uslugama i cenama, sa dijakriticima "
@@ -88,20 +92,21 @@ Sitemap: {base}/sitemap.xml
 """
 
 
-# Adrese lokalnih servera koji rade. `127.0.0.1` je privatna adresa i skener je ne otvara
-# (ADR-006), pa `conftest.py` dozvoljava tačno ove, a ne sve privatne adrese.
-ZIVI: set[FakeSite] = set()
+# Addresses of the local servers that are running. `127.0.0.1` is a private address and the
+# scanner does not open it (ADR-006), so `conftest.py` allows exactly these, not every private
+# address.
+RUNNING: set[FakeSite] = set()
 
 
-def dozvoljene_adrese() -> frozenset[tuple[str, int]]:
-    return frozenset(site.address for site in ZIVI)
+def allowed_addresses() -> frozenset[tuple[str, int]]:
+    return frozenset(site.address for site in RUNNING)
 
 
 class FakeSite:
-    """Servira unapred pripremljene odgovore i broji šta je traženo.
+    """Serves prepared responses and records what was requested.
 
-    `dozvoljen=False` pravi server koji skener ne sme da otvori: cilj preusmerenja ili
-    resursa u testovima zaštite od SSRF-a.
+    `allowed=False` makes a server the scanner must not open: the target of a redirect or of
+    a resource in the SSRF protection tests.
     """
 
     def __init__(
@@ -109,9 +114,9 @@ class FakeSite:
         *,
         soft404: bool = False,
         extra: dict[str, Response | Callable[[], Response]] | None = None,
-        dozvoljen: bool = True,
+        allowed: bool = True,
     ) -> None:
-        self.dozvoljen = dozvoljen
+        self.allowed = allowed
         self.soft404 = soft404
         self.extra = extra or {}
         self.requests: list[str] = []
@@ -134,12 +139,12 @@ class FakeSite:
 
     def __enter__(self) -> FakeSite:
         self._thread.start()
-        if self.dozvoljen:
-            ZIVI.add(self)
+        if self.allowed:
+            RUNNING.add(self)
         return self
 
     def __exit__(self, *_exc: object) -> None:
-        ZIVI.discard(self)
+        RUNNING.discard(self)
         self._server.shutdown()
         self._server.server_close()
         self._thread.join(timeout=5)
@@ -184,7 +189,7 @@ class FakeSite:
             found = routes[path]
             return found() if callable(found) else found
         if self.soft404:
-            # Sajt koji na nepostojeću adresu vraća početnu — tačno §5.2.
+            # A site that answers a missing address with its home page: a soft 404.
             return routes["/"]
         return Response(b"<html><h1>404</h1></html>", status=404)
 
@@ -195,7 +200,7 @@ class FakeSite:
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.1"
 
-            def do_GET(self) -> None:  # noqa: N802 — ime traži biblioteka
+            def do_GET(self) -> None:  # noqa: N802 — the name is set by the library
                 with site._lock:
                     site.requests.append(self.path)
                     site._in_flight += 1
@@ -221,8 +226,8 @@ class FakeSite:
                         self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.end_headers()
                     if response.chunks is not None:
-                        for deo in response.chunks():
-                            self.wfile.write(deo)
+                        for chunk in response.chunks():
+                            self.wfile.write(chunk)
                             self.wfile.flush()
                         return
                     if response.stall:
@@ -232,12 +237,12 @@ class FakeSite:
                         body = body[1:]
                     self.wfile.write(body)
                 except (BrokenPipeError, ConnectionResetError):
-                    pass  # klijent je odustao usred odgovora — to je i poenta `stall`-a
+                    pass  # the client gave up mid-response, which is the point of `stall`
                 finally:
                     with site._lock:
                         site._in_flight -= 1
 
             def log_message(self, *_args: object) -> None:
-                """Tišina — inače testovi ispisuju pristupni log."""
+                """Silence; otherwise the tests print the access log."""
 
         return Handler

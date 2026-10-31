@@ -6,7 +6,7 @@ Bez nivoa 2, ili sa snimkom nivoa 2 iz 1.x, gledaju sirovi HTML, kao do sada.
 
 from __future__ import annotations
 
-from factories import SRPSKI_TEKST, clean_browser, clean_site, run_level
+from factories import SERBIAN_TEXT, clean_browser, clean_site, run_level
 
 from sitetriage.messages import reason
 
@@ -20,7 +20,7 @@ def js_sajt(lang: str | None = None):
     return site
 
 
-def renderovano(lang: str | None, tekst: str = SRPSKI_TEKST):
+def renderovano(lang: str | None, tekst: str = SERBIAN_TEXT):
     browser = clean_browser()
     browser.dom.lang, browser.dom.text_sample, browser.dom.text_length = lang, tekst[:4000], len(tekst)
     return browser
@@ -35,7 +35,7 @@ def test_jezik_iz_renderovanog_teksta_kad_sirovog_nema():
     rezultat = provere(js_sajt(), renderovano("en-US"))["i18n.lang.mismatch"]
     assert rezultat.status == "finding"
     assert rezultat.findings[0].evidence["lang"] == "en-US"
-    assert rezultat.findings[0].evidence["text_length"] == len(SRPSKI_TEKST)
+    assert rezultat.findings[0].evidence["text_length"] == len(SERBIAN_TEXT)
 
 
 def test_bez_nivoa_2_ostaje_unknown():
