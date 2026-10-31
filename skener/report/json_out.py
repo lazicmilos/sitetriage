@@ -1,4 +1,4 @@
-"""JSON izveštaj: ugovor za web aplikaciju, `diff`, `outcomes` i kupca koda.
+"""JSON izveštaj: ugovor za programe koji čitaju izlaz (web aplikacija, `diff`, `outcomes`, CRM).
 
 Serijalizovan `ScanResult`, bez rečenica: rečenica se pravi iz dokaza na jeziku onoga ko
 čita. Oblik opisuje `skener/schema/report-2.json`, a pravila promene su u README-u.

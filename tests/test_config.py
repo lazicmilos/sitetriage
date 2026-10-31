@@ -1,5 +1,6 @@
 import pytest
 
+from skener import __version__
 from skener.config import ConfigError, _validate, digest, get, load_config, multiplier, user_agent
 
 
@@ -54,7 +55,7 @@ def test_nepotpuna_tabela_mnozilaca_puca():
 
 # --------------------------------------------------------------------------- #
 # Identitet operatera: User-Agent predstavlja onog ko skenira, ne autora alata.
-# Alat se prodaje, pa bi inače svaki kupac skenirao sa autorovim mejlom.
+# Alat pokreću različiti operateri, pa bi inače svako skenirao sa autorovim mejlom.
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def bez_okruzenja(monkeypatch):
@@ -85,9 +86,8 @@ def test_nepotpun_identitet_puca(bez_okruzenja, naziv, kontakt):
 def test_user_agent_nosi_operatera_a_ne_autora(bez_okruzenja):
     cfg = load_config()
     cfg["identitet"] = {"naziv": "Web studio Primer", "kontakt": "kontakt@primer.rs"}
-    ua = user_agent(cfg)
-    assert "Web studio Primer" in ua and "kontakt@primer.rs" in ua
-    assert "miloslazic458" not in ua
+    # Tačno ono što je operater upisao, ništa više: ni autor alata ni podrazumevani kontakt.
+    assert user_agent(cfg) == f"SiteTriage/{__version__} (+kontakt@primer.rs; Web studio Primer)"
 
 
 def test_identitet_iz_okruzenja_ima_prednost(monkeypatch):
@@ -100,7 +100,7 @@ def test_identitet_iz_okruzenja_ima_prednost(monkeypatch):
     assert "Iz okruzenja" in ua and "env@primer.rs" in ua  # ASCII: ž → z
 
 
-# Pogađanje grešaka: kupac upisuje ime kako mu je prirodno, a HTTP zaglavlje sme da
+# Pogađanje grešaka: operater upisuje ime kako mu je prirodno, a HTTP zaglavlje sme da
 # nosi samo ASCII. Ime sa „Š" ili ćirilicom inače obori svaki zahtev.
 @pytest.mark.parametrize(
     "naziv, ocekivano",

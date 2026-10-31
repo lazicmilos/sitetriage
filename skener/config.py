@@ -84,7 +84,7 @@ def get(cfg: dict[str, Any], dotted: str) -> Any:
 
 
 def _ascii(tekst: str) -> str:
-    """Ime koje kupac upiše kako mu je prirodno → ono što HTTP zaglavlje sme da nosi.
+    """Ime koje operater upiše kako mu je prirodno → ono što HTTP zaglavlje sme da nosi.
 
     Srpska slova se presipaju, ostalo (crte, emodžiji) otpada, a razmaci i novi redovi
     se sažimaju u jedan razmak — novi red bi u zahtevu započeo novo zaglavlje.
@@ -96,8 +96,8 @@ def _ascii(tekst: str) -> str:
 def user_agent(cfg: dict[str, Any]) -> str:
     """User-Agent koji predstavlja operatera — onog ko pokreće skeniranje.
 
-    Administrator sajta u svom logu vidi ko ga skenira i kako da ga kontaktira. Alat
-    se prodaje, pa to mora biti kupac, ne autor alata; bez oba podatka nema
+    Administrator sajta u svom logu vidi ko ga skenira i kako da ga kontaktira. To je
+    operater koji je pokrenuo alat, ne autor alata; bez oba podatka nema
     skeniranja. `SKENER_NAZIV` i `SKENER_KONTAKT` imaju prednost nad fajlom (Docker).
     """
     naziv = _ascii(os.environ.get("SKENER_NAZIV") or get(cfg, "identitet.naziv") or "")
