@@ -28,8 +28,8 @@ Ako ijedan test preskoči sa „Chromium se ne pokreće", slika nije dobra i dal
 ## 1. Ispitni skup: specifikacija naspram stvarnosti (10 min)
 
 ```bash
-docker compose run --rm skener pytest -m live -v 2>&1 | tee rad/live.txt
-docker compose run --rm skener skener record domains.example.csv --out /rad/snimci
+docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv skener pytest -m live -v 2>&1 | tee rad/live.txt
+docker compose run --rm skener skener record /rad/live.csv --out /rad/snimci
 docker compose run --rm skener python scripts/metrike.py /rad/snimci | tee rad/metrike-ispitni.txt
 ```
 
