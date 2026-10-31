@@ -14,7 +14,7 @@ import tracemalloc
 
 import pytest
 from factories import run_level
-from localserver import FakeSite, Response, endless, bomb, html
+from localserver import FakeSite, Response, bomb, endless, html
 from test_fetch_http import scan
 
 from sitetriage.config import get, load_config

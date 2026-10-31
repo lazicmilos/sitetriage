@@ -32,7 +32,7 @@ def _snapshot() -> SiteSnapshot:
     )
 
 
-def test_serijalizacija_bez_gubitka():
+def test_serialization_is_lossless():
     original = _snapshot()
     payload = json.loads(json.dumps(to_jsonable(original)))
     restored = from_dict(SiteSnapshot, payload)
@@ -41,24 +41,24 @@ def test_serijalizacija_bez_gubitka():
     assert restored.home is restored.pages[0]
 
 
-def test_nepoznata_polja_se_ignorisu():
-    """Stariji snapshot sa disk-a ne sme da obori noviji kod."""
+def test_unknown_fields_are_ignored():
+    """An older snapshot on disk must not crash newer code."""
     payload = to_jsonable(_snapshot())
-    payload["polje_iz_buducnosti"] = 1
+    payload["field_from_the_future"] = 1
     assert from_dict(SiteSnapshot, payload).domain == "d.rs"
 
 
-def test_unknown_bez_razloga_je_bug():
+def test_unknown_without_a_reason_is_a_bug():
     with pytest.raises(ValueError, match="unknown"):
         CheckResult(check_id="seo.title.missing", status="unknown")
 
 
-def test_finding_bez_nalaza_je_bug():
-    with pytest.raises(ValueError, match="bez ijednog nalaza"):
+def test_finding_without_findings_is_a_bug():
+    with pytest.raises(ValueError, match="without a single finding"):
         CheckResult(check_id="seo.title.missing", status="finding")
 
 
-def test_ok_sa_nalazom_je_bug():
+def test_ok_with_a_finding_is_a_bug():
     finding = Finding(
         domain="d.rs",
         check_id="seo.title.missing",
@@ -66,7 +66,7 @@ def test_ok_sa_nalazom_je_bug():
         category="seo",
         severity="high",
     )
-    with pytest.raises(ValueError, match="status nije"):
+    with pytest.raises(ValueError, match="status is not"):
         CheckResult(check_id="seo.title.missing", status="ok", findings=[finding])
 
 

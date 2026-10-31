@@ -1,4 +1,4 @@
-"""CLI i izveštaji od kraja do kraja (§10, §11)."""
+"""CLI and reports end to end."""
 
 from __future__ import annotations
 
@@ -17,10 +17,10 @@ from sitetriage.score import rank
 
 
 # --------------------------------------------------------------------------- #
-# Ulazni CSV (§4.1): ovde samo ono što radi CLI — `--only`, log i poruka na izlazu.
-# Čitanje same liste je u test_inputs.py.
+# Input CSV: only what the CLI does here (`--only`, the log and the error message).
+# Reading the list itself is in test_inputs.py.
 # --------------------------------------------------------------------------- #
-def test_only_filtrira(tmp_path):
+def test_only_filters(tmp_path):
     path = tmp_path / "d.csv"
     path.write_text("domain,industry\na.rs,hotel\nb.rs,hotel\n", encoding="utf-8")
     assert [r.domain for r in cli.read_domains(path, ["B.RS"])] == ["b.rs"]
@@ -28,100 +28,101 @@ def test_only_filtrira(tmp_path):
         cli.read_domains(path, ["c.rs"])
 
 
-def test_upozorenja_iz_liste_idu_u_log_sa_brojem_reda(tmp_path, caplog):
+def test_list_warnings_go_to_the_log_with_the_row_number(tmp_path, caplog):
     path = tmp_path / "d.csv"
     path.write_text(
         "domain,industry\ninstitucija.example,institution\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8"
     )
     cli.read_domains(path)
-    assert "red 3: domen se ponavlja" in caplog.text
+    assert "row 3: domain is repeated" in caplog.text
 
 
-def test_izuzeti_iz_konfiguracije_i_sa_komandne_linije(tmp_path):
-    """Oba izvora važe; u izveštaju je samo broj izuzetih, bez imena."""
-    with FakeSite() as prvi:
-        host, port = prvi.address
+def test_excluded_from_config_and_from_the_command_line(tmp_path):
+    """Both sources apply; the report shows only the number of excluded domains, without names."""
+    with FakeSite() as first:
+        host, port = first.address
         domains = tmp_path / "d.csv"
-        domains.write_text(f"domain,industry\n{prvi.base_url},other\n", encoding="utf-8")
-        iz_konfiguracije = tmp_path / "izuzeti.txt"
-        iz_konfiguracije.write_text("# pisali 25.09.\nnekidrugi.rs\n", encoding="utf-8")
-        sa_komandne_linije = tmp_path / "jos.txt"
-        sa_komandne_linije.write_text(f"{host}\n", encoding="utf-8")
-        config = tmp_path / "moj.toml"
-        config.write_text(f'[operator]\nexclude_file = "{iz_konfiguracije.as_posix()}"\n', encoding="utf-8")
-        out = tmp_path / "izlaz"
-        argumenti = ["--config", str(config), "--exclude", str(sa_komandne_linije), "--level", "1"]
-        assert cli.main(["scan", str(domains), "--out", str(out), *argumenti]) == 0
-    assert prvi.requests == []
+        domains.write_text(f"domain,industry\n{first.base_url},other\n", encoding="utf-8")
+        from_config = tmp_path / "excluded.txt"
+        from_config.write_text("# pisali 25.09.\nnekidrugi.rs\n", encoding="utf-8")
+        from_command_line = tmp_path / "more.txt"
+        from_command_line.write_text(f"{host}\n", encoding="utf-8")
+        config = tmp_path / "mine.toml"
+        config.write_text(f'[operator]\nexclude_file = "{from_config.as_posix()}"\n', encoding="utf-8")
+        out = tmp_path / "out"
+        arguments = ["--config", str(config), "--exclude", str(from_command_line), "--level", "1"]
+        assert cli.main(["scan", str(domains), "--out", str(out), *arguments]) == 0
+    assert first.requests == []
     assert json.loads((out / "report.json").read_text(encoding="utf-8"))["summary"]["excluded"] == 1
-    stranica = (out / "index.html").read_text(encoding="utf-8")
-    assert "Izuzeto na zahtev" in stranica and prvi.base_url not in stranica
+    page = (out / "index.html").read_text(encoding="utf-8")
+    assert "Izuzeto na zahtev" in page and first.base_url not in page
 
 
-def test_nepostojeci_fajl_sa_izuzetima_puca_razumljivo(tmp_path):
+def test_missing_exclusion_file_fails_clearly(tmp_path):
     domains = tmp_path / "d.csv"
     domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="fajl sa izuzetim domenima ne postoji"):
-        cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), "--exclude", "nema.txt"])
+    with pytest.raises(SystemExit, match="the file of excluded domains does not exist"):
+        cli.main(["scan", str(domains), "--out", str(tmp_path / "out"), "--exclude", "nema.txt"])
 
 
-def test_greska_u_listi_je_poruka_a_ne_traceback(tmp_path):
+def test_list_error_is_a_message_not_a_traceback(tmp_path):
     path = tmp_path / "d.csv"
     path.write_text("sajt,industry\na.rs,hotel\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="red 1: nedostaje kolona `domain`"):
-        cli.main(["scan", str(path), "--out", str(tmp_path / "izlaz")])
+    with pytest.raises(SystemExit, match="row 1: the header has no `domain` column"):
+        cli.main(["scan", str(path), "--out", str(tmp_path / "out")])
 
 
 # --------------------------------------------------------------------------- #
-# scan → recheck (§11.1)
+# scan → recheck
 # --------------------------------------------------------------------------- #
 @pytest.fixture(scope="module")
-def prolaz(tmp_path_factory):
-    """Dva lokalna sajta: jedan uredan, jedan sa lažnim 404 i bez OG oznaka.
+def scan_run(tmp_path_factory):
+    """Two local sites: one tidy, one with a soft 404 and without OG tags.
 
-    Jedan prolaz za ceo modul: podizanje servera i pun scan traju, a svi testovi
-    ispod gledaju isti rezultat.
+    One run for the whole module: starting the servers and a full scan take time, and every
+    test below looks at the same result.
     """
-    tmp_path = tmp_path_factory.mktemp("prolaz")
-    # `--config` se spaja preko sitetriage.toml; ovde gasimo pauze da testovi ne traju minut.
-    config = tmp_path / "brzo.toml"
+    tmp_path = tmp_path_factory.mktemp("run")
+    # `--config` is merged over the default config; here we turn off the pauses so the tests
+    # do not take a minute.
+    config = tmp_path / "fast.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
 
-    with FakeSite() as cist, FakeSite(soft404=True, extra={"/": Response(html("Bez oznaka"))}) as los:
+    with FakeSite() as clean, FakeSite(soft404=True, extra={"/": Response(html("Bez oznaka"))}) as broken:
         domains = tmp_path / "domains.csv"
         domains.write_text(
-            f"domain,industry,note\n{cist.base_url},hotel,\n{los.base_url},restaurant,\n",
+            f"domain,industry,note\n{clean.base_url},hotel,\n{broken.base_url},restaurant,\n",
             encoding="utf-8",
         )
-        out = tmp_path / "izvestaj"
+        out = tmp_path / "report"
         code = cli.main(
             ["scan", str(domains), "--out", str(out), "--level", "1", "--config", str(config)]
         )
-        yield code, out, cist, los
+        yield code, out, clean, broken
 
 
-def test_scan_pravi_sve_izlaze(prolaz):
-    code, out, _cist, _los = prolaz
+def test_scan_writes_every_output(scan_run):
+    code, out, _clean, _broken = scan_run
     assert code == 0
     assert (out / "index.html").is_file()
     assert (out / "findings.csv").is_file()
     assert (out / "summary.csv").is_file()
-    assert list((out / "snapshots").glob("*/site.json")), "snapshoti se uvek pišu (§2.2)"
+    assert list((out / "snapshots").glob("*/site.json")), "snapshots are always written"
 
 
-def test_scan_pise_json_po_semi(prolaz):
+def test_scan_writes_json_that_matches_the_schema(scan_run):
     import jsonschema
-    from test_json import SEMA
+    from test_json import SCHEMA
 
-    _code, out, _cist, _los = prolaz
-    dokument = json.loads((out / "report.json").read_text(encoding="utf-8"))
-    jsonschema.validate(dokument, SEMA)
-    assert set(dokument["duration_s"]) == {"level1", "level2", "level2_light", "total"}
-    assert dokument["environment"]["chromium"] is None, "nivo 2 nije radio (--level 1)"
+    _code, out, _clean, _broken = scan_run
+    document = json.loads((out / "report.json").read_text(encoding="utf-8"))
+    jsonschema.validate(document, SCHEMA)
+    assert set(document["duration_s"]) == {"level1", "level2", "level2_light", "total"}
+    assert document["environment"]["chromium"] is None, "level 2 did not run (--level 1)"
 
 
-def test_summary_ima_red_po_domenu(prolaz):
-    _code, out, _cist, _los = prolaz
+def test_summary_has_a_row_per_domain(scan_run):
+    _code, out, _clean, _broken = scan_run
     rows = list(csv.DictReader((out / "summary.csv").open(encoding="utf-8")))
     assert len(rows) == 2
     assert set(rows[0]) == set(csv_out.SUMMARY_HEADER)
@@ -129,44 +130,44 @@ def test_summary_ima_red_po_domenu(prolaz):
     assert [int(r["rank"]) for r in rows] == [1, 2]
 
 
-def test_findings_ima_red_po_nalazu_sa_dokazom(prolaz):
-    _code, out, _cist, _los = prolaz
+def test_findings_have_a_row_per_finding_with_evidence(scan_run):
+    _code, out, _clean, _broken = scan_run
     rows = list(csv.DictReader((out / "findings.csv").open(encoding="utf-8")))
-    assert rows, "loš sajt mora da proizvede bar jedan nalaz"
+    assert rows, "the broken site must produce at least one finding"
     assert set(rows[0]) == set(csv_out.FINDINGS_HEADER)
     for row in rows:
-        assert json.loads(row["evidence_json"]), "svaki nalaz nosi dokaz (§3.5)"
+        assert json.loads(row["evidence_json"]), "every finding carries evidence"
         assert row["message_client"] and "{" not in row["message_client"]
 
 
-def test_recheck_daje_isti_rezultat_bez_ijednog_zahteva(prolaz, tmp_path):
-    """Kalibracija bez ponovnog prolaza je cela poenta podele iz §2.1."""
-    _code, out, cist, los = prolaz
-    prvi = (out / "summary.csv").read_text(encoding="utf-8")
-    pre = len(cist.requests) + len(los.requests)
+def test_recheck_gives_the_same_result_without_a_single_request(scan_run, tmp_path):
+    """Calibration without a new run is the whole point of keeping fetching and checks apart."""
+    _code, out, clean, broken = scan_run
+    first = (out / "summary.csv").read_text(encoding="utf-8")
+    before = len(clean.requests) + len(broken.requests)
 
-    ponovo = tmp_path / "ponovo"
-    assert cli.main(["recheck", str(out / "snapshots"), "--out", str(ponovo)]) == 0
+    again = tmp_path / "again"
+    assert cli.main(["recheck", str(out / "snapshots"), "--out", str(again)]) == 0
 
-    assert len(cist.requests) + len(los.requests) == pre, "recheck ne sme da dodirne mrežu"
-    assert (ponovo / "summary.csv").read_text(encoding="utf-8") == prvi
+    assert len(clean.requests) + len(broken.requests) == before, "recheck must not touch the network"
+    assert (again / "summary.csv").read_text(encoding="utf-8") == first
 
 
-def test_html_je_samostalan(prolaz):
-    """Bez CDN-a: izveštaj se otvara i bez mreže (§10.2)."""
-    _code, out, _cist, _los = prolaz
+def test_html_is_self_contained(scan_run):
+    """No CDN: the report opens without a network."""
+    _code, out, _clean, _broken = scan_run
     page = (out / "index.html").read_text(encoding="utf-8")
     assert "<style>" in page and "<script>" in page
     assert "cdn" not in page.lower()
     assert 'src="http' not in page and "@import" not in page
-    assert "0,6 MB/s" in page or "MB/s" in page, "pretpostavka za brzinu mora biti u fusnoti (§10.3)"
+    assert "0,6 MB/s" in page or "MB/s" in page, "the speed assumption must be in the footnote"
 
 
-def test_record_snima_gzipovane_fixture_e(tmp_path):
-    """§12.2: bez sirovog HTML-a ostalih strana, inače repo naraste."""
+def test_record_writes_gzipped_fixtures(tmp_path):
+    """Without the raw HTML of the other pages, otherwise the repository grows."""
     from sitetriage import store
 
-    config = tmp_path / "brzo.toml"
+    config = tmp_path / "fast.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
@@ -177,16 +178,16 @@ def test_record_snima_gzipovane_fixture_e(tmp_path):
         )
 
     assert code == 0
-    assert list(out.glob("*/site.json.gz")), "fixture-i se pišu gzipovani"
-    (snimljen, _browser) = next(iter(store.read_all(out)))
-    assert snimljen.home.raw_html, "sirovi HTML početne ostaje (treba za eskalaciju)"
-    assert all(p.raw_html is None for p in snimljen.pages[1:])
+    assert list(out.glob("*/site.json.gz")), "fixtures are written gzipped"
+    (recorded, _browser) = next(iter(store.read_all(out)))
+    assert recorded.home.raw_html, "the raw HTML of the home page stays (escalation needs it)"
+    assert all(p.raw_html is None for p in recorded.pages[1:])
 
 
 # --------------------------------------------------------------------------- #
-# HTML izveštaj — sadržaj
+# HTML report: content
 # --------------------------------------------------------------------------- #
-def _izvestaj(**kwargs) -> DomainReport:
+def _report(**kwargs) -> DomainReport:
     finding = Finding(
         domain="d.rs",
         check_id="seo.canonical.duplicate",
@@ -205,167 +206,169 @@ def _izvestaj(**kwargs) -> DomainReport:
     return DomainReport(**{**base, **kwargs})
 
 
-def test_ozbiljnost_ima_oznaku_i_znak_a_ne_samo_boju():
-    """Boje moraju biti razlučive i u sivim tonovima i za daltoniste (§10.2)."""
-    page = html_out.render([_izvestaj()], load_config())
+def test_severity_has_a_label_and_a_glyph_not_only_a_colour():
+    """Colours must be distinguishable in greyscale and for colour-blind readers."""
+    page = html_out.render([_report()], load_config())
     assert "KRITIČNO" in page and "▲" in page
 
 
-def test_nacrt_mejla_ima_tri_recenice():
-    report = _izvestaj()
-    nacrt = html_out.email_draft(report)
-    assert report.domain in nacrt
-    assert "1. 5 od 7 proverenih stranica sajta prijavljuje" in nacrt
+def test_email_draft_has_three_sentences():
+    report = _report()
+    draft = html_out.email_draft(report)
+    assert report.domain in draft
+    assert "1. 5 od 7 proverenih stranica sajta prijavljuje" in draft
 
 
-def test_nacrt_mejla_za_cist_sajt_ne_izmislja_probleme():
+def test_email_draft_for_a_clean_site_does_not_invent_problems():
     report = DomainReport(domain="cist.rs", industry="healthcare")
     assert "nisam našao" in html_out.email_draft(report)
     assert "did not find" in html_out.email_draft(report, "en")
 
 
-def test_izvestaj_na_engleskom_nema_srpskih_oznaka():
-    page = html_out.render([_izvestaj()], load_config(), lang="en")
+def test_english_report_has_no_serbian_labels():
+    page = html_out.render([_report()], load_config(), lang="en")
     assert '<html lang="en">' in page and "▲ CRITICAL" in page and "Copy suggested text" in page
     assert "5 of the 7 checked pages on the site" in page
     assert "I reviewed the site d.rs" in page
-    for srpski in ("KRITIČNO", "Kopiraj", "Rangirani", "Poštovani", "Prolaz od"):
-        assert srpski not in page, srpski
+    for serbian in ("KRITIČNO", "Kopiraj", "Rangirani", "Poštovani", "Prolaz od"):
+        assert serbian not in page, serbian
 
 
 @pytest.mark.parametrize(
-    "lang, ocekivano",
+    "lang, expected",
     [pytest.param("sr", "· 1 nalaz</span>", id="sr"), pytest.param("en", "· 1 finding</span>", id="en")],
 )
-def test_broj_nalaza_u_izvestaju_se_slaze_sa_imenicom(lang, ocekivano):
-    """Bilo je „1 nalaza"; na engleskom bi bilo „1 findings" (BUG-014, isto pravilo)."""
-    assert ocekivano in html_out.render([_izvestaj()], load_config(), lang=lang)
+def test_finding_count_in_the_report_agrees_with_the_noun(lang, expected):
+    """It used to say „1 nalaza"; in English it would be "1 findings" (BUG-014, same rule)."""
+    assert expected in html_out.render([_report()], load_config(), lang=lang)
 
 
-def test_recheck_na_engleskom(tmp_path):
+def test_recheck_in_english(tmp_path):
     from pathlib import Path
 
     fixtures = Path(__file__).parent / "fixtures"
     assert cli.main(["recheck", str(fixtures), "--out", str(tmp_path), "--lang", "en"]) == 0
-    redovi = list(csv.DictReader((tmp_path / "findings.csv").open(encoding="utf-8")))
-    assert redovi and all(r["message_client"] for r in redovi)
-    assert not [r for r in redovi if "strana" in r["message_client"] or "sajt" in r["message_client"]]
+    rows = list(csv.DictReader((tmp_path / "findings.csv").open(encoding="utf-8")))
+    assert rows and all(r["message_client"] for r in rows)
+    assert not [r for r in rows if "strana" in r["message_client"] or "sajt" in r["message_client"]]
     assert '<html lang="en">' in (tmp_path / "index.html").read_text(encoding="utf-8")
 
 
-def test_html_bezi_od_html_a_iz_sadrzaja_sajta():
-    """Naslovi i adrese dolaze sa tuđeg sajta — moraju da se eskejpuju."""
-    report = _izvestaj()
+def test_html_escapes_html_from_site_content():
+    """Titles and URLs come from someone else's site, so they must be escaped."""
+    report = _report()
     report.findings[0].evidence["canonical"] = '<script>alert("xss")</script>'
     page = html_out.render([report], load_config())
     assert "<script>alert" not in page
     assert "&lt;script&gt;" in page
 
 
-def test_unknown_razlozi_se_prikazuju():
+def test_unknown_reasons_are_shown():
     from sitetriage.models import Reason, Unknown
 
-    razlog = Reason("unmeasured_responses", {"unmeasured": 9, "threshold": 5})
-    report = _izvestaj(unknowns=[Unknown("perf.page.weight", razlog)])
+    reason = Reason("unmeasured_responses", {"unmeasured": 9, "threshold": 5})
+    report = _report(unknowns=[Unknown("perf.page.weight", reason)])
     page = html_out.render([report], load_config())
     assert "9 odgovora nije izmereno (prag 5)" in page
     assert "perf.page.weight" in page
 
 
-def test_bom_se_pise_samo_kad_se_trazi(tmp_path):
-    reports = rank([_izvestaj()])
-    sa = csv_out.write_summary(tmp_path / "sa.csv", reports, bom=True)
-    bez = csv_out.write_summary(tmp_path / "bez.csv", reports, bom=False)
-    assert sa.read_bytes().startswith(b"\xef\xbb\xbf")
-    assert not bez.read_bytes().startswith(b"\xef\xbb\xbf")
+def test_bom_is_written_only_when_asked_for(tmp_path):
+    reports = rank([_report()])
+    with_bom = csv_out.write_summary(tmp_path / "with.csv", reports, bom=True)
+    without_bom = csv_out.write_summary(tmp_path / "without.csv", reports, bom=False)
+    assert with_bom.read_bytes().startswith(b"\xef\xbb\xbf")
+    assert not without_bom.read_bytes().startswith(b"\xef\xbb\xbf")
 
 
 # --------------------------------------------------------------------------- #
-# explain (§11.1)
+# explain
 # --------------------------------------------------------------------------- #
-def test_explain_ispisuje_prag_i_recenicu(capsys):
+def test_explain_prints_the_threshold_and_the_sentence(capsys):
     assert cli.main(["explain", "seo.canonical.duplicate"]) == 0
-    ispis = capsys.readouterr().out
-    assert "critical" in ispis and "≥ 2 pages" in ispis
-    assert "rečenica za klijenta" in ispis
+    output = capsys.readouterr().out
+    assert "critical" in output and "≥ 2 pages" in output
+    assert "client sentence" in output
 
 
-def test_explain_ispisuje_oba_jezika_i_varijante(capsys):
+def test_explain_prints_both_languages_and_variants(capsys):
     assert cli.main(["explain", "perf.page.weight"]) == 0
-    ispis = capsys.readouterr().out
-    assert "rečenica za klijenta (sr)" in ispis and "rečenica za klijenta (en)" in ispis
-    assert "varijanta video (sr)" in ispis and "varijanta video (en)" in ispis
+    output = capsys.readouterr().out
+    assert "client sentence (sr)" in output and "client sentence (en)" in output
+    assert "variant video (sr)" in output and "variant video (en)" in output
 
 
-def test_explain_all_bez_markdown_a(capsys):
+def test_explain_all_without_markdown(capsys):
     assert cli.main(["explain", "--all"]) == 0
     assert "perf.page.weight" in capsys.readouterr().out
 
 
-def test_argumenti_komandne_linije_menjaju_konfiguraciju(tmp_path, monkeypatch):
-    """`--concurrency` menja oba semafora, `--max-level2` limit, a `--format csv` piše samo CSV."""
+def test_command_line_arguments_change_the_config(tmp_path, monkeypatch):
+    """`--concurrency` changes both semaphores, `--max-level2` the limit, and `--format csv`
+    writes only CSV."""
     from sitetriage.models import ScanResult
 
-    primljeno = {}
+    received = {}
 
     async def scan(targets, config, **kwargs):
-        primljeno.update(config=config, **kwargs)
+        received.update(config=config, **kwargs)
         return ScanResult(duration_s={"total": 0.0})
 
     monkeypatch.setattr(cli.pipeline, "scan", scan)
     domains = tmp_path / "d.csv"
     domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
-    izlaz = tmp_path / "izlaz"
-    argumenti = ["--concurrency", "2", "--max-level2", "0", "--format", "csv", "--level", "1"]
-    assert cli.main(["scan", str(domains), "--out", str(izlaz), *argumenti]) == 0
+    out = tmp_path / "out"
+    arguments = ["--concurrency", "2", "--max-level2", "0", "--format", "csv", "--level", "1"]
+    assert cli.main(["scan", str(domains), "--out", str(out), *arguments]) == 0
 
-    config = primljeno["config"]
+    config = received["config"]
     assert config["http"]["concurrency"] == config["http"]["domain_concurrency"] == 2
-    assert config["escalation"]["max_level2"] == 0 and primljeno["level"] == "1"
-    assert (izlaz / "summary.csv").is_file() and not (izlaz / "index.html").exists()
+    assert config["escalation"]["max_level2"] == 0 and received["level"] == "1"
+    assert (out / "summary.csv").is_file() and not (out / "index.html").exists()
 
 
-def test_explain_ispisuje_opis_provere(capsys):
-    # mutacija `description=None` u registru je preživela: opis se ispisivao, a niko ga nije proveravao
+def test_explain_prints_the_check_description(capsys):
+    # the mutation `description=None` in the registry survived: the description was printed,
+    # but nothing checked it
     assert cli.main(["explain", "seo.canonical.duplicate"]) == 0
     assert "point their canonical to the same other URL" in capsys.readouterr().out
 
 
-def test_explain_nepoznate_provere_predlaze_slicne():
+def test_explain_of_an_unknown_check_suggests_similar_ones():
     with pytest.raises(SystemExit, match="canonical"):
         cli.main(["explain", "canonical"])
 
 
-def test_explain_all_markdown_pokriva_sve_provere(capsys):
+def test_explain_all_markdown_covers_every_check(capsys):
     from sitetriage.checks import registry
 
     assert cli.main(["explain", "--all", "--markdown"]) == 0
-    ispis = capsys.readouterr().out
+    output = capsys.readouterr().out
     registry.load_all()
     for check_id in registry.REGISTRY:
-        assert f"`{check_id}`" in ispis, f"{check_id} fali u tabeli za README"
+        assert f"`{check_id}`" in output, f"{check_id} is missing from the README table"
 
 
-def test_scan_bez_identiteta_odbija_pre_ijednog_zahteva(tmp_path, monkeypatch):
-    """Bez imena i kontakta operatera nema skeniranja — ni jednog zahteva."""
+def test_scan_without_identity_refuses_before_a_single_request(tmp_path, monkeypatch):
+    """Without the operator's name and contact there is no scanning, not even one request."""
     monkeypatch.delenv("SITETRIAGE_OPERATOR_NAME", raising=False)
     monkeypatch.delenv("SITETRIAGE_OPERATOR_CONTACT", raising=False)
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
         domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
         with pytest.raises(SystemExit, match=r"\[operator\] name"):
-            cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), "--level", "1"])
-        assert site.requests == [], f"zahtevi pre provere identiteta: {site.requests}"
+            cli.main(["scan", str(domains), "--out", str(tmp_path / "out"), "--level", "1"])
+        assert site.requests == [], f"requests before the identity check: {site.requests}"
 
 
-def test_verzija_je_ista_u_paketu_cli_i_user_agentu(capsys, monkeypatch):
-    """Administrator sajta vidi verziju u User-Agent-u, pa ona mora biti ona koja stvarno radi."""
+def test_version_is_the_same_in_the_package_cli_and_user_agent(capsys, monkeypatch):
+    """The site administrator sees the version in the User-Agent, so it must be the one that runs."""
     from importlib.metadata import version
 
     from sitetriage import __version__
     from sitetriage.config import user_agent
 
-    assert version("sitetriage") == __version__, "pyproject.toml čita verziju iz sitetriage/__init__.py"
+    assert version("sitetriage") == __version__, "pyproject.toml reads the version from __init__.py"
     with pytest.raises(SystemExit):
         cli.main(["--version"])
     assert capsys.readouterr().out.strip() == f"sitetriage {__version__}"
@@ -375,30 +378,29 @@ def test_verzija_je_ista_u_paketu_cli_i_user_agentu(capsys, monkeypatch):
 
 
 # --------------------------------------------------------------------------- #
-# Pogađanje grešaka: nevažeći brojevi na komandnoj liniji
+# Error guessing: invalid numbers on the command line
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
-    "argumenti",
+    "arguments",
     [
         pytest.param(["--concurrency", "0"], id="gv-concurrency-0"),
-        pytest.param(["--concurrency", "-1"], id="nv-concurrency-negativan"),
-        pytest.param(["--concurrency", "osam"], id="nv-concurrency-tekst"),
-        pytest.param(["--max-level2", "-1"], id="nv-max-level2-negativan"),
+        pytest.param(["--concurrency", "-1"], id="nv-concurrency-negative"),
+        pytest.param(["--concurrency", "osam"], id="nv-concurrency-text"),
+        pytest.param(["--max-level2", "-1"], id="nv-max-level2-negative"),
     ],
 )
-def test_nevazeci_brojevi_na_komandnoj_liniji_se_odbijaju(tmp_path, argumenti):
+def test_invalid_numbers_on_the_command_line_are_rejected(tmp_path, arguments):
     domains = tmp_path / "d.csv"
     domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
-    with pytest.raises(SystemExit) as izlaz:
-        cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), *argumenti])
-    assert izlaz.value.code == 2, "argparse odbija pre ijednog zahteva"
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main(["scan", str(domains), "--out", str(tmp_path / "out"), *arguments])
+    assert exit_info.value.code == 2, "argparse rejects it before a single request"
 
 
 # --------------------------------------------------------------------------- #
-# Tok nivoa 2 kroz CLI — pokrivenost je pokazala da ga nijedan test ne pokreće,
-# a koristi ga svaki pravi prolaz.
+# Level 2 through the CLI: coverage showed that no test ran it, and every real run uses it.
 # --------------------------------------------------------------------------- #
-BEZ_H1 = (
+WITHOUT_H1 = (
     "<!doctype html><html lang='sr'><head><title>Bez naslova</title>"
     "<link rel='canonical' href='/'><meta name='description' content='Opis.'>"
     "<meta property='og:title' content='a'><meta property='og:description' content='b'>"
@@ -408,9 +410,9 @@ BEZ_H1 = (
 ).encode()
 
 
-# Početna sa dovoljno teksta: lažni sajt inače ima ~550 znakova, ispod praga od 800
-# za „prazan HTML", pa je i on legitimno kandidat za nivo 2.
-BOGATA_POCETNA = html(
+# A home page with enough text: the fake site otherwise has ~550 characters, below the 800
+# threshold for "empty HTML", so it would legitimately be a level 2 candidate too.
+RICH_HOME = html(
     "Početna",
     head=(
         "<link rel='canonical' href='/'><meta name='description' content='Opis.'>"
@@ -422,125 +424,127 @@ BOGATA_POCETNA = html(
 
 
 @pytest.mark.browser
-def test_scan_auto_salje_na_pun_nivo_2_samo_kandidate(tmp_path):
-    config = tmp_path / "brzo.toml"
+def test_scan_auto_sends_only_candidates_to_full_level2(tmp_path):
+    config = tmp_path / "fast.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
-    with FakeSite(extra={"/": Response(BOGATA_POCETNA)}) as cist, FakeSite(
-        extra={"/": Response(BEZ_H1)}
-    ) as bez_h1:
+    with FakeSite(extra={"/": Response(RICH_HOME)}) as clean, FakeSite(
+        extra={"/": Response(WITHOUT_H1)}
+    ) as without_h1:
         domains = tmp_path / "d.csv"
         domains.write_text(
-            f"domain,industry\n{cist.base_url},other\n{bez_h1.base_url},other\n", encoding="utf-8"
+            f"domain,industry\n{clean.base_url},other\n{without_h1.base_url},other\n", encoding="utf-8"
         )
-        out = tmp_path / "izvestaj"
+        out = tmp_path / "report"
         assert cli.main(["scan", str(domains), "--out", str(out), "--config", str(config)]) == 0
 
-    snimci = [json.loads(p.read_text(encoding="utf-8")) for p in (out / "snapshots").glob("*/browser.json")]
-    lagano = {s["domain"]: s["light"] for s in snimci}
-    assert lagano[bez_h1.base_url] is False, "sirovi HTML bez h1 mora na pun nivo 2"
-    # BUG-020: čist i brz HTML ne govori ništa o težini strane, pa i taj sajt meri težinu, ali bez profila.
-    assert lagano[cist.base_url] is True, "čist i brz sajt dobija lagan nivo 2"
-    nalazi = [r for r in csv.DictReader((out / "findings.csv").open(encoding="utf-8"))]
-    assert any(r["domain"] == bez_h1.base_url and r["check_id"] == "seo.h1.missing" for r in nalazi)
-    assert list((out / "snapshots").glob("*/browser.json")), "snapshot nivoa 2 mora na disk"
+    paths = (out / "snapshots").glob("*/browser.json")
+    snapshots = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
+    light = {s["domain"]: s["light"] for s in snapshots}
+    assert light[without_h1.base_url] is False, "raw HTML without h1 must go to full level 2"
+    # BUG-020: clean and fast HTML says nothing about page weight, so that site measures weight
+    # too, but without the profile.
+    assert light[clean.base_url] is True, "a clean and fast site gets light level 2"
+    findings = [r for r in csv.DictReader((out / "findings.csv").open(encoding="utf-8"))]
+    assert any(r["domain"] == without_h1.base_url and r["check_id"] == "seo.h1.missing" for r in findings)
+    assert list((out / "snapshots").glob("*/browser.json")), "the level 2 snapshot must reach the disk"
 
 
-def test_bez_playwright_nivo_2_se_preskace_uz_poruku(tmp_path, monkeypatch, caplog):
-    """`pip install sitetriage` bez `[browser]`: nivo 1 radi, a nivo 2 se preskače uz razlog.
+def test_without_playwright_level2_is_skipped_with_a_message(tmp_path, monkeypatch, caplog):
+    """`pip install sitetriage` without `[browser]`: level 1 works, level 2 is skipped with a reason.
 
-    CLI je hvatao `ImportError` samo pri uvozu modula `fetch.browser`, a on se uvozi i
-    bez Playwright-a. Playwright se uvozi tek u `capture_all`, pa je prolaz pucao.
+    The CLI caught `ImportError` only when importing the `fetch.browser` module, and that module
+    imports without Playwright too. Playwright is imported only in `capture_all`, so the run crashed.
     """
     import sys
 
     monkeypatch.setitem(sys.modules, "playwright.async_api", None)
-    config = tmp_path / "brzo.toml"
+    config = tmp_path / "fast.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
         domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
-        out = tmp_path / "izvestaj"
-        argumenti = ["scan", str(domains), "--out", str(out), "--level", "2", "--config", str(config)]
-        assert cli.main(argumenti) == 0
+        out = tmp_path / "report"
+        arguments = ["scan", str(domains), "--out", str(out), "--level", "2", "--config", str(config)]
+        assert cli.main(arguments) == 0
 
-    redovi = list(csv.DictReader((out / "summary.csv").open(encoding="utf-8")))
-    assert redovi[0]["level2_ran"] == "0"
+    rows = list(csv.DictReader((out / "summary.csv").open(encoding="utf-8")))
+    assert rows[0]["level2_ran"] == "0"
     assert "Playwright is not installed" in caplog.text
 
 
 @pytest.mark.browser
-def test_record_nivo_2_snima_i_browser_snapshot(tmp_path):
-    config = tmp_path / "brzo.toml"
+def test_record_level2_also_records_the_browser_snapshot(tmp_path):
+    config = tmp_path / "fast.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
         domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
         out = tmp_path / "fixtures"
-        argumenti = ["record", str(domains), "--out", str(out), "--level", "2", "--config", str(config)]
-        assert cli.main(argumenti) == 0
+        arguments = ["record", str(domains), "--out", str(out), "--level", "2", "--config", str(config)]
+        assert cli.main(arguments) == 0
     assert list(out.glob("*/browser.json.gz")) and list(out.glob("*/site.json.gz"))
 
 
 # --------------------------------------------------------------------------- #
-# Greške komandi i logovanje
+# Command errors and logging
 # --------------------------------------------------------------------------- #
-def test_recheck_bez_snapshota_puca_razumljivo(tmp_path):
+def test_recheck_without_snapshots_fails_clearly(tmp_path):
     with pytest.raises(SystemExit, match="no snapshot found"):
-        cli.main(["recheck", str(tmp_path), "--out", str(tmp_path / "izlaz")])
+        cli.main(["recheck", str(tmp_path), "--out", str(tmp_path / "out")])
 
 
-def test_explain_bez_argumenata_puca(capsys):
+def test_explain_without_arguments_fails(capsys):
     with pytest.raises(SystemExit):
         cli.main(["explain"])
     assert "--all" in capsys.readouterr().err
 
 
-def test_prekid_sa_tastature_vraca_130(monkeypatch, tmp_path):
-    """Ctrl+C usred prolaza: uredan izlazni kod 130, ne traceback."""
+def test_keyboard_interrupt_returns_130(monkeypatch, tmp_path):
+    """Ctrl+C in the middle of a run: a clean exit code 130, not a traceback."""
 
-    def prekini(_args):
+    def interrupt(_args):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(cli, "cmd_recheck", prekini)  # parser se gradi pri svakom pozivu main()
+    monkeypatch.setattr(cli, "cmd_recheck", interrupt)  # the parser is built on every main() call
     assert cli.main(["recheck", str(tmp_path)]) == 130
 
 
-def test_greska_u_konfiguraciji_je_poruka_a_ne_traceback(tmp_path):
-    pokvaren = tmp_path / "pokvaren.toml"
-    pokvaren.write_text("[http\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="greška u konfiguraciji"):
-        cli.main(["recheck", str(tmp_path), "--config", str(pokvaren)])
+def test_config_error_is_a_message_not_a_traceback(tmp_path):
+    broken = tmp_path / "broken.toml"
+    broken.write_text("[http\n", encoding="utf-8")
+    with pytest.raises(SystemExit, match="configuration error"):
+        cli.main(["recheck", str(tmp_path), "--config", str(broken)])
 
 
-def test_debug_domain_propusta_samo_taj_domen():
+def test_debug_domain_lets_through_only_that_domain():
     import io
     import logging
 
     cli.setup_logging("institucija.example")
-    tok = io.StringIO()
+    stream = io.StringIO()
     handler = logging.getLogger("sitetriage").handlers[0]
-    handler.stream = tok
+    handler.stream = stream
     log = logging.getLogger("sitetriage.test")
-    log.debug("ovaj se vidi", extra={"domain": "institucija.example"})
-    log.debug("ovaj ne", extra={"domain": "restoran-ugao.example"})
-    redovi = [json.loads(red) for red in tok.getvalue().splitlines()]
-    assert [r["message"] for r in redovi] == ["ovaj se vidi"]
-    assert redovi[0]["domain"] == "institucija.example" and redovi[0]["level"] == "DEBUG"
+    log.debug("this one shows", extra={"domain": "institucija.example"})
+    log.debug("this one does not", extra={"domain": "restoran-ugao.example"})
+    lines = [json.loads(line) for line in stream.getvalue().splitlines()]
+    assert [r["message"] for r in lines] == ["this one shows"]
+    assert lines[0]["domain"] == "institucija.example" and lines[0]["level"] == "DEBUG"
     cli.setup_logging(None)
 
 
-@pytest.mark.skipif(not hasattr(__import__("time"), "tzset"), reason="tzset postoji samo na Unix-u")
-def test_vreme_u_logu_je_zaista_utc(monkeypatch):
-    """Pogađanje grešaka (vremenska zona): „Z" na kraju tvrdi UTC, pa vreme mora biti UTC."""
+@pytest.mark.skipif(not hasattr(__import__("time"), "tzset"), reason="tzset exists only on Unix")
+def test_log_time_is_really_utc(monkeypatch):
+    """Error guessing (time zone): the trailing "Z" claims UTC, so the time must be UTC."""
     import logging
     import time
 
     monkeypatch.setenv("TZ", "Europe/Belgrade")
     time.tzset()
     try:
-        zapis = logging.LogRecord("sitetriage", logging.INFO, __file__, 1, "poruka", None, None)
-        zapis.created = 1_790_000_000  # 2026-09-21T14:13:20Z; u Beogradu je tada 16:13
-        assert json.loads(cli.JsonLines().format(zapis))["ts"] == "2026-09-21T14:13:20Z"
+        record = logging.LogRecord("sitetriage", logging.INFO, __file__, 1, "message", None, None)
+        record.created = 1_790_000_000  # 2026-09-21T14:13:20Z; 16:13 in Belgrade at that moment
+        assert json.loads(cli.JsonLines().format(record))["ts"] == "2026-09-21T14:13:20Z"
     finally:
         monkeypatch.delenv("TZ")
         time.tzset()

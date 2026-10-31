@@ -21,7 +21,7 @@ import jsonschema
 import pytest
 from factories import clean_site
 from localserver import html
-from test_json import SEMA
+from test_json import SCHEMA
 
 from sitetriage import pipeline, store
 from sitetriage.config import load_config
@@ -325,7 +325,7 @@ def test_unreachable_is_not_in_the_ranking(tmp_path):
     assert [r.domain for r in result.not_scanned] == ["zatvoren.rs"]
     assert result.summary["unreachable"] == 1 and result.summary["failed"] == 1
     assert result.unreachable[0].rank == 0 and result.not_scanned[0].rank == 0
-    jsonschema.validate(to_jsonable(result), SEMA)
+    jsonschema.validate(to_jsonable(result), SCHEMA)
 
 
 @pytest.mark.parametrize(

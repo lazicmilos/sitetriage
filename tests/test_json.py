@@ -1,4 +1,4 @@
-"""JSON izveštaj: ugovor sa verzijom šeme, koji se ne menja tiho."""
+"""JSON report: a contract with a schema version, which does not change silently."""
 
 from __future__ import annotations
 
@@ -18,55 +18,56 @@ from sitetriage.models import BrowserSnapshot, from_dict, to_jsonable
 from sitetriage.report import json_out
 
 FIXTURES = Path(__file__).parent / "fixtures"
-SEMA = json.loads(files("sitetriage").joinpath("schema/report-3.json").read_text(encoding="utf-8"))
+SCHEMA = json.loads(files("sitetriage").joinpath("schema/report-3.json").read_text(encoding="utf-8"))
 
 
-def test_json_izvestaj_prolazi_semu(tmp_path):
-    rezultat = pipeline.recheck(FIXTURES, load_config())
-    path = json_out.write(tmp_path / "report.json", rezultat)
-    dokument = json.loads(path.read_text(encoding="utf-8"))
-    jsonschema.validate(dokument, SEMA)
-    assert list(dokument)[:2] == ["schema_version", "scanner_version"], "verzija je na vrhu dokumenta"
+def test_json_report_matches_the_schema(tmp_path):
+    result = pipeline.recheck(FIXTURES, load_config())
+    path = json_out.write(tmp_path / "report.json", result)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    jsonschema.validate(document, SCHEMA)
+    assert list(document)[:2] == ["schema_version", "scanner_version"], "the version is at the top"
 
 
-def test_json_nema_recenica():
-    """Rečenica se pravi iz dokaza na jeziku čitaoca; u ugovoru bi bila na jednom jeziku zauvek."""
-    dokument = to_jsonable(pipeline.recheck(FIXTURES, load_config()))
-    nalazi = [f for r in dokument["ranked"] for f in r["findings"]]
-    assert nalazi and not [f for f in nalazi if {"message_client", "message_tech"} & set(f)]
+def test_json_has_no_sentences():
+    """A sentence is built from the evidence in the reader's language; in the contract it would be
+    in one language forever."""
+    document = to_jsonable(pipeline.recheck(FIXTURES, load_config()))
+    findings = [f for r in document["ranked"] for f in r["findings"]]
+    assert findings and not [f for f in findings if {"message_client", "message_tech"} & set(f)]
 
 
-def test_sema_odbija_nepoznato_polje():
-    """`additionalProperties: false`: novo polje mora prvo u šemu, pa tek onda u izlaz."""
-    dokument = to_jsonable(pipeline.recheck(FIXTURES, load_config()))
-    dokument["ranked"][0]["novo_polje"] = 1
-    with pytest.raises(jsonschema.ValidationError, match="novo_polje"):
-        jsonschema.validate(dokument, SEMA)
+def test_schema_rejects_an_unknown_field():
+    """`additionalProperties: false`: a new field goes into the schema first, then into the output."""
+    document = to_jsonable(pipeline.recheck(FIXTURES, load_config()))
+    document["ranked"][0]["new_field"] = 1
+    with pytest.raises(jsonschema.ValidationError, match="new_field"):
+        jsonschema.validate(document, SCHEMA)
 
 
 # --------------------------------------------------------------------------- #
-# Snapshoti iz 1.x ostaju čitljivi: na njima je kalibrisana lista A
+# Snapshots from 1.x stay readable: list A was calibrated on them
 # --------------------------------------------------------------------------- #
 def _v1(browser: BrowserSnapshot) -> BrowserSnapshot:
-    """Snimak nivoa 2 kakav je zapisivala verzija 1.0.0: bez polja uvedenih u v2 (Z-24)."""
-    podaci = to_jsonable(browser)
-    podaci["scanner_version"] = "1.0.0"
-    for polje in ("requests_at_load", "bytes_at_load", "bytes_by_type_at_load", "unmeasured_at_load"):
-        del podaci["network"][polje]
-    return from_dict(BrowserSnapshot, podaci)
+    """A level 2 snapshot as version 1.0.0 wrote it: without the fields added in 2.0 (ADR-016)."""
+    data = to_jsonable(browser)
+    data["scanner_version"] = "1.0.0"
+    for field in ("requests_at_load", "bytes_at_load", "bytes_by_type_at_load", "unmeasured_at_load"):
+        del data["network"][field]
+    return from_dict(BrowserSnapshot, data)
 
 
 @pytest.mark.parametrize(
-    "check_id, polje",
+    "check_id, field",
     [
         ("perf.page.weight", "network.bytes_at_load"),
         ("perf.request.count", "network.requests_at_load"),
     ],
 )
-def test_v1_snapshot_daje_unknown_a_ne_pad(check_id, polje):
-    """Podrazumevana nula bi bila `ok` za težinu koju niko nije izmerio."""
+def test_v1_snapshot_gives_unknown_not_a_crash(check_id, field):
+    """A default zero would be `ok` for a weight nobody measured."""
     browser = _v1(clean_browser())
     ctx = registry.Context(domain=browser.domain, industry="other", config=load_config())
-    rezultat = {r.check_id: r for r in registry.run(2, browser, ctx)}[check_id]
-    assert rezultat.status == "unknown"
-    assert reason(rezultat.reason) == f"snapshot iz verzije 1.0.0 nema {polje}"
+    result = {r.check_id: r for r in registry.run(2, browser, ctx)}[check_id]
+    assert result.status == "unknown"
+    assert reason(result.reason) == f"snapshot iz verzije 1.0.0 nema {field}"

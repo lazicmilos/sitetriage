@@ -1,19 +1,20 @@
-"""Rečenice za klijenta i operatera, na srpskom i engleskom.
+"""Client and operator sentences, in Serbian and English (ADR-009).
 
-Nalaz nosi samo `check_id`, dokaz i `variant`, a rečenica se pravi tek pri prikazu, na
-jeziku izveštaja. Zato isti nalaz može da se prikaže na oba jezika, a `diff` poredi dokaz,
-ne tekst.
+A finding carries only its `check_id`, evidence and `variant`; the sentence is built at display
+time, in the report language. That is why the same finding can be shown in both languages, and
+`diff` compares evidence, not text.
 
-Šablon je običan `str.format`, uz dva dodatka:
+A template is a plain `str.format`, with these additions:
 
-- `{broj:n:oblik|oblik|oblik}` daje broj i imenicu u pravilnom obliku („3 kopije");
-  srpski ima tri oblika, engleski dva;
-- `{lista:join: → }` spaja listu datim razdvajačem;
-- `{vreme:utc}` skraćuje UTC vreme iz dokaza na „2026-09-22 09:00"; zonu piše šablon.
+- `{count:n:form|form|form}` gives the number and the noun in the right form ("3 kopije");
+  Serbian has three forms, English two;
+- `{items:join: → }` joins a list with the given separator;
+- `{time:utc}` shortens a UTC time from the evidence to "2026-09-22 09:00"; the template
+  writes the zone.
 
-U rečenici za klijenta decimalni broj se piše po pravilima jezika („14,9" ili „14.9"), a
-tehnička rečenica ga ostavlja kakav jeste. Tehnički kodovi iz dokaza (izvor uzorka,
-kodiranje) čitaju se kroz `CODES` jezika.
+In the client sentence a decimal number is written by the rules of the language ("14,9" or
+"14.9"); the technical sentence leaves it as it is. Technical codes from the evidence (sample
+source, encoding) are read through the language's `CODES`.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ def catalog(lang: str) -> ModuleType:
     try:
         return _CATALOGS[lang]
     except KeyError:
-        raise ValueError(f"nepoznat jezik {lang!r}; podržani su {', '.join(LANGS)}") from None
+        raise ValueError(f"unknown language {lang!r}; supported: {', '.join(LANGS)}") from None
 
 
 class _Formatter(string.Formatter):
@@ -65,7 +66,7 @@ class _Formatter(string.Formatter):
 
 
 def templates(check_id: str, lang: str, variant: str | None = None) -> tuple[str, str]:
-    """(klijentski, tehnički) šablon; varijanta menja samo ono što navodi."""
+    """(client, technical) template; a variant overrides only what it names."""
     entry = catalog(lang).FINDINGS[check_id]
     override = entry["variants"][variant] if variant else {}
     return override.get("client", entry["client"]), override.get("tech", entry["tech"])
@@ -81,17 +82,17 @@ def render(finding: Any, lang: str = "sr") -> Message:
 
 
 def number(value: float, lang: str = "sr") -> str:
-    """Broj za prikaz, po pravilima jezika: „99,4" ili „99.4" (Z-28)."""
+    """A number for display, by the rules of the language: "99,4" or "99.4"."""
     return catalog(lang).DECIMAL(value)
 
 
 def reason(r: Any, lang: str = "sr") -> str:
-    """Razlog za `unknown` ili za eskalaciju, iz koda i podataka."""
+    """The reason for `unknown` or for escalation, from its code and data."""
     cat = catalog(lang)
     return _Formatter(cat, localize=True).format(cat.REASONS[r.code], **r.evidence)
 
 
 def text(key: str, lang: str = "sr", **values: Any) -> str:
-    """Oznaka iz izveštaja ili deo nacrta mejla."""
+    """A report label or a part of the email draft."""
     cat = catalog(lang)
     return _Formatter(cat, localize=True).format(cat.TEXT[key], **values)
