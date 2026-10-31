@@ -42,7 +42,7 @@ The protocol is the form in `docs/manual-check-form.md`:
   (like BUG-005), gets a root-cause analysis, and after the fix the criteria are measured again on B.
 - Pass criteria: 0 incorrect findings in the top 10; at least 7 of 10 "would send"; 0 missed serious
   problems in the bottom 5.
-- A filled-in form contains domains, so it stays in `rad/` and never enters the
+- A filled-in form contains domains, so it stays in `work/` and never enters the
   repository; the test report carries only totals.
 
 ## Consequences

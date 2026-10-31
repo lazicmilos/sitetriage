@@ -65,7 +65,7 @@ markers = [
     "browser: needs Playwright and Chromium installed; skipped when Chromium does not start",
 ]
 
-# Mutation testing (docs/plan-testiranja.md): the modules with logic.
+# Mutation testing (docs/sr/plan-testiranja.md): the modules with logic.
 # A new module under sitetriage/ is included automatically unless it is in do_not_mutate. That
 # is why pure modules (messages, diff, outcomes, address classification) do not go into fetch/*
 # or report/*. mutmut 3.2.3 runs the whole test suite; it does not read a test selection from

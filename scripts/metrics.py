@@ -2,7 +2,7 @@
 
     python scripts/metrics.py out/snapshots/
 
-Answers the questions of `docs/provera-na-pravim-sajtovima.md`: how many domains are
+Answers the questions of `docs/real-site-verification.md`: how many domains are
 `partial`, why, and which check says `unknown` most often. A high share of `unknown`
 is a bug or a bad threshold, not "the site is clean".
 """

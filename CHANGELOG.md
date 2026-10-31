@@ -43,6 +43,15 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
   keys appear in `evidence_json` in `findings.csv`. Field names, `check_id`s, reason codes and CSV
   columns are unchanged, and the Serbian and English sentences are word for word the same.
 - `config_digest` changes, because the industry multiplier tables are renamed.
+- The working folder for lists and results is `work/` instead of `rad/`; Docker Compose mounts it
+  as `/work` instead of `/rad`.
+- Operator-facing text is English: CLI help, log lines, errors, and the free-text details stored in
+  snapshots and shown in reports (for example a budget that ran out or an address that is not
+  public). Client-facing sentences are unchanged in both languages.
+- The live test list (`SITETRIAGE_LIVE_CSV`) uses the column `expected` instead of `ocekivano`,
+  and `clean` instead of `cist` for the control clean site.
+- The scripts are `scripts/metrics.py`, `scripts/distribution.py` (`--with-domains` instead of
+  `--sa-domenima`) and `scripts/mutation.py`.
 - The HTML report is titled `SiteTriage — izveštaj` / `SiteTriage — report`.
 - A domain with no usable name is stored under `snapshots/unknown-domain/` instead of
   `snapshots/nepoznat-domen/`.

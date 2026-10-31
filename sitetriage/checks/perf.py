@@ -44,7 +44,8 @@ def _seconds_on_mobile(mb: float, ctx: Context) -> float:
     "perf.compression.missing",
     level=1,
     category="perf",
-    # low, not medium: the saving on the HTML alone is tenths of a second (docs/izvestaj-testiranja-100.md).
+    # low, not medium: the saving on the HTML alone is tenths of a second
+    # (docs/sr/izvestaj-testiranja-100.md).
     base_severity="low",
     requires=["home"],
     description="The server does not send the HTML compressed.",

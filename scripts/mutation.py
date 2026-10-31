@@ -1,4 +1,4 @@
-"""Mutation testing (docs/plan-testiranja.md).
+"""Mutation testing (docs/sr/plan-testiranja.md).
 
 mutmut runs only on Linux, so it is started through Docker:
 
@@ -9,11 +9,11 @@ mutated and which tests catch them is set in pyproject.toml, [tool.mutmut].
 
 The `check(...)` decorator in the registry runs at import time, before mutmut switches the
 mutant on, so mutmut reports its mutants as survivors even though the tests catch them.
-They are checked by hand, see docs/izvestaj-testiranja-2.md.
+They are checked by hand, see docs/sr/izvestaj-testiranja-2.md.
 
 mutmut 3.2.3 does not create mutants in decorated functions, so it does not mutate the bodies
 of checks (`@check`); the score applies to the helper functions. See the mutation testing
-section of docs/izvestaj-testiranja-3.md.
+section of docs/sr/izvestaj-testiranja-3.md.
 """
 
 from __future__ import annotations

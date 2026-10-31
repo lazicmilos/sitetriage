@@ -90,7 +90,7 @@ surrounding comment already says it.
 | §12.1 | v1: test layers: offline tests of pure functions, and opt-in live calibration tests against real sites, kept out of CI because a site's expired certificate is not a tool bug | inferred | README "Testovi"; CONTRIBUTING "Running tests" |
 | §12.2 | v1: fixtures recorded with `record`, without raw HTML of non-home pages (repo size); fixtures go stale | stated | `tests/fixtures/README.md`; *otherwise inline only* |
 | §12.3 | v1: test design: per check a positive, a negative and an `unknown` test (the "third type"); table-driven tests (URL normalization) | stated | CONTRIBUTING "Test design conventions" |
-| §12.4 | v1: the hand-written test set: eight typical sites and the `check_id`s each must produce, including the control clean site `klinika.example` | stated | `tests/fixtures/README.md`, `tests/test_ispitni_skup.py` |
+| §12.4 | v1: the hand-written test set: eight typical sites and the `check_id`s each must produce, including the control clean site `klinika.example` | stated | `tests/fixtures/README.md`, `tests/test_reference_set.py` |
 | §13 | v1: implementation phases. **Phase 3** includes "injecting a deliberately broken domain must not bring down the run". Unrelated to the F0–F5 phases of v2 | inferred | *inline only* |
 | §15 | v1: list of pitfalls (*zamke*). Cited items below | stated | *inline only* |
 
@@ -123,7 +123,7 @@ Pitfalls 3 and 6 are never cited. Their topics are unknown.
 | `§3.1`, `§3.2`, `§3.3`, `§4`, `§5`, `§6.1`, `§6.3` | `docs/sr/izvestaj-testiranja-3.md`, `scripts/mutation.py` | Sections of IT-SKENER-003: automated tests, mutation testing, message catalog, exit criteria, defects, closed observations, owner decisions of 2026-10-05 | stated |
 | "§6.3, odluka 6" | `docs/sr/izvestaj-testiranja-3.md` | Owner decision 6 of 2026-10-05: run duration on the recommended machine is measured on the first VPS run | stated |
 | "plan testiranja (§8)" | `docs/sr/izvestaj-testiranja-3.md` | PT-SKENER-001 §8, defect management: severities blocker / critical / major (false finding or false negative for the client) / minor / trivial | stated |
-| "§7", "spec §7", "Kriterijumi iz §7" | `docs/sr/kalibracija.md`, `docs/manual-check-form.md`, `skener/models.py`, `skener/score.py`, `skener/report/html_out.py`, `tests/test_uzrok_partial.py` | v2 specification §7, exit criteria (see §7 above) | stated |
+| "§7", "spec §7", "Kriterijumi iz §7" | `docs/sr/kalibracija.md`, `docs/manual-check-form.md`, `sitetriage/models.py`, `sitetriage/score.py`, `sitetriage/report/html_out.py`, `tests/test_partial_cause.py` | v2 specification §7, exit criteria (see §7 above) | stated |
 | "§9 specifikacije" | `docs/sr/izvestaj-testiranja-3.md` | v2 specification §9, items moved out of v2 | inferred |
 
 `§` references that exist only in commit messages: "Spec §8 traži ADR za JSON šemu" (`fc46eed`, v2
@@ -249,14 +249,14 @@ IT-SKENER-003 §6.2. How O-5 and O-7 to O-13 were closed is tabled in IT-SKENER-
 | R-1 | Risk in the v2 specification: longer loads under the network profile make level 2, and the run, longer | [ADR-010](ADR-010-mrezni-profil.md), [ADR-019](ADR-019-run-duration-and-level2-coverage.md) |
 | R-2 | Risk in the v2 specification: the three host-variant requests, each with a politeness pause, push slow sites over the time budget | [ADR-014](ADR-014-host-canonicalization.md) |
 | R1–R6 | Test-plan risks (no hyphen): R1 sites change between runs, R2 timing tests flaky on slow machines, R3 mutation testing too slow, R4 lead list leaking into the public repo, R5 calibration on A spilling over to B, R6 message refactor silently changing Serbian sentences | `docs/sr/plan-testiranja.md` §7 |
-| "pravilo 7" (rule 7) | Cited in `docs/manual-check-form.md`: a filled-in form contains domains, so it stays in `rad/` and out of the repository. The list of rules it belongs to is not in the repository (presumably the specification's working rules) | *not decodable beyond this usage* |
+| "pravilo 7" (rule 7) | Cited in `docs/manual-check-form.md`: a filled-in form contains domains, so it stays in `rad/` (now `work/`) and out of the repository. The list of rules it belongs to is not in the repository (presumably the specification's working rules) | *not decodable beyond this usage* |
 | "faze 0–7" | `docs/sr/kvalitet.md`: v1 development phases "in the commit history". That history is not in this repository (it starts on 2026-09-26) | *not decodable* |
 | "§13, faza 3" | v1 specification §13, phase 3 (see §13 above) | this page |
 | "odluka 1–9" | The numbered owner decisions of 2026-10-05 in IT-SKENER-003 §6.3 | that section |
 | Runs A, B, C | Runs over list A in IT-SKENER-001 (A, 2026-09-24) and IT-SKENER-002 (B after BUG-003..015, C after BUG-016) | IT-SKENER-002 §3.4 |
 | Runs D–H | Runs over list A on 2026-09-27: D (F2 acceptance), E (after the host-variant fix), F (hotspot, first under the profile), G (hotspot), H (fast link on another computer; the input of Z-50). Plus one run from GitHub Actions on 2026-09-28, invalid for Z-51 | `docs/sr/kalibracija.md` |
 | List A, list B | List A: the same 100 domains as IT-SKENER-001/002, for calibration. List B: 100 new domains of the same type, no overlap, for validation. Neither is in the repository | [ADR-020](ADR-020-threshold-calibration.md); `docs/sr/plan-testiranja.md` §3 |
-| `rad/` | Working folder outside git (`.gitignore`) for lists, per-domain results and filled-in forms | `docs/sr/plan-testiranja.md` §3 |
+| `rad/` | Working folder outside git (`.gitignore`) for lists, per-domain results and filled-in forms; renamed `work/` in v3 (mounted as `/work` in Docker) | `docs/sr/plan-testiranja.md` §3 |
 | `gv-`, `ke-`, `tab-`, `nv-`, `st-`, `pg-` | Test-case id prefixes by technique: boundary value, equivalence class, decision table, invalid class, state transition, error guessing | `docs/sr/plan-testiranja.md` §3; CONTRIBUTING "Test design conventions" |
 | ADR-001 to ADR-005, ADR-007 | Never published in this repository | [README](README.md) |
 | ADR-012 | English public interface (being written) | [README](README.md) |

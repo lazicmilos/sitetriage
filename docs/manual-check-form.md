@@ -4,12 +4,12 @@ The manual check is the acceptance test of a release ([ADR-021](adr/ADR-021-manu
 The product owner does it over the report of a run on the validation list (list B, see
 [ADR-020](adr/ADR-020-threshold-calibration.md)). It was introduced as the acceptance test of v2,
 as defined in the [test plan](sr/plan-testiranja.md). This page is the empty form. A filled-in copy
-contains domains, so it stays in `rad/` and never enters the repository; the test report carries
+contains domains, so it stays in `work/` and never enters the repository; the test report carries
 only the totals.
 
 ## Before you start
 
-- Copy this file to `rad/manual-check-b.md` and fill in the copy.
+- Copy this file to `work/manual-check-b.md` and fill in the copy.
 - Check as soon as possible after the run, at the latest within 3 days. Sites change, and a finding
   is judged against the state of the site at scan time. If the site changed in the meantime, write
   that in the note and count the finding as neither correct nor incorrect.

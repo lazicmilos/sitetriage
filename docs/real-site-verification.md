@@ -35,9 +35,9 @@ If any test is skipped because Chromium does not start, the image is broken. Sto
 ## 1. Test set: specification against reality (10 min)
 
 ```bash
-docker compose run --rm -e SITETRIAGE_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v 2>&1 | tee rad/live.txt
-docker compose run --rm sitetriage sitetriage record /rad/live.csv --out /rad/recordings
-docker compose run --rm sitetriage python scripts/metrics.py /rad/recordings | tee rad/metrics-testset.txt
+docker compose run --rm -e SITETRIAGE_LIVE_CSV=/work/live.csv sitetriage pytest -m live -v 2>&1 | tee work/live.txt
+docker compose run --rm sitetriage sitetriage record /work/live.csv --out /work/recordings
+docker compose run --rm sitetriage python scripts/metrics.py /work/recordings | tee work/metrics-testset.txt
 ```
 
 `record` deliberately does not write over `tests/fixtures/`: look at the difference first, and only
@@ -53,17 +53,17 @@ Every failure in `live.txt` is one of three things. Say which one:
 
 ## 2. A real run: 30–50 domains from your lead list (20 min)
 
-Put the list in `rad/leads.csv` (header `domain,industry,note`).
+Put the list in `work/leads.csv` (header `domain,industry,note`).
 
 ```bash
-time docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --out /rad/report 2>&1 | tee rad/run.log
-docker compose run --rm sitetriage python scripts/metrics.py /rad/report/snapshots | tee rad/metrics.txt
+time docker compose run --rm sitetriage sitetriage scan /work/leads.csv --out /work/report 2>&1 | tee work/run.log
+docker compose run --rm sitetriage python scripts/metrics.py /work/report/snapshots | tee work/metrics.txt
 ```
 
 When a domain looks odd:
 
 ```bash
-docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --only odd-site.example --debug-domain odd-site.example --out /rad/debug
+docker compose run --rm sitetriage sitetriage scan /work/leads.csv --only odd-site.example --debug-domain odd-site.example --out /work/debug
 ```
 
 ## 3. Criteria
@@ -84,9 +84,9 @@ check that no bad sites were missed. For the full acceptance check on a validati
 
 ## 4. What to send back
 
-1. `rad/live.txt`
-2. `rad/metrics-testset.txt` and `rad/metrics.txt`
-3. `rad/report/summary.csv` and `rad/report/findings.csv`
+1. `work/live.txt`
+2. `work/metrics-testset.txt` and `work/metrics.txt`
+3. `work/report/summary.csv` and `work/report/findings.csv`
 4. your manual verdicts for the top 5 and the bottom 5
 5. anything that caught your eye, even if you cannot explain why
 
@@ -96,12 +96,12 @@ them comes out of `metrics.py`.
 ## 5. Afterwards
 
 Record every decision in the form **threshold, observation, decision**, in an ADR. Try
-thresholds in `rad/calibration.toml`, which holds only what you change: the defaults ship with the
+thresholds in `work/calibration.toml`, which holds only what you change: the defaults ship with the
 tool, and your own TOML passed with `--config` overrides only what it sets. That way there is no
 image rebuild between two attempts and no second download of the sites:
 
 ```bash
-docker compose run --rm sitetriage sitetriage recheck /rad/report/snapshots --config /rad/calibration.toml --out /rad/new
+docker compose run --rm sitetriage sitetriage recheck /work/report/snapshots --config /work/calibration.toml --out /work/new
 ```
 
 Once a threshold is decided, it moves into `sitetriage.toml` and is committed, with its reasoning.

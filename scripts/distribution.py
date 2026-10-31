@@ -1,12 +1,12 @@
 """Distribution of level-2 measurements from saved snapshots, for threshold calibration (ADR-020).
 
     python scripts/distribution.py out/snapshots/
-    python scripts/distribution.py out/snapshots/ --with-domains > rad/distribution-domains.txt
+    python scripts/distribution.py out/snapshots/ --with-domains > work/distribution-domains.txt
 
 Prints p50, p75, p90, p95 and the maximum of the weight and the request count until `load`, the
 time until `load` under the network profile and the level-2 duration per domain, plus the
 canonical findings. Domain names and URLs are printed only with `--with-domains`, and that output
-goes only into `rad/`, because per-domain results do not go into the repository.
+goes only into `work/`, because per-domain results do not go into the repository.
 """
 
 from __future__ import annotations
