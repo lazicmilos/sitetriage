@@ -469,7 +469,7 @@ def test_snapshot_se_pise_na_disk_cim_je_domen_gotov(tmp_path):
         ("institucija.example", "institucija.example"),
         ("http://127.0.0.1:8123", "http_127.0.0.1_8123"),
         ("../../etc/passwd", "etc_passwd"),
-        ("", "nepoznat-domen"),
+        ("", "unknown-domain"),
     ],
 )
 def test_ime_direktorijuma_ne_izlazi_iz_izlaznog_foldera(domain, expected):
