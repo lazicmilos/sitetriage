@@ -30,7 +30,7 @@ max_seconds_per_domain = 40     # tvrd budžet (§4.2); 25 s nije bilo dovoljno 
 max_crawl_delay_s = 10          # Crawl-delay se poštuje do ove granice (§8.3)
 second_attempt_after_s = 60     # sajt koji ne odgovara pokušava se ponovo tek posle ovoliko, pa
                                 # tek onda ide u „Ne rade" (Z-20); za to vreme radi ostatak liste
-user_agent = "MlazicSiteScanner/{verzija} (+{kontakt}; {naziv})"   # popunjava se iz [identitet]
+user_agent = "SiteTriage/{verzija} (+{kontakt}; {naziv})"   # popunjava se iz [identitet]
 
 [net]
 # Privatne i posebne adrese (localhost, 10.x, 192.168.x, 169.254.x…) se ne otvaraju, ni
