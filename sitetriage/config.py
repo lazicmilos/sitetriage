@@ -12,6 +12,7 @@ top-level `profile = "NAME"` in the user config; the flag wins.
 from __future__ import annotations
 
 import copy
+import difflib
 import hashlib
 import json
 import math
@@ -72,7 +73,11 @@ ADR_012 = "docs/adr/ADR-012-english-public-interface.md"
 
 
 class ConfigError(Exception):
-    """The configuration is user input: it fails loudly and names the key."""
+    """The configuration is user input: it fails loudly and names the key.
+
+    That includes a key the packaged defaults do not have (a typo would otherwise be merged and
+    never read) and a value of the wrong type or out of range.
+    """
 
 
 def _packaged_config_path() -> Path:
@@ -129,6 +134,7 @@ def load_config(path: str | Path | None = None, *, profile: str | None = None) -
         if not user_path.is_file():
             raise ConfigError(f"configuration file does not exist: {user_path}")
         user = _read(user_path)
+        _check_known(reference, user, str(user_path))
     name = profile if profile is not None else user.get("profile", cfg.get("profile", ""))
     if not isinstance(name, str):
         raise ConfigError(f"profile must be the name of a profile as a string, got {name!r}")
@@ -136,6 +142,7 @@ def load_config(path: str | Path | None = None, *, profile: str | None = None) -
         layer = _read(profile_path(name))
         if "profile" in layer:
             raise ConfigError(f"profile {name!r}: a profile cannot choose another profile")
+        _check_known(reference, layer, f"profile {name!r}")
         _merge(cfg, layer)
     _merge(cfg, user)
     cfg["profile"] = name
@@ -287,6 +294,30 @@ def _renamed(cfg: dict[str, Any]) -> None:
         if old in cfg:
             pairs = ", ".join(f"{k} → {v}" for k, v in keys.items())
             raise ConfigError(f"[{old}] was renamed to [{new}] in SiteTriage 3.0 ({pairs}); see {ADR_012}")
+
+
+def _check_known(reference: dict[str, Any], layer: dict[str, Any], source: str, prefix: str = "") -> None:
+    """Every key of a user config or a profile exists in the packaged defaults (BUG-09).
+
+    A key the defaults do not have is merged and never read, so a typo would run the defaults
+    without a word. Two cases keep their own, more specific message from `_validate`: a section
+    renamed in 3.0 and a table for an unknown industry.
+    """
+    if not prefix:
+        _renamed(layer)
+    for key, value in layer.items():
+        dotted = f"{prefix}{key}"
+        if key not in reference:
+            if prefix == "industry_multipliers.":
+                continue
+            close = difflib.get_close_matches(key, list(reference), n=1)
+            if close:
+                hint = f"; did you mean {prefix}{close[0]}?"
+            else:
+                hint = f"; the known keys are in {_packaged_config_path()}"
+            raise ConfigError(f"{dotted}: unknown key in {source}{hint}")
+        if isinstance(value, dict) and isinstance(reference[key], dict):
+            _check_known(reference[key], value, source, f"{dotted}.")
 
 
 def _is_number(value: Any) -> bool:
