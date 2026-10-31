@@ -13,6 +13,7 @@ import json
 import os
 import tomllib
 import unicodedata
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -64,14 +65,21 @@ class ConfigError(Exception):
     """The configuration is user input: it fails loudly and names the key."""
 
 
+def _packaged_config_path() -> Path:
+    """The default config that ships inside the package (package data, see pyproject.toml)."""
+    # An installed package is unpacked on disk, so the resource is a real file.
+    return Path(str(resources.files("sitetriage").joinpath(CONFIG_NAME)))
+
+
 def default_config_path() -> Path:
-    """The working directory first, then the repository root next to the package."""
-    for candidate in (Path.cwd() / CONFIG_NAME, Path(__file__).resolve().parent.parent / CONFIG_NAME):
+    """A full `sitetriage.toml` in the working directory first, then the one in the package."""
+    packaged = _packaged_config_path()
+    for candidate in (Path.cwd() / CONFIG_NAME, packaged):
         if candidate.is_file():
             return candidate
     raise ConfigError(
-        f"{CONFIG_NAME} was found neither in {Path.cwd()} nor next to the package. "
-        f"Run the tool from the repository root or pass --config PATH."
+        f"{CONFIG_NAME} was found neither in {Path.cwd()} nor in the package ({packaged.parent}). "
+        f"Reinstall SiteTriage; the default config ships with it, and --config is merged over it."
     )
 
 

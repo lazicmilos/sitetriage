@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 
 from sitetriage import __version__
@@ -244,8 +247,34 @@ def test_config_in_the_working_directory_takes_precedence(tmp_path, monkeypatch)
 
 def test_without_a_default_config_it_fails_and_says_what_to_do(monkeypatch):
     monkeypatch.setattr("sitetriage.config.CONFIG_NAME", "nonexistent.toml")
-    with pytest.raises(ConfigError, match="--config"):
+    with pytest.raises(ConfigError, match="Reinstall SiteTriage"):
         load_config()
+
+
+def test_default_config_ships_inside_the_package(tmp_path, monkeypatch):
+    """A wheel from PyPI has no repository around it: the defaults must come from the package."""
+    from importlib.resources import files
+
+    from sitetriage.config import default_config_path
+
+    monkeypatch.chdir(tmp_path)
+    packaged = files("sitetriage").joinpath("sitetriage.toml")
+    assert packaged.is_file()
+    assert default_config_path() == Path(str(packaged))
+    assert get(load_config(), "http.max_body_kb") == 10240
+
+
+@pytest.mark.skipif("MUTANT_UNDER_TEST" in os.environ, reason="mutmut copies only part of the repository")
+def test_default_config_is_package_data_and_has_no_second_copy():
+    """Without package data the wheel would not contain the file; a second copy at the
+    repository root would drift from the one that is installed."""
+    import tomllib
+
+    root = Path(__file__).resolve().parent.parent
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "sitetriage.toml" in pyproject["tool"]["setuptools"]["package-data"]["sitetriage"]
+    assert "sitetriage/sitetriage.toml" in pyproject["tool"]["mutmut"]["also_copy"]
+    assert not (root / "sitetriage.toml").exists(), "the default config lives in sitetriage/ only"
 
 
 @pytest.mark.parametrize("section", ["severity_points", "industry_multipliers"])
