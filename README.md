@@ -1,12 +1,12 @@
 # SiteTriage
 
 SiteTriage takes a list of domains, usually one or two hundred, scans each site politely and ranks
-the ones that deserve a full manual audit. Every ranked site comes with a few ready-to-use sentences,
-in Serbian or English, that you can put in a message, a call or a contact form. It is built for web
-studios and consultants who have a long list of prospects and want to know where to spend their
-time. It is not an audit and it does not replace one, and it is not a vulnerability scanner. It
-reads the home page and a small sample of pages, and tells you which sites have problems a site
-owner would care about.
+the ones that deserve a full manual audit. Every ranked site comes with a few sentences, in Serbian
+or English, that you can paste into a message, use on a call or type into a contact form. It is
+built for web studios and consultants who have a long list of prospects and want to know where to
+spend their time. It reads the home page and a small sample of pages and tells you which sites have
+problems their owners would care about. The audit itself is still your job, and the tool does not
+look for vulnerabilities.
 
 ![Screenshot of an HTML report](docs/izvestaj.png)
 
@@ -59,8 +59,8 @@ Fonts choose what to send by User-Agent, and the page should be measured the way
   domain gets no request at all, and the report shows only how many domains were excluded, not
   which.
 
-**Responsible use.** The tool tells you which sites have problems; what you do with that is up to
-you. You are responsible for how you contact site owners. Cold outreach by email is regulated in
+**Responsible use.** The tool tells you which sites have problems. How you contact their owners is
+your responsibility. Cold outreach by email is regulated in
 many places (in the EU by the GDPR and the ePrivacy rules, and by national law), so check what
 applies to you before you send anything. Also note that each run with level 2 downloads a probe file
 from `speed.cloudflare.com` to measure your own connection (see
@@ -252,8 +252,8 @@ Run `sitetriage <command> --help` for the full list.
 
 ## How it works
 
-The most important design decision is not the split into level 1 and level 2. It is this: code that
-touches the network and code that draws conclusions are two separate layers. A check never opens a
+The split into level 1 and level 2 matters less than another decision: code that touches the
+network and code that draws conclusions live in two separate layers. A check never opens a
 connection. It receives data that was already collected and returns results.
 
 ```
@@ -474,7 +474,7 @@ plan, three test reports, calibration log and an ISO/IEC 25010 review) is in
   JavaScript (a splash page with one button, a parked domain) is the strongest argument for an
   email, and today it is not a finding. Of 160 home pages on lists A and B, 4 have fewer than 200
   characters; the limit will be calibrated on A and B.
-- Core Web Vitals (LCP, CLS): valuable numbers, but they need more careful measurement.
+- Core Web Vitals (LCP, CLS): useful numbers, but they need more careful measurement.
 - CPU emulation, so that load time no longer depends slightly on the machine.
 - A check for structured data (`schema.org`), which has real value for restaurants and clinics.
 - CMS detection (WordPress, Wix, custom-built), because it changes how an offer is written.

@@ -17,8 +17,7 @@ and are not maintained any more. Current decisions live in the
 
 List A and list B are two private lists of 100 real websites each, mostly small businesses and
 associations in Serbia: list A for calibrating thresholds, list B, with no overlap, for validating
-them. Neither list is published, and
-the documents name no domains from them.
+them. Neither list is published, and the documents name no domains from them.
 
 The documents cite specification sections (`§4.2`), v2 requirements (`Z-26`), bugs (`BUG-020`),
 observations (`O-7`) and document ids (`IT-SKENER-003`). The sources behind most of these ids were
