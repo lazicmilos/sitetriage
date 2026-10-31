@@ -493,6 +493,22 @@ def test_recheck_without_snapshots_fails_clearly(tmp_path):
         cli.main(["recheck", str(tmp_path), "--out", str(tmp_path / "out")])
 
 
+@pytest.mark.parametrize("kind", ["nv-missing", "nv-a-file", "pg-corrupt-json"])
+def test_bad_recheck_input_is_a_message_not_a_traceback(tmp_path, kind):
+    """BUG-10: the message names the path, and main() exits through SystemExit(message), i.e. 1."""
+    target = tmp_path / "snapshots"
+    if kind == "nv-a-file":
+        target.write_text("domain,industry\n", encoding="utf-8")
+    elif kind == "pg-corrupt-json":
+        (target / "a.example").mkdir(parents=True)
+        (target / "a.example" / "site.json").write_text("{", encoding="utf-8")
+        target = target / "a.example" / "site.json"
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["recheck", str(tmp_path / "snapshots"), "--out", str(tmp_path / "out")])
+    assert isinstance(raised.value.code, str) and str(target) in raised.value.code
+    assert "\n" not in raised.value.code
+
+
 def test_explain_without_arguments_fails(capsys):
     with pytest.raises(SystemExit):
         cli.main(["explain"])
