@@ -34,7 +34,7 @@ def test_list_warnings_go_to_the_log_with_the_row_number(tmp_path, caplog):
         "domain,industry\ninstitucija.example,institution\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8"
     )
     cli.read_domains(path)
-    assert "row 3: domain is repeated" in caplog.text
+    assert "row 3: same site as row 2 (institucija.example)" in caplog.text
 
 
 def test_excluded_from_config_and_from_the_command_line(tmp_path):
