@@ -80,7 +80,7 @@ def chromium_se_pokrece() -> str | None:
 def pytest_runtest_setup(item):
     """Važi za svaki test sa oznakom `browser`, ne samo za `test_fetch_browser.py`.
 
-    `tryfirst`: preskače se pre fixture-a, jer i fixture (npr. `dva_prolaza`) pokreće browser.
+    `tryfirst`: preskače se pre fixture-a, jer i fixture (npr. `two_runs`) pokreće browser.
     """
     if item.get_closest_marker("browser") and (razlog := chromium_se_pokrece()):
         pytest.skip(razlog)
