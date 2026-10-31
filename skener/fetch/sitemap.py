@@ -6,7 +6,7 @@ Parsiranje i uzorkovanje su čiste funkcije; rekurzivno dohvatanje radi
 
 from __future__ import annotations
 
-import gzip
+import zlib
 from collections import defaultdict
 from collections.abc import Iterable
 from typing import Literal
@@ -14,26 +14,29 @@ from xml.etree import ElementTree
 
 from skener.fetch.urls import normalize, path_group, same_site
 
-SitemapKind = Literal["index", "urlset", "unknown"]
+# `too_large`: mapa postoji, ali je veća od granice, pa se ne zna šta navodi.
+SitemapKind = Literal["index", "urlset", "unknown", "too_large"]
 
-# ponytail: tvrd limit na ulaz umesto defusedxml zavisnosti. Sitemap je sadržaj
-# sa tuđeg servera, pa je ovo granica poverenja; ako ikad zatreba pun štit od
-# XML bombi, `defusedxml.ElementTree` je zamena u jednom redu.
-MAX_PARSE_BYTES = 10 * 1024 * 1024
 GZIP_MAGIC = b"\x1f\x8b"
 
 
-def parse(data: bytes | None) -> tuple[SitemapKind, list[str]]:
-    """Vraća (vrsta, lokacije). Podržava `.xml.gz` — ima ih dosta (§4.4)."""
+def parse(data: bytes | None, *, max_bytes: int) -> tuple[SitemapKind, list[str]]:
+    """Vraća (vrsta, lokacije). Podržava `.xml.gz` — ima ih dosta (§4.4).
+
+    ponytail: tvrd limit na ulaz umesto defusedxml zavisnosti. Sitemap je sadržaj sa tuđeg
+    servera, pa je `max_bytes` (`sitemap.max_kb`) granica poverenja, i to za raspakovanu
+    veličinu: gzip od 50 kB je i 50 MB. Ako ikad zatreba pun štit od XML bombi,
+    `defusedxml.ElementTree` je zamena u jednom redu.
+    """
     if not data:
         return "unknown", []
     if data[:2] == GZIP_MAGIC:
         try:
-            data = gzip.decompress(data)
-        except OSError:
+            data = _gunzip(data, max_bytes + 1)
+        except zlib.error:
             return "unknown", []
-    if len(data) > MAX_PARSE_BYTES:
-        return "unknown", []
+    if len(data) > max_bytes:
+        return "too_large", []
     # Prazan red pre `<?xml` (čest WordPress kvar) je za XML greška, ali mapa sajta postoji (BUG-028).
     data = data.lstrip()
 
@@ -57,6 +60,21 @@ def parse(data: bytes | None) -> tuple[SitemapKind, list[str]]:
         if _tag(loc) == "loc" and loc.text and loc.text.strip()
     ]
     return kind, locations
+
+
+def _gunzip(data: bytes, limit: int) -> bytes:
+    """Najviše `limit` bajtova raspakovanog gzip-a, deo po deo, i kad ima više delova (`cat a.gz b.gz`).
+
+    Prekinut gzip daje ono što je raspakovano do prekida, a `gzip.decompress` bi tu pukao.
+    """
+    out = bytearray()
+    while len(out) < limit:
+        raspakivac = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        out += raspakivac.decompress(data, limit - len(out))
+        data = raspakivac.unused_data
+        if not raspakivac.eof or data[:2] != GZIP_MAGIC:
+            break
+    return bytes(out)
 
 
 def _tag(element: ElementTree.Element) -> str:

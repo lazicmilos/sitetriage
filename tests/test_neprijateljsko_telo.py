@@ -239,3 +239,64 @@ def test_pg_sitemap_gz_bomba_nije_nalaz_da_mape_nema():
     rezultat = run_level(1, snapshot)["infra.sitemap.missing"]
     assert rezultat.status == "unknown" and rezultat.reason.code == "sitemap_too_large"
     assert snapshot.sample_source == "links", "uzorak se dopunjava vezama sa početne"
+
+
+# --------------------------------------------------------------------------- #
+# Raspakivanje deo po deo: isto što i httpx, ali bez komada većeg od granice koraka
+# --------------------------------------------------------------------------- #
+def _raspakuj(encodings: list[str], data: bytes) -> bytes:
+    from skener.fetch.http import _Raspakivanje
+
+    r = _Raspakivanje(encodings)
+    return b"".join([*r.decode(data[:7]), *r.decode(data[7:]), *r.flush()])
+
+
+SADRZAJ = HTML_PREFIX * 50
+
+
+@pytest.mark.parametrize(
+    "encodings, sazmi",
+    [
+        pytest.param(["gzip"], lambda d: zlib_sazmi(d, 31), id="gzip"),
+        pytest.param(["deflate"], lambda d: zlib_sazmi(d, 15), id="deflate-zlib"),
+        pytest.param(["deflate"], lambda d: zlib_sazmi(d, -15), id="deflate-sirov"),
+        pytest.param(["identity"], lambda d: d, id="identity"),
+        pytest.param(["br"], lambda d: d, id="nepoznato-ostaje-kako-je-stiglo"),
+        pytest.param(["gzip", " Deflate"], lambda d: zlib_sazmi(zlib_sazmi(d, 31), 15), id="dva-sazimanja"),
+    ],
+)
+def test_raspakivanje_kao_httpx(encodings, sazmi):
+    assert _raspakuj(encodings, sazmi(SADRZAJ)) == SADRZAJ
+
+
+def zlib_sazmi(data: bytes, wbits: int) -> bytes:
+    import zlib
+
+    sazimac = zlib.compressobj(9, zlib.DEFLATED, wbits)
+    return sazimac.compress(data) + sazimac.flush()
+
+
+def test_raspakivanje_ne_vraca_komad_veci_od_koraka():
+    from skener.fetch.http import RASPAKOVANO_ODJEDNOM, _Raspakivanje
+
+    delovi = list(_Raspakivanje(["gzip"]).decode(bomba(8 * 1024 * KB)))
+    assert sum(map(len, delovi)) == 8 * 1024 * KB
+    assert max(map(len, delovi)) <= RASPAKOVANO_ODJEDNOM
+
+
+def test_pg_pokvaren_gzip_je_greska_veze_kao_pre():
+    """httpx je za pokvaren gzip dizao `DecodingError`, a to je vrsta `connection`."""
+    telo = Response(b"nije gzip uopste", headers={"content-encoding": "gzip"}, encoded=True)
+    with FakeSite(extra={"/": telo}) as site:
+        snapshot = scan(site)
+    assert snapshot.entry.error_kind == "connection"
+    assert "DecodingError" in snapshot.entry.error_detail
+
+
+def test_pg_beskonacan_niz_preusmerenja_je_i_dalje_too_many_redirects():
+    """Preusmerenja se sada prate ručno; granica httpx-a (20 skokova) mora da ostane ista."""
+    petlja = Response(status=302, headers={"location": "/"})
+    with FakeSite(extra={"/": petlja}) as site:
+        snapshot = scan(site)
+    assert snapshot.entry.error_kind == "too_many_redirects"
+    assert site.paths().count("/") == 21, "početni zahtev i 20 skokova, bez ponavljanja, kao pre"

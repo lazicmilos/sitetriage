@@ -22,7 +22,11 @@ domain_concurrency = 16         # domena u radu odjednom; budžet domena kreće 
 delay_ms = [500, 1000]          # pauza sa jitter-om ka istom hostu (§8.3)
 timeout_connect_s = 5
 timeout_read_s = 10
-timeout_total_s = 20
+timeout_total_s = 20            # ceo zahtev, sa preusmerenjima i telom; telo koje kaplje bajt po
+                                # bajt nikad ne okine rok za čitanje
+max_body_kb = 10240             # telo posle raspakivanja; ostatak se ne čita (gzip od 65 kB ume da
+                                # bude 64 MB). 20 × thresholds.perf.html_size_kb, pa običan sajt ostaje
+                                # ceo; sečena početna je `unknown` za provere koje čitaju ceo HTML
 max_requests_per_domain = 19    # tvrd budžet (§4.2): početna 1 + robots 1 + varijante hosta 3 +
                                 # sonde 2 + mape 4 + uzorak 7 = 18, a budžet je 19 (Z-26)
 max_seconds_per_domain = 40     # tvrd budžet (§4.2); 25 s nije bilo dovoljno za spor deljeni
@@ -44,6 +48,7 @@ max_depth = 3
 max_files = 4                   # 16 = početna 1 + robots 1 + sonde 2 + mape 4 + uzorak 7 (+1 rezerva);
                                 # za uzorak od 7 stranica 4 mape su dovoljne
 max_urls = 5000
+max_kb = 10240                  # mapa posle raspakivanja `.xml.gz`; veća je `unknown`, ne „nema mape"
 sample_size = 8                 # početna + 7 (§4.4)
 
 [escalation]

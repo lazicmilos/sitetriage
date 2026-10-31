@@ -56,6 +56,7 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     min_bytes = ctx.th("thresholds.perf.compression_min_kb") * 1024
     if encoding in COMPRESSED or home.html_bytes <= min_bytes:
         return ok(compression_missing.spec)
+    # Sečen HTML je veći od pročitanog, pa su veličina i ušteda donja granica („više od").
     return finding(
         compression_missing.spec,
         ctx,
@@ -68,6 +69,7 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
             "brzina": ctx.th("network_profile.download_mbps"),
         },
         urls=[home.final_url or home.url],
+        variant="truncated" if home.truncated else None,
     )
 
 
@@ -105,13 +107,18 @@ def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
 def html_size(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
     limit_kb = ctx.th("thresholds.perf.html_size_kb")
+    kb = round(home.html_bytes / 1024)
     if home.html_bytes <= limit_kb * 1024:
+        # Sečen HTML je veći od pročitanog: da li je i od praga, ne zna se.
+        if home.truncated:
+            return unknown(html_size.spec, "body_truncated", kb=kb)
         return ok(html_size.spec)
     return finding(
         html_size.spec,
         ctx,
-        evidence={"bajtova": home.html_bytes, "kb": round(home.html_bytes / 1024), "prag_kb": limit_kb},
+        evidence={"bajtova": home.html_bytes, "kb": kb, "prag_kb": limit_kb},
         urls=[home.final_url or home.url],
+        variant="truncated" if home.truncated else None,
     )
 
 

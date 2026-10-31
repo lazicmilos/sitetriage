@@ -43,6 +43,19 @@ FINDINGS: dict[str, dict] = {
             "by about {usteda_s} s."
         ),
         "tech": "content-encoding={kodiranje}, html_bytes={bajtova} (decoded), saving ≈ {usteda_s} s",
+        "variants": {
+            "truncated": {
+                "client": (
+                    "The server sends the page uncompressed (more than {kb} kB). Compression would cut "
+                    "the transfer to roughly a quarter, which on a slower mobile connection ({brzina} Mb/s) "
+                    "shortens loading by more than {usteda_s} s."
+                ),
+                "tech": (
+                    "content-encoding={kodiranje}, html_bytes>{bajtova} (decoded, cut at http.max_body_kb), "
+                    "saving > {usteda_s} s"
+                ),
+            }
+        },
     },
     "perf.redirect.chain": {
         "client": (
@@ -57,6 +70,16 @@ FINDINGS: dict[str, dict] = {
             "download and process it in full, which slows down rendering, especially on a phone."
         ),
         "tech": "html_bytes={bajtova} > {prag_kb} kB",
+        "variants": {
+            "truncated": {
+                "client": (
+                    "The home page code alone weighs more than {kb} kB, before images and scripts. The "
+                    "browser has to download and process it in full, which slows down rendering, "
+                    "especially on a phone."
+                ),
+                "tech": "html_bytes>{bajtova} (cut at http.max_body_kb) > {prag_kb} kB",
+            }
+        },
     },
     "perf.page.weight": {
         "client": "The home page transfers {mb} MB. " + _WEIGHT,
@@ -381,6 +404,17 @@ REASONS: dict[str, str] = {
     "requires.entry_response": "the home page returned no response (network error before HTTP)",
     "requires.home": "the home page was not fetched successfully",
     "requires.home_html": "the raw HTML of the home page was not saved",
+    "requires.home_complete": (
+        "the home page HTML is larger than http.max_body_kb and was cut there, so what comes after "
+        "that point was not seen"
+    ),
+    "body_truncated": (
+        "the home page HTML was cut at {kb} kB (http.max_body_kb), so its full size is not known"
+    ),
+    "sitemap_too_large": (
+        "the sitemap is larger than the limit (sitemap.max_kb or http.max_body_kb) and was not read, so it "
+        "is not known whether it lists any URLs"
+    ),
     "requires.robots": "the robots.txt request did not complete (network error or budget)",
     "requires.sitemap": "the sitemap request did not complete (network error or budget)",
     "requires.soft404": "at least one of the two soft 404 probes did not complete",

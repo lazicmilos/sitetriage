@@ -84,7 +84,7 @@ def _duplicates(
     level=1,
     category="seo",
     base_severity="high",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Početna strana nema <link rel=canonical>.",
     threshold="nema oznake na početnoj",
 )
@@ -105,7 +105,7 @@ def canonical_missing(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="seo",
     base_severity="critical",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description=(
         "Više stranica iz različitih delova sajta upućuje canonical-om na istu drugu adresu. "
         "Stranica koja upućuje na sebe, ili na svoju `http` ili `www` verziju, se ne broji."
@@ -158,7 +158,7 @@ def canonical_duplicate(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="seo",
     base_severity="high",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Početna strana nema <title> ili je prazan.",
     threshold="prazan ili nepostojeći <title>",
 )
@@ -180,7 +180,7 @@ def title_missing(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="seo",
     base_severity="high",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Više stranica iz različitih delova sajta ima identičan naslov.",
     threshold="≥ 3 stranice iz ≥ 3 različite grupe putanja sa istim naslovom",
 )
@@ -212,7 +212,7 @@ def title_duplicate(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="seo",
     base_severity="medium",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Početna strana nema <meta name=description>.",
     threshold="prazan ili nepostojeći meta opis",
 )
@@ -233,7 +233,7 @@ def description_missing(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="seo",
     base_severity="medium",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Više stranica iz različitih delova sajta ima identičan meta opis.",
     threshold="≥ 3 stranice iz ≥ 3 različite grupe putanja sa istim opisom",
 )

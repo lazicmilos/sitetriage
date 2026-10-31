@@ -10,13 +10,15 @@ uvek 1 i to je granica između alata i napada.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import random
 import socket
 import ssl
 import time
-from collections.abc import Callable, Iterable, Sequence
+import zlib
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -59,6 +61,12 @@ DNS_ERRNO = {
     socket.EAI_NONAME: "dns_nxdomain",
     socket.EAI_AGAIN: "dns_temporary",
 }
+# Sažimanja koja raspakujemo sami, deo po deo. Samo njih i najavljujemo serveru: br i zstd bi httpx
+# najavio čim se instalira njihov paket, a mi ih ne raspakujemo.
+ACCEPT_ENCODING = "gzip, deflate"
+# Najviše ovoliko bajtova jedan poziv raspakivanja vrati odjednom. httpx raspakuje svaki primljeni
+# komad do kraja, a 64 kB gzip-a je i 64 MB.
+RASPAKOVANO_ODJEDNOM = 64 * 1024
 
 
 @dataclass
@@ -71,6 +79,8 @@ class Outcome:
     redirect_chain: list[str] = field(default_factory=list)
     headers: dict[str, str] = field(default_factory=dict)
     body: bytes | None = None
+    # Telo je bilo duže od `http.max_body_kb` (posle raspakivanja), pa je `body` samo njegov početak.
+    truncated: bool = False
     elapsed_ms: int = 0
     error_kind: str | None = None
     error_detail: str | None = None
@@ -78,6 +88,87 @@ class Outcome:
     @property
     def ok(self) -> bool:
         return self.status is not None and self.error_kind is None
+
+
+class _Zlib:
+    """Jedno `Content-Encoding` sažimanje (gzip ili deflate), raspakovano u ograničenim delovima."""
+
+    def __init__(self, encoding: str) -> None:
+        self._raspakivac = zlib.decompressobj(16 + zlib.MAX_WBITS if encoding == "gzip" else zlib.MAX_WBITS)
+        # deflate bez zlib zaglavlja (sirov) je čest; httpx ga prepozna po grešci na prvom delu.
+        self._sirov_deflate_moguc = encoding == "deflate"
+
+    def decode(self, data: bytes) -> Iterator[bytes]:
+        while True:
+            try:
+                deo = self._raspakivac.decompress(data, RASPAKOVANO_ODJEDNOM)
+            except zlib.error as exc:
+                if not self._sirov_deflate_moguc:
+                    raise httpx.DecodingError(str(exc)) from exc
+                self._sirov_deflate_moguc = False
+                self._raspakivac = zlib.decompressobj(-zlib.MAX_WBITS)
+                continue
+            self._sirov_deflate_moguc = False
+            if deo:
+                yield deo
+            data = self._raspakivac.unconsumed_tail
+            if not data and len(deo) < RASPAKOVANO_ODJEDNOM:
+                return
+
+    def flush(self) -> Iterator[bytes]:
+        if ostatak := self._raspakivac.flush():
+            yield ostatak
+
+
+class _Raspakivanje:
+    """`Content-Encoding` kao httpx, ali nijedan korak ne pravi više od `RASPAKOVANO_ODJEDNOM`.
+
+    Nepoznato sažimanje se preskače, kao u httpx-u: telo ostaje kakvo je stiglo.
+    """
+
+    def __init__(self, encodings: Iterable[str]) -> None:
+        # Poslednje primenjeno sažimanje se raspakuje prvo.
+        vrste = [e.strip().lower() for e in encodings]
+        self._faze = [_Zlib(e) for e in reversed(vrste) if e in ("gzip", "deflate")]
+
+    def decode(self, data: bytes) -> Iterator[bytes]:
+        return self._kroz(data, 0)
+
+    def flush(self) -> Iterator[bytes]:
+        for i, faza in enumerate(self._faze):
+            for deo in faza.flush():
+                yield from self._kroz(deo, i + 1)
+
+    def _kroz(self, data: bytes, od: int) -> Iterator[bytes]:
+        if od == len(self._faze):
+            if data:
+                yield data
+            return
+        for deo in self._faze[od].decode(data):
+            yield from self._kroz(deo, od + 1)
+
+
+async def _procitaj(response: httpx.Response, limit: int) -> tuple[bytes, bool]:
+    """(telo, sečeno): najviše `limit` raspakovanih bajtova. Ostatak se ne čita, veza se zatvara."""
+    raspakivanje = _Raspakivanje(response.headers.get_list("content-encoding", split_commas=True))
+    delovi: list[bytes] = []
+    primljeno = 0
+
+    def dodaj(novi: Iterator[bytes]) -> bool:
+        nonlocal primljeno
+        for deo in novi:
+            if primljeno + len(deo) > limit:
+                delovi.append(deo[: limit - primljeno])
+                return True
+            delovi.append(deo)
+            primljeno += len(deo)
+        return False
+
+    async with contextlib.aclosing(response.aiter_raw()) as sirovo:
+        async for komad in sirovo:
+            if dodaj(raspakivanje.decode(komad)):
+                return b"".join(delovi), True
+    return b"".join(delovi), dodaj(raspakivanje.flush())
 
 
 class DomainBudget:
@@ -256,7 +347,7 @@ class Fetcher:
             # Bez HTTP(S)_PROXY iz okruženja: proxy sam razrešava ime, pa bi zaobišao proveru.
             trust_env=False,
             follow_redirects=True,
-            headers={"User-Agent": user_agent(self.config)},
+            headers={"User-Agent": user_agent(self.config), "Accept-Encoding": ACCEPT_ENCODING},
             timeout=httpx.Timeout(
                 get(self.config, "http.timeout_total_s"),
                 connect=get(self.config, "http.timeout_connect_s"),
@@ -323,35 +414,57 @@ class Fetcher:
 
     async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
         """`stop_at`: adresa koja je već preuzeta. Preusmerenje na nju se ne prati, a ishod je
-        odgovor koji na nju upućuje, bez tela (Z-26)."""
+        odgovor koji na nju upućuje, bez tela (Z-26).
+
+        Ceo zahtev, sa preusmerenjima i telom, ima rok `http.timeout_total_s`: telo koje kaplje
+        bajt po bajt nikad ne okine rok za čitanje, a držalo bi mesto domena do kraja prolaza.
+        """
         client = self._pick_client(verify=verify)
+        rok = get(self.config, "http.timeout_total_s")
         try:
-            response = await client.get(url, follow_redirects=stop_at is None)
-            koraci = [response]
-            while response.next_request is not None:
-                sledeca = str(response.next_request.url)
-                if normalize(sledeca) == normalize(stop_at):
-                    lanac = [str(r.url) for r in koraci] + [sledeca]
-                    status = response.status_code
-                    return Outcome(url=url, status=status, final_url=sledeca, redirect_chain=lanac)
-                if len(koraci) > client.max_redirects:
-                    raise httpx.TooManyRedirects("Exceeded maximum allowed redirects.")
-                response = await client.send(response.next_request, follow_redirects=False)
-                koraci.append(response)
+            async with asyncio.timeout(rok):
+                return await self._preuzmi(client, url, stop_at)
+        except TimeoutError:
+            detail = f"zahtev duži od {rok:g} s (http.timeout_total_s)"
+            return Outcome(url=url, error_kind="timeout", error_detail=detail)
         except Exception as exc:  # noqa: BLE001 — izuzetak nikad ne napušta domen (§8.2)
             kind, detail = _classify(exc)
             return Outcome(url=url, error_kind=kind, error_detail=detail)
 
-        # Sa `stop_at` httpx ne vodi istoriju, pa lanac čine koraci; bez njega je jedan korak.
-        chain = [str(r.request.url) for r in response.history] + [str(r.url) for r in koraci]
-        return Outcome(
-            url=url,
-            status=response.status_code,
-            final_url=str(response.url),
-            redirect_chain=chain,
-            headers=dict(response.headers),
-            body=response.content,
-        )
+    async def _preuzmi(self, client: httpx.AsyncClient, url: str, stop_at: str | None) -> Outcome:
+        """Preusmerenja se prate ručno: httpx bi telo svakog koraka pročitao i raspakovao do kraja.
+
+        Telo konačnog odgovora se čita do `http.max_body_kb` raspakovanih bajtova, a telo koraka
+        koji preusmerava se ne čita uopšte.
+        """
+        limit = get(self.config, "http.max_body_kb") * 1024
+        request = client.build_request("GET", url)
+        lanac: list[str] = []
+        while True:
+            response = await client.send(request, stream=True, follow_redirects=False)
+            try:
+                lanac.append(str(response.url))
+                if response.next_request is None:
+                    body, truncated = await _procitaj(response, limit)
+                    return Outcome(
+                        url=url,
+                        status=response.status_code,
+                        final_url=str(response.url),
+                        redirect_chain=lanac,
+                        headers=dict(response.headers),
+                        body=body,
+                        truncated=truncated,
+                    )
+                sledeca = str(response.next_request.url)
+                if stop_at is not None and normalize(sledeca) == normalize(stop_at):
+                    lanac.append(sledeca)
+                    status = response.status_code
+                    return Outcome(url=url, status=status, final_url=sledeca, redirect_chain=lanac)
+                if len(lanac) > client.max_redirects:
+                    raise httpx.TooManyRedirects("Exceeded maximum allowed redirects.")
+                request = response.next_request
+            finally:
+                await response.aclose()
 
 
 async def measure_link(config: dict) -> float | None:
@@ -489,6 +602,7 @@ def _home(outcome: Outcome) -> PageSnapshot:
         elapsed_ms=outcome.elapsed_ms,
         redirect_hops=max(len(outcome.redirect_chain) - 1, 0),
         keep_raw_html=True,
+        truncated=outcome.truncated,
     )
 
 
@@ -636,6 +750,7 @@ async def _collect_sitemap(
     max_depth = get(cfg, "sitemap.max_depth")
     max_files = get(cfg, "sitemap.max_files")
     max_urls = get(cfg, "sitemap.max_urls")
+    max_bytes = get(cfg, "sitemap.max_kb") * 1024
 
     # `Sitemap:` iz robots.txt ima prednost nad pogađanjem (§4.3). Kad robots.txt navodi i mape
     # drugih domena (jedan robots.txt za ceo lanac sajtova), one bi potrošile `max_files` pre
@@ -666,9 +781,17 @@ async def _collect_sitemap(
         if not outcome.ok or outcome.status != 200:
             continue
 
-        kind, locations = sitemap_parser.parse(outcome.body)
+        # Sečeno telo je deo mape: ne zna se šta je posle granice, isto kao za preveliku mapu.
+        if outcome.truncated:
+            kind, locations = "too_large", []
+        else:
+            kind, locations = sitemap_parser.parse(outcome.body, max_bytes=max_bytes)
         info.depth_reached = max(info.depth_reached, depth)
-        if kind == "index":
+        if kind == "too_large":
+            # Mapa postoji, samo nije pročitana: to nije „nema mape", i spisak adresa nije potpun.
+            info.truncated = True
+            info.error = f"{canonical}: veća od granice (sitemap.max_kb, http.max_body_kb)"
+        elif kind == "index":
             info.nested_count += len(locations)
             queue.extend((loc, depth + 1) for loc in locations)
         elif kind == "urlset":
@@ -704,6 +827,7 @@ async def _fetch_sample(
                 body=outcome.body,
                 elapsed_ms=outcome.elapsed_ms,
                 redirect_hops=max(len(outcome.redirect_chain) - 1, 0),
+                truncated=outcome.truncated,
             )
         )
 

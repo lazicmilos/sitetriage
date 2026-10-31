@@ -58,6 +58,11 @@ def _stanje(snapshot: SiteSnapshot, ctx: Context) -> tuple[str | None, str, int,
     return home.lang, home.text_sample, home.text_length, "sirovi_html"
 
 
+def _secen_sirovi_html(snapshot: SiteSnapshot, izvor: str) -> bool:
+    """Sirovi HTML početne je sečen na `http.max_body_kb`; posle nivoa 2 važi stranica iz browsera."""
+    return izvor == "sirovi_html" and snapshot.home.truncated
+
+
 def _lang_usable(lang: str | None) -> bool:
     """Ima li smisla porediti ovaj `lang` sa sadržajem."""
     if not lang:
@@ -77,6 +82,8 @@ def _lang_usable(lang: str | None) -> bool:
 )
 def lang_missing(snapshot: SiteSnapshot, ctx: Context):
     lang, _, _, izvor = _stanje(snapshot, ctx)
+    if _secen_sirovi_html(snapshot, izvor):
+        return unknown(lang_missing.spec, "requires.home_complete")
     if lang is not None:
         return ok(lang_missing.spec)
     return finding(
@@ -98,6 +105,8 @@ def lang_missing(snapshot: SiteSnapshot, ctx: Context):
 )
 def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
     lang, _, _, izvor = _stanje(snapshot, ctx)
+    if _secen_sirovi_html(snapshot, izvor):
+        return unknown(lang_invalid.spec, "requires.home_complete")
     if lang is None or _lang_usable(lang):
         return ok(lang_invalid.spec)
     return finding(
@@ -130,6 +139,8 @@ def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
 def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
     lang, tekst, duzina, izvor = _stanje(snapshot, ctx)
+    if _secen_sirovi_html(snapshot, izvor):
+        return unknown(lang_mismatch.spec, "requires.home_complete")
     min_text = ctx.th("thresholds.i18n.min_text_length")
     if duzina < min_text:
         # Iz sirovog HTML-a ujedno i signal za eskalaciju na nivo 2 (§6): sadržaj se verovatno crta iz JS-a.

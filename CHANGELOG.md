@@ -32,6 +32,9 @@ Projekat je otvoren pod imenom SiteTriage, uz licencu MIT. Paket i komanda se i 
   slajderu), sa najvećim procenjenim viškom. Broj slika i višak u kB bili su preveliki, a višak
   ponekad veći od cele strane: na jednom sajtu 7.011 kB umesto 2.923 kB. Na pravom prolazu od 249
   domena 5 od 91 nalaza `perf.img.oversized` više ne prelazi prag (BUG-030).
+- Telo odgovora se čita najviše do `http.max_body_kb` (10 MB) posle raspakivanja, `.xml.gz` mapa do
+  `sitemap.max_kb`, a ceo zahtev traje najviše `http.timeout_total_s`: gzip bomba, beskonačno ili
+  sporo telo ne troše memoriju niti zaustavljaju prolaz. Sečena početna je `unknown` za provere HTML-a.
 
 ## 2.0.0 — 2026-10-06
 
