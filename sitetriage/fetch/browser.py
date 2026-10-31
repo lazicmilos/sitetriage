@@ -323,9 +323,12 @@ async def capture(
         page.on("pageerror", recorder.on_page_error)
 
         reached = "error"
+        debug = {"domain": site.domain}
+        log.debug("goto %s (light %s)", url, light, extra=debug)
         try:
             response = await page.goto(url, wait_until="load", timeout=timeout_ms)
             reached = "load"
+            log.debug("reached load: status %s", response.status if response else None, extra=debug)
             # An error page (e.g. a 403 from bot protection) is not the home page; measuring it gives a
             # false weight and false findings (BUG-021).
             if response is not None and response.status >= 400:
@@ -335,9 +338,11 @@ async def capture(
         except PlaywrightError as exc:
             if "Timeout" not in type(exc).__name__ and "imeout" not in str(exc):
                 snapshot.errors.append(SnapshotError("goto", type(exc).__name__, str(exc)[:300]))
+                log.debug("goto failed: %s", type(exc).__name__, extra=debug)
                 snapshot.status = "failed"
                 return snapshot
             reached = "timeout"
+            log.debug("goto timed out after %d ms", timeout_ms, extra=debug)
 
         if reached == "load":
             # Network idle is welcome, not required.
@@ -368,6 +373,15 @@ async def capture(
             bytes_at_load=recorder.bytes_at_load,
             bytes_by_type_at_load=recorder.by_type_at_load,
             unmeasured_at_load=recorder.unmeasured_at_load,
+        )
+        log.debug(
+            "measured %d requests, %d bytes (%d requests, %d bytes until load), %d unmeasured",
+            recorder.request_count,
+            recorder.total_bytes,
+            recorder.requests_at_load,
+            recorder.bytes_at_load,
+            recorder.unmeasured,
+            extra=debug,
         )
         snapshot.console = ConsoleStats(
             errors=recorder.console_errors,

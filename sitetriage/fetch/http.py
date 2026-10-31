@@ -177,7 +177,8 @@ class DomainBudget:
     When it is used up, what was collected goes on, and the rest is `unknown`.
     """
 
-    def __init__(self, max_requests: int, max_seconds: float) -> None:
+    def __init__(self, max_requests: int, max_seconds: float, domain: str | None = None) -> None:
+        self.domain = domain  # only for the `domain` field of log records (`--debug-domain`)
         self.max_requests = max_requests
         self.max_seconds = max_seconds
         self.started = time.monotonic()
@@ -395,6 +396,15 @@ class Fetcher:
                 outcome = await self._send(url, verify=verify, stop_at=stop_at)
                 outcome.elapsed_ms = int((time.monotonic() - started) * 1000)
             self._host_next_allowed[host] = time.monotonic() + random.uniform(*self._delay_range)
+        log.debug(
+            "GET %s %s, %d ms, %d redirect hops, truncated %s",
+            url,
+            f"status {outcome.status}" if outcome.status is not None else f"error {outcome.error_kind}",
+            outcome.elapsed_ms or 0,
+            max(len(outcome.redirect_chain) - 1, 0),
+            outcome.truncated,
+            extra={"domain": budget.domain},
+        )
 
         if outcome.status in GIVE_UP_STATUSES:
             budget.abort(f"server returned {outcome.status}, giving up on the domain for this run")
@@ -515,7 +525,7 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
     cfg = fetcher.config
     domain = target.domain
     budget = DomainBudget(
-        get(cfg, "http.max_requests_per_domain"), get(cfg, "http.max_seconds_per_domain")
+        get(cfg, "http.max_requests_per_domain"), get(cfg, "http.max_seconds_per_domain"), domain
     )
     fetched_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     snapshot = SiteSnapshot(

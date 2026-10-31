@@ -280,7 +280,9 @@ difference in a second, without downloading two hundred sites again. Try thresho
 file that holds only what you change: `--config` overrides only what it sets.
 
 `scan` also takes `--level 1|2|auto`, `--max-level2 N` (the cap for level 2, default 60),
-`--snapshots DIR`, `--exclude FILE` and `--debug-domain DOMAIN` (DEBUG log for that domain only).
+`--snapshots DIR`, `--exclude FILE` and `--debug-domain DOMAIN` (DEBUG log for that domain only: every
+request with its status or error, time, redirect hops and whether the body was cut off, and on level
+2 the navigation, `load` and the measured requests and bytes).
 Run `sitetriage <command> --help` for the full list.
 
 ## How it works
