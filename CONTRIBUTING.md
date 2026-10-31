@@ -23,7 +23,7 @@ same on every machine. CI runs the same image.
 ```bash
 git clone https://github.com/lazicmilos/sitetriage.git
 cd sitetriage
-mkdir rad
+mkdir work
 docker compose build
 docker compose run --rm sitetriage pytest -q
 ```

@@ -55,7 +55,7 @@ def test_excluded_from_config_and_from_the_command_line(tmp_path):
     assert first.requests == []
     assert json.loads((out / "report.json").read_text(encoding="utf-8"))["summary"]["excluded"] == 1
     page = (out / "index.html").read_text(encoding="utf-8")
-    assert "Izuzeto na zahtev" in page and first.base_url not in page
+    assert "Excluded on request" in page and first.base_url not in page
 
 
 def test_missing_exclusion_file_fails_clearly(tmp_path):

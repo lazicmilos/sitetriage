@@ -19,7 +19,7 @@ does not.
 
 ```bash
 git pull
-mkdir -p rad                                    # input and output; the code stays in the image
+mkdir -p work                                   # input and output; the code stays in the image
 export SITETRIAGE_OPERATOR_NAME="Operator name" SITETRIAGE_OPERATOR_CONTACT="contact@studio.example"  # who is scanning; no requests without it
 export SITETRIAGE_UID=$(id -u) SITETRIAGE_GID=$(id -g)  # Linux: so the reports belong to you
 docker compose build

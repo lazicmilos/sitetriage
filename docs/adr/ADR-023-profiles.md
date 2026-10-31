@@ -63,6 +63,9 @@ every site.
 
 ## Consequences
 
+- The profile also sets the report language. English is the default (`report.lang = "en"`), `rs`
+  switches to Serbian, and `--lang` overrides both, so a run for Serbian sites needs only
+  `--profile rs`.
 - By default, users lose `i18n.lang.mismatch`, and nobody gets a false Serbian finding. The check
   stays in the registry, in `sitetriage explain` and in the README table, whose threshold text says
   it needs a content-language profile.

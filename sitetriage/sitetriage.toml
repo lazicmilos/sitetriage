@@ -139,6 +139,8 @@ console_errors = 3
 text_similarity = 0.9           # similarity of a probe to the home page = hard evidence
 
 [report]
+lang = "en"                     # language of the reports and client sentences: en or sr; --lang
+                                # overrides it, and the rs profile sets sr
 mobile_overhead_s = 1.0         # overhead time on top of 0.6 MB/s
 top_findings = 3                # this many fit into an email
 

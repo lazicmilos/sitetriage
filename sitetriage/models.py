@@ -36,6 +36,9 @@ CATEGORIES: tuple[str, ...] = typing.get_args(Category)
 # Content languages that `i18n.lang.mismatch` has a detector for (`sitetriage/checks/i18n.py`). A
 # profile turns them on through `thresholds.i18n.content_languages` (ADR-023).
 CONTENT_LANGUAGES: tuple[str, ...] = ("sr",)
+# Languages of sentences and reports (`report.lang`, `--lang`); each has a catalog in
+# `sitetriage/messages/`.
+REPORT_LANGUAGES: tuple[str, ...] = ("en", "sr")
 
 
 # --------------------------------------------------------------------------- #

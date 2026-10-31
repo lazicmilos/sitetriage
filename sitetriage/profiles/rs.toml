@@ -5,6 +5,12 @@
 # (Cyrillic share above thresholds.i18n.cyrillic_ratio, or č/ć/š/ž/đ above
 # thresholds.i18n.diacritic_ratio) with a `lang` of a language not written that way is a finding.
 # Without the profile the check is `not_applicable`.
+#
+# It also writes the reports and the client sentences in Serbian (`report.lang = "sr"`);
+# `--lang en` still gives English.
 
 [thresholds.i18n]
 content_languages = ["sr"]
+
+[report]
+lang = "sr"
