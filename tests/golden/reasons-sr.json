@@ -1,0 +1,272 @@
+[
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "i18n.lang.invalid",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "i18n.lang.mismatch",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "i18n.lang.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.host.duplicate",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.https.redirect.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.robots.missing",
+  "reason": "zahtev za robots.txt nije izvršen (mrežna greška ili budžet)"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.sitemap.missing",
+  "reason": "zahtev za sitemap nije izvršen (mrežna greška ili budžet)"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.soft404",
+  "reason": "bar jedna od dve sonde za lažni 404 nije izvršena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.tls.invalid",
+  "reason": "početna strana nije zabeležena (dohvatanje je puklo, vidi log)"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "infra.unreachable",
+  "reason": "početna strana nije zabeležena (dohvatanje je puklo, vidi log)"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "perf.compression.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "perf.html.size",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "perf.redirect.chain",
+  "reason": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "seo.canonical.duplicate",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "seo.canonical.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "seo.description.duplicate",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "seo.description.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "seo.title.duplicate",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "seo.title.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "social.og.description.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "social.og.image.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/prazan-snapshot",
+  "check": "social.og.title.missing",
+  "reason": "početna strana nije uspešno dohvaćena"
+ },
+ {
+  "case": "nivo1/bez-odgovora",
+  "check": "infra.tls.invalid",
+  "reason": "veza nije uspostavljena (connect_timeout), sertifikat nije proveren"
+ },
+ {
+  "case": "nivo1/bez-odgovora",
+  "check": "infra.unreachable",
+  "reason": "početna nije vratila odgovor (connect_timeout, pokušaja: 0); iz toga se ne vidi da sajt ne radi"
+ },
+ {
+  "case": "nivo1/bez-odgovora",
+  "check": "perf.redirect.chain",
+  "reason": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)"
+ },
+ {
+  "case": "nivo1/tls-preko-http",
+  "check": "infra.tls.invalid",
+  "reason": "https nije uspeo (tls_handshake: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF); sajt je dohvaćen preko http-a, sertifikat nije proveren"
+ },
+ {
+  "case": "nivo1/sitemap-403",
+  "check": "infra.sitemap.missing",
+  "reason": "server je na sitemap odgovorio statusom 403; iz toga se ne vidi da li postoji"
+ },
+ {
+  "case": "nivo1/robots-403",
+  "check": "infra.robots.missing",
+  "reason": "server je na robots.txt odgovorio statusom 403; iz toga se ne vidi da li postoji"
+ },
+ {
+  "case": "nivo1/sonde-403",
+  "check": "infra.soft404",
+  "reason": "sonde su dobile status 403, 403; iz toga se ne vidi kako sajt odgovara na nepostojeću adresu"
+ },
+ {
+  "case": "nivo1/malo-teksta",
+  "check": "i18n.lang.mismatch",
+  "reason": "premalo teksta u sirovom HTML-u (100 < 400 znakova)"
+ },
+ {
+  "case": "nivo1/pukla-provera",
+  "check": "perf.compression.missing",
+  "reason": "provera je pukla: AttributeError: 'NoneType' object has no attribute 'get'"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "a11y.img.alt.missing",
+  "reason": "stranica nije otvorena u browseru"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "perf.img.oversized",
+  "reason": "stranica nije otvorena u browseru"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "perf.load.time",
+  "reason": "stranica nije otvorena u browseru"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "perf.page.weight",
+  "reason": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "perf.request.count",
+  "reason": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "qa.console.errors",
+  "reason": "stranica nije otvorena u browseru"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "seo.h1.missing",
+  "reason": "stranica nije otvorena u browseru"
+ },
+ {
+  "case": "nivo2/browser-pao",
+  "check": "seo.h1.multiple",
+  "reason": "stranica nije otvorena u browseru"
+ },
+ {
+  "case": "nivo2/bez-saobracaja",
+  "check": "perf.page.weight",
+  "reason": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "case": "nivo2/bez-saobracaja",
+  "check": "perf.request.count",
+  "reason": "mrežni saobraćaj nije izmeren"
+ },
+ {
+  "case": "nivo2/nemereni-odgovori",
+  "check": "perf.page.weight",
+  "reason": "9 odgovora nije izmereno (prag 5)"
+ },
+ {
+  "case": "nivo2/prekid-ucitavanja",
+  "check": "a11y.img.alt.missing",
+  "reason": "stranica nije dovršila učitavanje, slike nisu prebrojane"
+ },
+ {
+  "case": "nivo2/prekid-ucitavanja",
+  "check": "perf.page.weight",
+  "reason": "učitavanje prekinuto pre kraja, izmereno je nepotpuno"
+ },
+ {
+  "case": "nivo2/prekid-ucitavanja",
+  "check": "perf.request.count",
+  "reason": "učitavanje prekinuto pre kraja, izmereno je nepotpuno"
+ },
+ {
+  "case": "nivo2/prekid-ucitavanja",
+  "check": "seo.h1.missing",
+  "reason": "stranica nije dovršila učitavanje, h1 može da stigne kasnije"
+ },
+ {
+  "case": "nivo2/vreme-nije-mereno",
+  "check": "perf.load.time",
+  "reason": "vreme učitavanja nije izmereno"
+ },
+ {
+  "case": "nivo2/nemerene-slike",
+  "check": "perf.img.oversized",
+  "reason": "6 od 10 slika nije izmereno"
+ },
+ {
+  "case": "eskalacija",
+  "check": "eskalacija",
+  "reason": "sirovi HTML ima 300 znakova teksta (< 800)"
+ },
+ {
+  "case": "eskalacija",
+  "check": "eskalacija",
+  "reason": "sirovi HTML nema nijedan h1 — nivo 2 proverava da li ga crta JavaScript"
+ },
+ {
+  "case": "eskalacija",
+  "check": "eskalacija",
+  "reason": "ima bar jedan nalaz nivoa 1 ozbiljnosti ≥ medium"
+ },
+ {
+  "case": "eskalacija",
+  "check": "eskalacija",
+  "reason": "HTML početne je 400000 B (> 300000)"
+ },
+ {
+  "case": "eskalacija",
+  "check": "eskalacija",
+  "reason": "HTML se ne šalje kompresovan"
+ },
+ {
+  "case": "eskalacija",
+  "check": "eskalacija",
+  "reason": "početna odgovara za 2000 ms (> 1500)"
+ }
+]
