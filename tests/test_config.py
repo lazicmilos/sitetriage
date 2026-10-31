@@ -363,3 +363,96 @@ def test_digest_changes_when_a_threshold_changes(key, value):
         section = section[part]
     section[last] = value
     assert digest(cfg) != before
+
+
+# --------------------------------------------------------------------------- #
+# BUG-06: every value is checked against the type of its packaged default, and values that would
+# crash a run or silently invert it are rejected with the key and the value.
+# --------------------------------------------------------------------------- #
+def _one_value(tmp_path: Path, section: str, line: str) -> tuple[Path, str]:
+    """A config file that sets one key, and the dotted name of that key."""
+    override = tmp_path / "mine.toml"
+    override.write_text(f"[{section}]\n{line}\n", encoding="utf-8")
+    return override, f"{section}.{line.split(' =')[0]}"
+
+
+@pytest.mark.parametrize(
+    "section, line, shown",
+    [
+        pytest.param("severity_points", 'high = "lots"', "'lots'", id="nv-points-text"),
+        pytest.param("severity_points", "high = true", "True", id="nv-points-boolean"),
+        pytest.param("severity_points", "high = -20", "-20", id="nv-points-negative"),
+        pytest.param("severity_points", "high = 0", "0", id="gv-points-0"),
+        pytest.param("http", "delay_ms = [500]", "[500]", id="nv-delay-one-number"),
+        pytest.param("http", "delay_ms = [-1000, -500]", "[-1000, -500]", id="nv-delay-negative"),
+        pytest.param("http", "delay_ms = [1000, 500]", "[1000, 500]", id="nv-delay-reversed"),
+        pytest.param("http", 'delay_ms = ["a", "b"]', "'a'", id="nv-delay-text"),
+        pytest.param("http", "delay_ms = 500", "500", id="nv-delay-not-a-list"),
+        pytest.param("http", "delay_ms = { min = 0 }", "{'min': 0}", id="nv-delay-table"),
+        pytest.param("http", "timeout_total_s = 0", "0", id="gv-total-timeout-0"),
+        pytest.param("http", "timeout_connect_s = 0", "0", id="gv-connect-timeout-0"),
+        pytest.param("http", "timeout_read_s = -1", "-1", id="nv-read-timeout-negative"),
+        pytest.param("browser", "timeout_s = 0", "0", id="gv-browser-timeout-0"),
+        pytest.param("browser", "drain_timeout_s = 0", "0", id="gv-drain-0"),
+        pytest.param("browser", "max_seconds_per_domain = 0", "0", id="gv-level2-budget-0"),
+        pytest.param("thresholds.perf", "image_ratio = -1", "-1", id="nv-ratio-negative"),
+        pytest.param("thresholds.perf", "image_ratio = 0", "0", id="gv-ratio-0"),
+        pytest.param("thresholds.perf", "image_ratio = nan", "nan", id="nv-nan"),
+        pytest.param("thresholds.i18n", "cyrillic_ratio = 1.5", "1.5", id="nv-share-above-1"),
+        pytest.param("sitemap", "sample_size = 0", "0", id="gv-sample-0"),
+        pytest.param("sitemap", "sample_size = 1", "1", id="gv-sample-home-page-only"),
+        pytest.param("sitemap", "sample_size = 2.5", "2.5", id="nv-sample-fraction"),
+        pytest.param("industry_multipliers.hotel", "perf = -5", "-5", id="nv-multiplier-negative"),
+        pytest.param("thresholds.qa", "console_errors = -1", "-1", id="nv-negative-count"),
+        pytest.param(
+            "thresholds.perf",
+            "page_weight_mb = { medium = 5.0, high = 4.0, critical = 7.0 }",
+            "'medium': 5.0",
+            id="nv-tiers-out-of-order",
+        ),
+        pytest.param(
+            "thresholds.perf", "load_ms = { medium = 6000, high = 6000 }", "'high': 6000", id="gv-tiers-equal"
+        ),
+        pytest.param("thresholds", "perf = 5", "5", id="nv-number-instead-of-a-table"),
+        pytest.param("operator", "name = 5", "5", id="nv-number-instead-of-text"),
+        pytest.param("browser", 'serial_load = "yes"', "'yes'", id="nv-text-instead-of-bool"),
+    ],
+)
+def test_invalid_value_fails_and_names_the_key_and_the_value(tmp_path, section, line, shown):
+    override, key = _one_value(tmp_path, section, line)
+    with pytest.raises(ConfigError) as error:
+        load_config(override)
+    assert key in str(error.value) and shown in str(error.value), str(error.value)
+
+
+@pytest.mark.parametrize(
+    "section, line, expected",
+    [
+        pytest.param("http", "delay_ms = [0, 0]", [0, 0], id="gv-delay-0"),
+        pytest.param("http", "delay_ms = [500, 500]", [500, 500], id="gv-delay-min-equals-max"),
+        pytest.param("http", "delay_ms = [0.5, 1.5]", [0.5, 1.5], id="ke-delay-fractions"),
+        pytest.param("http", "timeout_total_s = 2.5", 2.5, id="ke-fraction-of-a-second"),
+        pytest.param("http", "max_crawl_delay_s = 0", 0, id="gv-crawl-delay-cap-0"),
+        pytest.param("severity_points", "high = 1", 1, id="gv-points-1"),
+        pytest.param("thresholds.perf", "image_ratio = 3", 3, id="ke-integer-for-float"),
+        pytest.param("thresholds.i18n", "cyrillic_ratio = 1", 1, id="gv-share-1"),
+        pytest.param("sitemap", "sample_size = 2", 2, id="gv-sample-home-page-and-one"),
+        pytest.param("industry_multipliers.hotel", "perf = 0", 0, id="gv-multiplier-0"),
+        pytest.param(
+            "thresholds.perf",
+            "page_weight_mb = { medium = 1, high = 2.5, critical = 3 }",
+            {"medium": 1, "high": 2.5, "critical": 3},
+            id="ke-tiers-in-order",
+        ),
+    ],
+)
+def test_valid_value_is_accepted(tmp_path, section, line, expected):
+    override, key = _one_value(tmp_path, section, line)
+    assert get(load_config(override), key) == expected
+
+
+def test_packaged_defaults_and_profiles_pass_their_own_validation():
+    from sitetriage.config import available_profiles
+
+    for name in ["", *available_profiles()]:
+        load_config(profile=name)
