@@ -148,3 +148,57 @@ def test_exclusion_file():
 def test_exclusion_file_in_windows_1250():
     """pg-: Notepad on Serbian Windows saves the comment in windows-1250, and the domain is read anyway."""
     assert read_exclusions("# tražio vlasnik iz Niša\nx.rs\n".encode("cp1250")) == ["x.rs"]
+
+
+# --------------------------------------------------------------------------- #
+# The same site written two ways is scanned once (BUG-02)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        pytest.param("http://127.0.0.1:18001", "http://127.0.0.1:18001/", id="ke-trailing-slash"),
+        pytest.param("example.invalid", "https://example.invalid/", id="ke-scheme-and-slash"),
+        pytest.param("example.invalid", "http://example.invalid", id="ke-other-scheme"),
+        pytest.param("example.invalid", "www.example.invalid", id="ke-www"),
+        pytest.param("www.example.invalid", "https://WWW.Example.Invalid/", id="ke-www-upper-case-url"),
+        pytest.param("example.invalid", "example.invalid.", id="ke-trailing-dot"),
+        pytest.param("example.invalid", "https://example.invalid:443/", id="ke-default-https-port"),
+        pytest.param("http://example.invalid", "http://example.invalid:80", id="ke-default-http-port"),
+        pytest.param("example.invalid/en", "https://www.example.invalid/en/", id="ke-same-path"),
+        pytest.param("example.invalid", "example.invalid/?utm_source=a#top", id="ke-tracking-fragment"),
+        pytest.param("ftp://example.invalid", "FTP://EXAMPLE.INVALID", id="nv-not-a-web-url-as-written"),
+    ],
+)
+def test_the_same_site_written_two_ways_is_scanned_once(first, second):
+    rows, warnings = read(f"domain,industry\n{first},hotel\n{second},restaurant\n")
+    assert [(r.domain, r.industry) for r in rows] == [(first, "hotel")], "the first occurrence wins"
+    assert [(w.row, w.domain) for w in warnings] == [(3, second)]
+    assert warnings[0].message == f"same site as row 2 ({first}), skipping it"
+
+
+def test_three_spellings_of_one_site_give_one_row():
+    rows, warnings = read("domain\nexample.invalid\nhttps://example.invalid/\nwww.example.invalid\n")
+    assert [r.domain for r in rows] == ["example.invalid"]
+    assert [(w.row, w.message) for w in warnings] == [
+        (3, "same site as row 2 (example.invalid), skipping it"),
+        (4, "same site as row 2 (example.invalid), skipping it"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        pytest.param("firma.example", "blog.firma.example", id="ke-subdomain-is-another-site"),
+        pytest.param("http://127.0.0.1:18001", "http://127.0.0.1:18002", id="ke-other-port"),
+        pytest.param("example.invalid", "https://example.invalid:8443", id="ke-non-default-port"),
+        pytest.param("http://example.invalid:443", "https://example.invalid", id="pg-https-port-over-http"),
+        pytest.param("example.invalid/en", "example.invalid/sr", id="ke-other-entry-path"),
+        pytest.param("example.invalid", "example.invalid/en", id="ke-entry-path-vs-root"),
+        pytest.param("wwwfirma.example", "firma.example", id="gv-www-without-dot"),
+        pytest.param("example.invalid/?lang=en", "example.invalid/?lang=sr", id="ke-other-query"),
+    ],
+)
+def test_different_sites_stay_distinct(first, second):
+    rows, warnings = read(f"domain\n{first}\n{second}\n")
+    assert [r.domain for r in rows] == [first, second]
+    assert warnings == []
