@@ -74,8 +74,8 @@ another server.
 
 The tool opens public addresses only. `localhost`, `10.x`, `192.168.x`, `169.254.169.254` and the
 other private and special addresses are never opened, not when a public name resolves to them and
-not after a redirect. A domain given with an IP address, a port or a user name gets no request at
-all. Without this, a web application built on the scanner would let its users look inside the
+not after a redirect. A domain given with an IP address (in any notation, `0177.0.0.1` and `127.1`
+included), a port or a user name gets no request at all. Without this, a web application built on the scanner would let its users look inside the
 server (SSRF).
 
 Staging with a port works only when you allow it explicitly:
@@ -87,8 +87,10 @@ allowed_private = ["staging.example:8123"]
 
 In the browser (level 2) the protection cannot see the target of a redirect or a WebSocket, so a web
 application in production also needs an egress filter at the network level
-([ADR-006](docs/adr/ADR-006-ssrf.md)). Level 1 does not read `HTTP(S)_PROXY` from the environment,
-because a proxy would bypass the check.
+([ADR-006](docs/adr/ADR-006-ssrf.md)). Level 1 and the link probe before level 2 (`probe_url`) do
+not read `HTTP(S)_PROXY` from the environment, because a proxy would bypass the check. A `probe_url`
+on a private address is not opened either, unless `allowed_private` lists it: the link is then not
+measured, and load time is `unknown`.
 
 ## Quick start
 
