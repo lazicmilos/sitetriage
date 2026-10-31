@@ -79,4 +79,4 @@ reason `requires.level2_full`, not `unknown`.
   to 54 domains, for 29 of them only because of that. With `not_applicable` it went back to 25,
   with ranking and `findings.csv` unchanged.
 - The fourth state and the `not_applicable` list are breaking changes in `CHANGELOG.md` 2.0.0.
-- Tests: `tests/test_malo_stranica.py` (Z-21), `tests/test_uzrok_partial.py` (Z-22).
+- Tests: `tests/test_too_few_pages.py` (Z-21), `tests/test_partial_cause.py` (Z-22).
