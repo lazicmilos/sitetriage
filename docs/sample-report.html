@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiteTriage — report</title>
+<style>
+:root { color-scheme: light dark;
+  --bg:#ffffff; --fg:#111827; --muted:#6b7280; --line:#e5e7eb; --card:#f9fafb; --accent:#1d4ed8; }
+@media (prefers-color-scheme: dark) { :root {
+  --bg:#0b0f19; --fg:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --card:#111827; --accent:#60a5fa; } }
+* { box-sizing: border-box; }
+body { margin:0; padding:24px 16px 64px; background:var(--bg); color:var(--fg);
+  font:15px/1.6 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
+.wrap { max-width:1100px; margin:0 auto; }
+h1 { font-size:24px; margin:0 0 4px; }
+h2 { font-size:18px; margin:32px 0 12px; }
+.sub { color:var(--muted); margin:0 0 24px; }
+.cards { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:28px; }
+.card { flex:1 1 140px; background:var(--card); border:1px solid var(--line);
+  border-radius:10px; padding:12px 14px; }
+.card b { display:block; font-size:22px; }
+.card span { color:var(--muted); font-size:13px; }
+table { width:100%; border-collapse:collapse; }
+th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+.tag { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px;
+  font-weight:700; letter-spacing:.03em; border:1px solid currentColor; white-space:nowrap; }
+details { background:var(--card); border:1px solid var(--line); border-radius:10px;
+  margin-bottom:10px; padding:0; }
+summary { cursor:pointer; padding:12px 14px; display:flex; gap:10px; align-items:baseline;
+  flex-wrap:wrap; }
+summary::marker { color:var(--muted); }
+summary .domain { font-weight:700; }
+summary .meta { color:var(--muted); font-size:13px; }
+.body { padding:0 14px 14px; }
+.finding { border-top:1px solid var(--line); padding:12px 0; }
+.finding p { margin:6px 0; }
+.tech { color:var(--muted); font-size:13px; font-family:ui-monospace, "SF Mono", Menlo, monospace; }
+.evidence { font-family:ui-monospace, "SF Mono", Menlo, monospace; font-size:12px;
+  background:var(--bg); border:1px solid var(--line); border-radius:6px;
+  padding:6px 8px; overflow-x:auto; margin:6px 0 0; }
+a { color:var(--accent); }
+button { font:inherit; padding:7px 12px; border-radius:8px; border:1px solid var(--line);
+  background:var(--bg); color:var(--fg); cursor:pointer; }
+button:hover { border-color:var(--accent); color:var(--accent); }
+.unknowns { margin-top:12px; font-size:13px; color:var(--muted); }
+footer { margin-top:40px; padding-top:16px; border-top:1px solid var(--line);
+  color:var(--muted); font-size:13px; }
+</style></head>
+<body><div class="wrap">
+<h1>SiteTriage — report</h1>
+<p class="sub">Run of 2026-09-22T09:00:00Z · tool version 3.0.0.dev0 · no profile</p>
+
+<div class="cards">
+<div class="card"><b>8</b><span>Domains</span></div><div class="card"><b>8</b><span>Scanned</span></div><div class="card"><b>0</b><span>Partial</span></div><div class="card"><b>0</b><span>Not working</span></div><div class="card"><b>0</b><span>Failed</span></div><div class="card"><b>7</b><span>On level 2</span></div><div class="card"><b>0 s</b><span>Duration</span></div>
+</div>
+<p class="sub">Budget spent: 0 % of working domains</p>
+
+
+<h2>Ranked domains</h2>
+<p class="sub">The order is by the single worst finding, and only then by the total: a site with
+one disaster is a better lead than a site with ten small issues.</p>
+<table>
+<thead><tr>
+<th class="num">#</th><th>Domain</th><th>Industry</th><th class="num">Score</th>
+<th>Worst finding</th><th class="num">Findings</th><th>Level 2</th><th>Status</th>
+</tr></thead>
+<tbody>
+<tr><td class="num">1</td><td><b>restoran-centar.example</b></td><td>restaurant</td><td class="num">96</td><td><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ CRITICAL</span> perf.page.weight</td><td class="num">3</td><td>yes</td><td>scanned</td></tr><tr><td class="num">2</td><td><b>institucija.example</b></td><td>institution</td><td class="num">80</td><td><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ CRITICAL</span> seo.canonical.duplicate</td><td class="num">3</td><td>yes</td><td>scanned</td></tr><tr><td class="num">3</td><td><b>hotel-planina.example</b></td><td>hotel</td><td class="num">99.4</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> social.og.title.missing</td><td class="num">6</td><td>yes</td><td>scanned</td></tr><tr><td class="num">4</td><td><b>prodavnica.example</b></td><td>ecommerce</td><td class="num">80</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> perf.request.count</td><td class="num">4</td><td>yes</td><td>scanned</td></tr><tr><td class="num">5</td><td><b>restoran-ugao.example</b></td><td>restaurant</td><td class="num">75.6</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> social.og.title.missing</td><td class="num">4</td><td>yes</td><td>scanned</td></tr><tr><td class="num">6</td><td><b>ordinacija.example</b></td><td>healthcare</td><td class="num">30</td><td><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> a11y.img.alt.missing</td><td class="num">1</td><td>yes</td><td>scanned</td></tr><tr><td class="num">7</td><td><b>b2b-firma.example</b></td><td>b2b</td><td class="num">14.4</td><td><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> perf.load.time</td><td class="num">2</td><td>yes</td><td>scanned</td></tr><tr><td class="num">8</td><td><b>klinika.example</b></td><td>healthcare</td><td class="num">3</td><td><span class="tag" style="color:#1e3a8a;background:#dbeafe">▪ LOW</span> infra.robots.missing</td><td class="num">1</td><td>no</td><td>scanned</td></tr>
+</tbody></table>
+
+<h2>By domain</h2>
+<details>
+<summary><span class="domain">#1 restoran-centar.example</span>
+<span class="meta">restaurant · score 96 ·
+worst 60 · 3 findings</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site restoran-centar.example and noticed the following:
+
+1. The home page transfers 14.9 MB. On a slower mobile connection (4.8 Mb/s) that takes about 25.8 s.
+
+2. The home page does not tell Google which address is its official one. When the same content exists at several addresses (with and without www, with ad parameters), Google picks which one to show on its own — and it can pick the wrong one.
+
+3. Opening the home page starts 87 separate downloads. Each one carries its own overhead, which is felt especially on a mobile connection.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<p class="tech">Sent to level 2 because: there is at least one level 1 finding of severity ≥ medium</p><div class="finding">
+<p><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ CRITICAL</span> <code>perf.page.weight</code>
+<span class="tech">· level 2 · points: 60</span></p>
+<p>The home page transfers 14.9 MB. On a slower mobile connection (4.8 Mb/s) that takes about 25.8 s.</p>
+<p class="tech">bytes_at_load=14903221, without video 14.9 MB, video 0.0 MB, requests=87, unmeasured=0, reached=load; including what came after load 14903221 B and 87 requests (informational)</p>
+<pre class="evidence">{&quot;bytes&quot;: 14903221, &quot;mb&quot;: 14.9, &quot;video_mb&quot;: 0.0, &quot;seconds&quot;: 25.8, &quot;speed_mbps&quot;: 4.8, &quot;requests&quot;: 87, &quot;unmeasured&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;bytes_by_type&quot;: {&quot;image&quot;: 11922576, &quot;script&quot;: 2235483}, &quot;total_bytes&quot;: 14903221, &quot;total_requests&quot;: 87}</pre>
+<div><a href="https://restoran-centar.example/" rel="noopener noreferrer nofollow">https://restoran-centar.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>seo.canonical.missing</code>
+<span class="tech">· level 1 · points: 24</span></p>
+<p>The home page does not tell Google which address is its official one. When the same content exists at several addresses (with and without www, with ad parameters), Google picks which one to show on its own — and it can pick the wrong one.</p>
+<p class="tech">https://restoran-centar.example/: missing &lt;link rel=canonical&gt;</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-centar.example/&quot;, &quot;canonical_tag_count&quot;: 0}</pre>
+<div><a href="https://restoran-centar.example/" rel="noopener noreferrer nofollow">https://restoran-centar.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>perf.request.count</code>
+<span class="tech">· level 2 · points: 12</span></p>
+<p>Opening the home page starts 87 separate downloads. Each one carries its own overhead, which is felt especially on a mobile connection.</p>
+<p class="tech">requests_at_load=87, 87 including those after load (reached=load)</p>
+<pre class="evidence">{&quot;requests&quot;: 87, &quot;total_requests&quot;: 87, &quot;reached&quot;: &quot;load&quot;}</pre>
+<div><a href="https://restoran-centar.example/" rel="noopener noreferrer nofollow">https://restoran-centar.example/</a></div></div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#2 institucija.example</span>
+<span class="meta">institution · score 80 ·
+worst 40 · 3 findings</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site institucija.example and noticed the following:
+
+1. 6 of the 7 checked pages on the site report a different address to Google as their official one (https://institucija.example/). Google may therefore treat them as copies of that address and leave them out of search results.
+
+2. For an address that does not exist, the site answers as if the page existed — both made-up addresses we checked opened a page with status 200. Search engines therefore have a harder time telling real pages from nonexistent ones and spend their crawl of the site on empty addresses.
+
+3. The home page has no main heading (h1). Headings are one of the signals Google uses to understand what a page is about, and screen reader users navigate the page by them.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<p class="tech">Sent to level 2 because: the raw HTML has 600 characters of text (&lt; 800); the raw HTML has no h1 — level 2 checks whether JavaScript draws it; there is at least one level 1 finding of severity ≥ medium</p><div class="finding">
+<p><span class="tag" style="color:#7f1d1d;background:#fee2e2">▲ CRITICAL</span> <code>seo.canonical.duplicate</code>
+<span class="tech">· level 1 · points: 40</span></p>
+<p>6 of the 7 checked pages on the site report a different address to Google as their official one (https://institucija.example/). Google may therefore treat them as copies of that address and leave them out of search results.</p>
+<p class="tech">canonical_normalized == https://institucija.example/ on 6 of 7 pages (share 0.8571) from 6 path groups (sample: sitemap)</p>
+<pre class="evidence">{&quot;canonical&quot;: &quot;https://institucija.example/&quot;, &quot;page_count&quot;: 6, &quot;total&quot;: 7, &quot;share&quot;: 0.8571, &quot;path_groups&quot;: 6, &quot;sample&quot;: &quot;sitemap&quot;}</pre>
+<div><a href="https://institucija.example/o-nama" rel="noopener noreferrer nofollow">https://institucija.example/o-nama</a></div><div><a href="https://institucija.example/usluge/prva" rel="noopener noreferrer nofollow">https://institucija.example/usluge/prva</a></div><div><a href="https://institucija.example/vesti/nesto" rel="noopener noreferrer nofollow">https://institucija.example/vesti/nesto</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>infra.soft404</code>
+<span class="tech">· level 1 · points: 20</span></p>
+<p>For an address that does not exist, the site answers as if the page existed — both made-up addresses we checked opened a page with status 200. Search engines therefore have a harder time telling real pages from nonexistent ones and spend their crawl of the site on empty addresses.</p>
+<p class="tech">both probes status=200, similarity to the home page 1.0</p>
+<pre class="evidence">{&quot;status&quot;: 200, &quot;probe_count&quot;: 2, &quot;similarity&quot;: 1.0, &quot;hard_evidence&quot;: true}</pre>
+<div><a href="https://institucija.example/abc123" rel="noopener noreferrer nofollow">https://institucija.example/abc123</a></div><div><a href="https://institucija.example/abc123.html" rel="noopener noreferrer nofollow">https://institucija.example/abc123.html</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>seo.h1.missing</code>
+<span class="tech">· level 2 · points: 20</span></p>
+<p>The home page has no main heading (h1). Headings are one of the signals Google uses to understand what a page is about, and screen reader users navigate the page by them.</p>
+<p class="tech">h1_count == 0 (measured in the browser, reached=load)</p>
+<pre class="evidence">{&quot;h1_count&quot;: 0, &quot;reached&quot;: &quot;load&quot;}</pre>
+<div><a href="https://institucija.example/" rel="noopener noreferrer nofollow">https://institucija.example/</a></div></div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#3 hotel-planina.example</span>
+<span class="meta">hotel · score 99.4 ·
+worst 30 · 6 findings</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site hotel-planina.example and noticed the following:
+
+1. When someone shares a link to the site in a message or on Facebook, there is no prepared title for the link preview, so platforms use the plain page title or the address itself.
+
+2. The home page does not tell Google which address is its official one. When the same content exists at several addresses (with and without www, with ad parameters), Google picks which one to show on its own — and it can pick the wrong one.
+
+3. The home page has no main heading (h1). Headings are one of the signals Google uses to understand what a page is about, and screen reader users navigate the page by them.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<p class="tech">Sent to level 2 because: the raw HTML has no h1 — level 2 checks whether JavaScript draws it; there is at least one level 1 finding of severity ≥ medium</p><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>social.og.title.missing</code>
+<span class="tech">· level 1 · points: 30</span></p>
+<p>When someone shares a link to the site in a message or on Facebook, there is no prepared title for the link preview, so platforms use the plain page title or the address itself.</p>
+<p class="tech">https://hotel-planina.example/: missing og:title (og tags in total: 2)</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://hotel-planina.example/&quot;, &quot;og_tag_count&quot;: 2}</pre>
+<div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>seo.canonical.missing</code>
+<span class="tech">· level 1 · points: 24</span></p>
+<p>The home page does not tell Google which address is its official one. When the same content exists at several addresses (with and without www, with ad parameters), Google picks which one to show on its own — and it can pick the wrong one.</p>
+<p class="tech">https://hotel-planina.example/: missing &lt;link rel=canonical&gt;</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://hotel-planina.example/&quot;, &quot;canonical_tag_count&quot;: 0}</pre>
+<div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>seo.h1.missing</code>
+<span class="tech">· level 2 · points: 24</span></p>
+<p>The home page has no main heading (h1). Headings are one of the signals Google uses to understand what a page is about, and screen reader users navigate the page by them.</p>
+<p class="tech">h1_count == 0 (measured in the browser, reached=load)</p>
+<pre class="evidence">{&quot;h1_count&quot;: 0, &quot;reached&quot;: &quot;load&quot;}</pre>
+<div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>i18n.lang.invalid</code>
+<span class="tech">· level 1 · points: 10.4</span></p>
+<p>The site is marked in its code with “zxx”, which is not a valid tag for any language. Screen readers therefore cannot rely on it.</p>
+<p class="tech">https://hotel-planina.example/: lang=&quot;zxx&quot; is not a usable BCP-47 code (source: raw HTML)</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://hotel-planina.example/&quot;, &quot;lang&quot;: &quot;zxx&quot;, &quot;code_length&quot;: 3, &quot;source&quot;: &quot;raw_html&quot;}</pre>
+<div><a href="https://hotel-planina.example/" rel="noopener noreferrer nofollow">https://hotel-planina.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>infra.sitemap.missing</code>
+<span class="tech">· level 1 · points: 8</span></p>
+<p>The site has no page map (sitemap). Google therefore finds new and deeper pages only through links, more slowly, and may not find pages that no link leads to.</p>
+<p class="tech">sitemap status=404, urls=0</p>
+<pre class="evidence">{&quot;status&quot;: 404, &quot;url_count&quot;: 0}</pre>
+<div><a href="https://hotel-planina.example/sitemap.xml" rel="noopener noreferrer nofollow">https://hotel-planina.example/sitemap.xml</a></div></div><div class="finding">
+<p><span class="tag" style="color:#1e3a8a;background:#dbeafe">▪ LOW</span> <code>infra.robots.missing</code>
+<span class="tech">· level 1 · points: 3</span></p>
+<p>The site has no robots.txt. Nothing breaks because of it, but Google reads that file before it crawls the site, and its absence is a sign that the site was not set up for search.</p>
+<p class="tech">robots.txt status=404</p>
+<pre class="evidence">{&quot;status&quot;: 404}</pre>
+</div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#4 prodavnica.example</span>
+<span class="meta">ecommerce · score 80 ·
+worst 30 · 4 findings</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site prodavnica.example and noticed the following:
+
+1. Opening the home page starts 175 separate downloads. Each one carries its own overhead, which is felt especially on a mobile connection.
+
+2. The home page has no main heading (h1). Headings are one of the signals Google uses to understand what a page is about, and screen reader users navigate the page by them.
+
+3. The site sends images much larger than they are displayed — about 2400 kB of unnecessary transfer on the first visit.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<p class="tech">Sent to level 2 because: the raw HTML has no h1 — level 2 checks whether JavaScript draws it</p><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>perf.request.count</code>
+<span class="tech">· level 2 · points: 30</span></p>
+<p>Opening the home page starts 175 separate downloads. Each one carries its own overhead, which is felt especially on a mobile connection.</p>
+<p class="tech">requests_at_load=175, 175 including those after load (reached=load)</p>
+<pre class="evidence">{&quot;requests&quot;: 175, &quot;total_requests&quot;: 175, &quot;reached&quot;: &quot;load&quot;}</pre>
+<div><a href="https://prodavnica.example/" rel="noopener noreferrer nofollow">https://prodavnica.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>seo.h1.missing</code>
+<span class="tech">· level 2 · points: 26</span></p>
+<p>The home page has no main heading (h1). Headings are one of the signals Google uses to understand what a page is about, and screen reader users navigate the page by them.</p>
+<p class="tech">h1_count == 0 (measured in the browser, reached=load)</p>
+<pre class="evidence">{&quot;h1_count&quot;: 0, &quot;reached&quot;: &quot;load&quot;}</pre>
+<div><a href="https://prodavnica.example/" rel="noopener noreferrer nofollow">https://prodavnica.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>perf.img.oversized</code>
+<span class="tech">· level 2 · points: 12</span></p>
+<p>The site sends images much larger than they are displayed — about 2400 kB of unnecessary transfer on the first visit.</p>
+<p class="tech">4 images with ratio &gt; 2.5, estimated excess 2400 kB, unmeasured 0</p>
+<pre class="evidence">{&quot;image_count&quot;: 4, &quot;kb&quot;: 2400, &quot;ratio_threshold&quot;: 2.5, &quot;unmeasured&quot;: 0, &quot;worst_image&quot;: &quot;https://prodavnica.example/slika0.jpg&quot;}</pre>
+<div><a href="https://prodavnica.example/slika0.jpg" rel="noopener noreferrer nofollow">https://prodavnica.example/slika0.jpg</a></div><div><a href="https://prodavnica.example/slika1.jpg" rel="noopener noreferrer nofollow">https://prodavnica.example/slika1.jpg</a></div><div><a href="https://prodavnica.example/slika2.jpg" rel="noopener noreferrer nofollow">https://prodavnica.example/slika2.jpg</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>perf.page.weight</code>
+<span class="tech">· level 2 · points: 12</span></p>
+<p>The home page transfers 2.6 MB. On a slower mobile connection (4.8 Mb/s) that takes about 5.3 s.</p>
+<p class="tech">bytes_at_load=2600000, without video 2.6 MB, video 0.0 MB, requests=175, unmeasured=0, reached=load; including what came after load 2600000 B and 175 requests (informational)</p>
+<pre class="evidence">{&quot;bytes&quot;: 2600000, &quot;mb&quot;: 2.6, &quot;video_mb&quot;: 0.0, &quot;seconds&quot;: 5.3, &quot;speed_mbps&quot;: 4.8, &quot;requests&quot;: 175, &quot;unmeasured&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;bytes_by_type&quot;: {&quot;image&quot;: 2080000, &quot;script&quot;: 390000}, &quot;total_bytes&quot;: 2600000, &quot;total_requests&quot;: 175}</pre>
+<div><a href="https://prodavnica.example/" rel="noopener noreferrer nofollow">https://prodavnica.example/</a></div></div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#5 restoran-ugao.example</span>
+<span class="meta">restaurant · score 75.6 ·
+worst 30 · 4 findings</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site restoran-ugao.example and noticed the following:
+
+1. When someone shares a link to the site in a message or on Facebook, there is no prepared title for the link preview, so platforms use the plain page title or the address itself.
+
+2. The home page does not tell Google which address is its official one. When the same content exists at several addresses (with and without www, with ad parameters), Google picks which one to show on its own — and it can pick the wrong one.
+
+3. When a link to the site is shared, platforms have no prepared description, so they pick text from the page themselves or show no description.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<p class="tech">Sent to level 2 because: there is at least one level 1 finding of severity ≥ medium</p><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>social.og.title.missing</code>
+<span class="tech">· level 1 · points: 30</span></p>
+<p>When someone shares a link to the site in a message or on Facebook, there is no prepared title for the link preview, so platforms use the plain page title or the address itself.</p>
+<p class="tech">https://restoran-ugao.example/: missing og:title (og tags in total: 1)</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;og_tag_count&quot;: 1}</pre>
+<div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>seo.canonical.missing</code>
+<span class="tech">· level 1 · points: 24</span></p>
+<p>The home page does not tell Google which address is its official one. When the same content exists at several addresses (with and without www, with ad parameters), Google picks which one to show on its own — and it can pick the wrong one.</p>
+<p class="tech">https://restoran-ugao.example/: missing &lt;link rel=canonical&gt;</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;canonical_tag_count&quot;: 0}</pre>
+<div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>social.og.description.missing</code>
+<span class="tech">· level 1 · points: 12</span></p>
+<p>When a link to the site is shared, platforms have no prepared description, so they pick text from the page themselves or show no description.</p>
+<p class="tech">https://restoran-ugao.example/: missing og:description (og tags in total: 1)</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;og_tag_count&quot;: 1}</pre>
+<div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>seo.description.missing</code>
+<span class="tech">· level 1 · points: 9.6</span></p>
+<p>The home page has no short description for Google. Google then picks text from the page to show below the title, and that can be part of the menu or the cookie notice.</p>
+<p class="tech">https://restoran-ugao.example/: missing &lt;meta name=description&gt; (length 0)</p>
+<pre class="evidence">{&quot;page&quot;: &quot;https://restoran-ugao.example/&quot;, &quot;description_length&quot;: 0}</pre>
+<div><a href="https://restoran-ugao.example/" rel="noopener noreferrer nofollow">https://restoran-ugao.example/</a></div></div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#6 ordinacija.example</span>
+<span class="meta">healthcare · score 30 ·
+worst 30 · 1 finding</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site ordinacija.example and noticed the following:
+
+1. On the home page, 28 of 30 images have no text description (alt). Visitors who use screen readers do not learn what is on them, and Google has less data for image search.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<div class="finding">
+<p><span class="tag" style="color:#9a3412;background:#ffedd5">● HIGH</span> <code>a11y.img.alt.missing</code>
+<span class="tech">· level 2 · points: 30</span></p>
+<p>On the home page, 28 of 30 images have no text description (alt). Visitors who use screen readers do not learn what is on them, and Google has less data for image search.</p>
+<p class="tech">images_without_alt_attr=28/30 (share 0.933), images_empty_alt=1 deliberately not counted, unmeasured=0</p>
+<pre class="evidence">{&quot;without_alt&quot;: 28, &quot;total&quot;: 30, &quot;empty_alt&quot;: 1, &quot;share&quot;: 0.933, &quot;unmeasured&quot;: 0}</pre>
+<div><a href="https://ordinacija.example/" rel="noopener noreferrer nofollow">https://ordinacija.example/</a></div></div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#7 b2b-firma.example</span>
+<span class="meta">b2b · score 14.4 ·
+worst 7.2 · 2 findings</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site b2b-firma.example and noticed the following:
+
+1. On a simulated 4.8 Mb/s connection, the home page needs 6.1 s to load completely.
+
+2. The home page transfers 2.1 MB. On a slower mobile connection (4.8 Mb/s) that takes about 4.5 s.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<p class="tech">Sent to level 2 because: the home page responds in 2400 ms (&gt; 1500)</p><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>perf.load.time</code>
+<span class="tech">· level 2 · points: 7.2</span></p>
+<p>On a simulated 4.8 Mb/s connection, the home page needs 6.1 s to load completely.</p>
+<p class="tech">load_ms=6100, reached=load</p>
+<pre class="evidence">{&quot;load_ms&quot;: 6100, &quot;seconds&quot;: 6.1, &quot;speed_mbps&quot;: 4.8, &quot;reached&quot;: &quot;load&quot;}</pre>
+<div><a href="https://b2b-firma.example/" rel="noopener noreferrer nofollow">https://b2b-firma.example/</a></div></div><div class="finding">
+<p><span class="tag" style="color:#854d0e;background:#fef9c3">◆ MEDIUM</span> <code>perf.page.weight</code>
+<span class="tech">· level 2 · points: 7.2</span></p>
+<p>The home page transfers 2.1 MB. On a slower mobile connection (4.8 Mb/s) that takes about 4.5 s.</p>
+<p class="tech">bytes_at_load=2100000, without video 2.1 MB, video 0.0 MB, requests=60, unmeasured=0, reached=load; including what came after load 2100000 B and 60 requests (informational)</p>
+<pre class="evidence">{&quot;bytes&quot;: 2100000, &quot;mb&quot;: 2.1, &quot;video_mb&quot;: 0.0, &quot;seconds&quot;: 4.5, &quot;speed_mbps&quot;: 4.8, &quot;requests&quot;: 60, &quot;unmeasured&quot;: 0, &quot;reached&quot;: &quot;load&quot;, &quot;bytes_by_type&quot;: {&quot;image&quot;: 1680000, &quot;script&quot;: 315000}, &quot;total_bytes&quot;: 2100000, &quot;total_requests&quot;: 60}</pre>
+<div><a href="https://b2b-firma.example/" rel="noopener noreferrer nofollow">https://b2b-firma.example/</a></div></div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details><details>
+<summary><span class="domain">#8 klinika.example</span>
+<span class="meta">healthcare · score 3 ·
+worst 3 · 1 finding</span></summary>
+<div class="body">
+<p><button data-draft="Hello,
+
+I reviewed the site klinika.example and noticed the following:
+
+1. The site has no robots.txt. Nothing breaks because of it, but Google reads that file before it crawls the site, and its absence is a sign that the site was not set up for search.
+
+If you are interested, I can send a detailed review with a suggestion of what to fix first.
+">Copy suggested text</button></p>
+<div class="finding">
+<p><span class="tag" style="color:#1e3a8a;background:#dbeafe">▪ LOW</span> <code>infra.robots.missing</code>
+<span class="tech">· level 1 · points: 3</span></p>
+<p>The site has no robots.txt. Nothing breaks because of it, but Google reads that file before it crawls the site, and its absence is a sign that the site was not set up for search.</p>
+<p class="tech">robots.txt status=404</p>
+<pre class="evidence">{&quot;status&quot;: 404}</pre>
+</div><p class="tech"><code>i18n.lang.mismatch</code> — does not apply: content language detection is off, because no profile turns it on (for example --profile rs)</p>
+</div></details>
+
+<footer>
+<p><b>Assumption for the loading time estimate:</b> effective speed
+4.8 Mb/s (0.6 MB/s, a slow 4G connection) plus 1 s of overhead
+time. A number you send to a client must be one you can defend, and you cannot defend a
+number without a stated assumption.</p>
+<p>The tool reads, it never writes. It does not scan ports, attempt logins, or look for
+vulnerabilities. Apart from the home page and two made-up addresses for the 404 check, it
+does not open pages that <code>robots.txt</code> disallows.</p>
+</footer>
+</div>
+<script>
+const LABELS = {"copy": "Copy suggested text", "copied": "Copied ✓"};
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-draft]');
+  if (!button) return;
+  const text = button.getAttribute('data-draft');
+  const done = () => { button.textContent = LABELS.copied; setTimeout(() => {
+    button.textContent = LABELS.copy; }, 1800); };
+  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, fallback); }
+  else fallback();
+  function fallback() {
+    const area = document.createElement('textarea');
+    area.value = text; document.body.appendChild(area); area.select();
+    try { document.execCommand('copy'); done(); } finally { area.remove(); }
+  }
+});
+</script>
+</body></html>

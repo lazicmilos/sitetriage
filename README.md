@@ -8,12 +8,14 @@ spend their time. It reads the home page and a small sample of pages and tells y
 problems their owners would care about. The audit itself is still your job, and the tool does not
 look for vulnerabilities.
 
-![Screenshot of an HTML report](docs/izvestaj.png)
+![Screenshot of an HTML report](docs/report.png)
 
-> The report in the screenshot was produced from the hand-written test set. The full HTML is in
-> [`docs/primer-izvestaja.html`](docs/primer-izvestaja.html), in Serbian and with the `rs`
-> [profile](#profiles) (`--lang en` gives the same report in English). It is a single file with no
-> CDN and opens without a network connection.
+> The screenshot shows a report built from the hand-written test set; the full HTML is
+> [`docs/sample-report.html`](docs/sample-report.html). Reports and the sentences for site owners
+> are in English by default. `--lang sr` switches them to Serbian, and so does the `rs`
+> [profile](#profiles): see [`docs/sample-report-sr.html`](docs/sample-report-sr.html) and its
+> [screenshot](docs/report-sr.png). Each report is one file that loads nothing from a CDN, so it
+> opens offline.
 
 ## What it deliberately does not do
 
@@ -98,7 +100,7 @@ browser measurements behave the same on every machine.
 ```bash
 git clone https://github.com/lazicmilos/sitetriage.git
 cd sitetriage
-mkdir rad
+mkdir work
 docker compose build
 docker compose run --rm sitetriage pytest -q        # every test must pass
 ```
@@ -112,9 +114,11 @@ too. On Linux, set `SITETRIAGE_UID=$(id -u)` and `SITETRIAGE_GID=$(id -g)` first
 You need Python 3.11 or newer.
 
 ```bash
-pip install -e '.[browser]'
+pip install 'sitetriage[browser]'
 playwright install chromium
 ```
+
+To work on the code, install from a clone instead, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Without the `browser` extra, level 1 works and level 2 is skipped with a message.
 
@@ -150,8 +154,9 @@ There is one profile so far, `rs`, for sites in Serbia. It turns on Serbian cont
 (`thresholds.i18n.content_languages = ["sr"]`), and with it `i18n.lang.mismatch`: Serbian content
 on a page whose `lang` names another language. Without a profile that check is "not applicable",
 because its only detector recognises Serbian and would mistake Croatian or Czech text for it
-([ADR-023](docs/adr/ADR-023-profiles.md)). Every other check works the same with or without a
-profile.
+([ADR-023](docs/adr/ADR-023-profiles.md)). With the profile, the report and its sentences are in
+Serbian too (`report.lang = "sr"`); add `--lang en` to keep them in English. Every other check works
+the same with or without a profile.
 
 ```bash
 sitetriage scan leads.csv --config my.toml --profile rs --out report/
@@ -209,8 +214,9 @@ The output folder holds:
 | `snapshots/` | the raw data collected for each domain |
 
 `--format` chooses which of the first four are written (`html`, `csv`, `json`, default all three
-formats); snapshots are always written. `--lang sr|en` chooses the language of the sentences and of
-the report (default `sr`), and `--csv-bom` writes the CSV files as UTF-8 with a BOM, for Excel.
+formats); snapshots are always written. `--lang en|sr` sets the language of the report and its
+sentences. Without it the tool uses `report.lang`: `en` by default, `sr` with the `rs` profile.
+`--csv-bom` writes the CSV files as UTF-8 with a BOM, for Excel.
 
 Only working sites are ranked. A site that does not open on the second attempt either, at least 60 s
 after the first (`http.second_attempt_after_s`), goes to the "Not working" section, with its own
@@ -260,8 +266,8 @@ fails if the output does not validate against the schema.
 ```bash
 sitetriage recheck report/snapshots/ --out new/                       # score saved snapshots again, no network
 sitetriage recheck report/snapshots/ --config trial-thresholds.toml --out new/
-sitetriage recheck report/snapshots/ --lang en --out english/         # the same run, report in English
-sitetriage recheck report/snapshots/ --profile rs --out serbian/      # with Serbian content detection
+sitetriage recheck report/snapshots/ --lang sr --out serbian/         # the same run, report in Serbian
+sitetriage recheck report/snapshots/ --profile rs --out rs/           # Serbian content detection and report
 sitetriage record my-domains.csv --out recordings/                    # record snapshots as fixtures
 sitetriage explain seo.canonical.duplicate                            # what a check does, its threshold and sentences
 sitetriage explain --all --markdown                                   # the table of checks below

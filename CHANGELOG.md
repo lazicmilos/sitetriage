@@ -43,6 +43,8 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
   keys appear in `evidence_json` in `findings.csv`. Field names, `check_id`s, reason codes and CSV
   columns are unchanged, and the Serbian and English sentences are word for word the same.
 - `config_digest` changes, because the industry multiplier tables are renamed.
+- Reports and client sentences are in English by default (`report.lang = "en"`); in 2.x the
+  default was Serbian. `--lang sr` or the `rs` profile gives the Serbian report.
 - The working folder for lists and results is `work/` instead of `rad/`; Docker Compose mounts it
   as `/work` instead of `/rad`.
 - Operator-facing text is English: CLI help, log lines, errors, and the free-text details stored in
