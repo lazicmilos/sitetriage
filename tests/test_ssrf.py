@@ -153,6 +153,47 @@ def test_ke_probe_on_explicitly_allowed_private_address_is_measured():
     assert speed is not None and speed > 0
 
 
+PROXY_VARIABLES = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY")
+
+
+@pytest.fixture
+def proxy_in_environment(monkeypatch):
+    """A "proxy" from the environment: a proxy resolves the name itself and would bypass the check."""
+    with FakeSite(allowed=False) as proxy:
+        for name in PROXY_VARIABLES:
+            monkeypatch.setenv(name, proxy.base_url)
+            monkeypatch.setenv(name.lower(), proxy.base_url)
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        monkeypatch.delenv("no_proxy", raising=False)
+        yield proxy
+
+
+def test_pg_level_1_ignores_proxy_from_the_environment(proxy_in_environment):
+    """httpx 0.28 mounts no proxy from the environment on a client with its own transport, so
+    `trust_env=True` alone changes nothing today. The client is still checked for `trust_env=False`,
+    so that a later httpx, or a client without our transport, cannot bring the proxy back."""
+    cfg = load_config()
+    cfg["http"]["delay_ms"] = [0, 0]
+    with FakeSite() as target:
+
+        async def run():
+            async with Fetcher(cfg) as fetcher:
+                outcome = await fetcher.request(f"{target.base_url}/", http.DomainBudget(5, 30))
+                return outcome, fetcher._pick_client(verify=True).trust_env
+
+        outcome, trust_env = asyncio.run(run())
+    assert proxy_in_environment.requests == [], "level 1 must not go through HTTP(S)_PROXY"
+    assert target.requests == ["/"] and outcome.status == 200
+    assert trust_env is False
+
+
+def test_pg_probe_ignores_proxy_from_the_environment(proxy_in_environment):
+    with FakeSite(extra={"/": Response(b"x" * 100_000)}) as target:
+        speed = _probe(f"{target.base_url}/")
+    assert proxy_in_environment.requests == [], "the probe must not go through HTTP(S)_PROXY"
+    assert target.requests == ["/"] and speed is not None
+
+
 def test_ke_probe_on_allowed_server_is_measured():
     with FakeSite(extra={"/": Response(b"x" * 100_000)}) as site:
         speed = _probe(f"{site.base_url}/")
