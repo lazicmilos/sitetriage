@@ -23,8 +23,8 @@ def test_korisnicka_konfiguracija_se_spaja_a_ne_zamenjuje(tmp_path):
 def test_mnozioci_i_fallback_na_ostalo():
     cfg = load_config()
     assert multiplier(cfg, "hotel", "social") == 1.5
-    assert multiplier(cfg, "restoran", "perf") == 1.5
-    assert multiplier(cfg, "zdravstvo", "a11y") == 1.5
+    assert multiplier(cfg, "restaurant", "perf") == 1.5
+    assert multiplier(cfg, "healthcare", "a11y") == 1.5
     assert multiplier(cfg, "nepostojeca-delatnost", "seo") == 1.0
 
 
@@ -59,6 +59,14 @@ def test_old_operator_section_fails_and_names_the_new_keys(tmp_path):
     override = tmp_path / "old.toml"
     override.write_text('[identitet]\nnaziv = "Web studio Primer"\n', encoding="utf-8")
     with pytest.raises(ConfigError, match=r"\[identitet\] was renamed to \[operator\].*naziv → name"):
+        load_config(override)
+
+
+def test_multipliers_for_an_old_industry_name_fail(tmp_path):
+    """`[industry_multipliers.restoran]` from before 3.0 would be merged and never used."""
+    override = tmp_path / "old.toml"
+    override.write_text("[industry_multipliers.restoran]\nperf = 2.0\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="industry_multipliers.restoran: unknown industry; known: hotel"):
         load_config(override)
 
 

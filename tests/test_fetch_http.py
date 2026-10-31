@@ -45,7 +45,7 @@ def scan(site: FakeSite, **config_overrides) -> object:
 
     async def run():
         async with Fetcher(cfg) as fetcher:
-            return await fetch_site(fetcher, DomainInput(domain=site.base_url, industry="ostalo"))
+            return await fetch_site(fetcher, DomainInput(domain=site.base_url, industry="other"))
 
     return asyncio.run(run())
 

@@ -214,7 +214,7 @@ def institucija() -> tuple[SiteSnapshot, BrowserSnapshot]:
         )
         for p in putanje
     ]
-    site = sajt("institucija.example", "institucija", pages=pages, soft404_status=200)
+    site = sajt("institucija.example", "institution", pages=pages, soft404_status=200)
     # Težina ispod praga: problem institucije je SEO, ne performanse.
     return site, browser("institucija.example", total_bytes=1_200_000, request_count=45, h1=0)
 
@@ -254,7 +254,7 @@ def restoran_centar() -> tuple[SiteSnapshot, BrowserSnapshot]:
         stranica(f"{origin}/meni", title="Meni", canonical=f"{origin}/meni"),
         stranica(f"{origin}/kontakt", title="Kontakt", canonical=f"{origin}/kontakt"),
     ]
-    site = sajt("restoran-centar.example", "restoran", pages=pages)
+    site = sajt("restoran-centar.example", "restaurant", pages=pages)
     # Brojevi iz primera u §3.3.
     return site, browser("restoran-centar.example", total_bytes=14_903_221, request_count=87, load_ms=3800)
 
@@ -273,7 +273,7 @@ def restoran_ugao() -> tuple[SiteSnapshot, BrowserSnapshot]:
         stranica(f"{origin}/meni", title="Meni", canonical=f"{origin}/meni"),
         stranica(f"{origin}/o-nama", title="O nama", canonical=f"{origin}/o-nama"),
     ]
-    return sajt("restoran-ugao.example", "restoran", pages=pages), browser("restoran-ugao.example")
+    return sajt("restoran-ugao.example", "restaurant", pages=pages), browser("restoran-ugao.example")
 
 
 def prodavnica() -> tuple[SiteSnapshot, BrowserSnapshot]:
@@ -304,7 +304,7 @@ def ordinacija() -> tuple[SiteSnapshot, BrowserSnapshot]:
         stranica(f"{origin}/usluge", title="Usluge", canonical=f"{origin}/usluge", lang="en-US"),
         stranica(f"{origin}/cenovnik", title="Cenovnik", canonical=f"{origin}/cenovnik", lang="en-US"),
     ]
-    site = sajt("ordinacija.example", "zdravstvo", pages=pages)
+    site = sajt("ordinacija.example", "healthcare", pages=pages)
     return site, browser(
         "ordinacija.example", images=30, bez_alta=28, prazan_alt=1, total_bytes=1_100_000
     )
@@ -333,7 +333,7 @@ def klinika() -> tuple[SiteSnapshot, None]:
         stranica(f"{origin}/kontakt", title="Kontakt", canonical=f"{origin}/kontakt"),
     ]
     # Jedini propust je robots.txt (low) — ništa što bi ga podiglo u izveštaju.
-    return sajt("klinika.example", "zdravstvo", pages=pages, robots_status=404), None
+    return sajt("klinika.example", "healthcare", pages=pages, robots_status=404), None
 
 
 DOMENI = {

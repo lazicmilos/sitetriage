@@ -141,9 +141,9 @@ def digest(cfg: dict[str, Any]) -> str:
 
 
 def multiplier(cfg: dict[str, Any], industry: str, category: str) -> float:
-    """Množilac po delatnosti (§9.2); nepoznata delatnost pada na `ostalo`."""
+    """Množilac po delatnosti (§9.2); nepoznata delatnost pada na `other`."""
     table = cfg["industry_multipliers"]
-    return float(table.get(industry, table["ostalo"])[category])
+    return float(table.get(industry, table["other"])[category])
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -184,6 +184,14 @@ def _validate(cfg: dict[str, Any]) -> None:
         if severity not in cfg.get("severity_points", {}):
             raise ConfigError(f"severity_points.{severity} nedostaje")
     table = cfg.get("industry_multipliers", {})
+    # A table for an unknown industry is never used: a user calibration under an old (pre-3.0)
+    # name like `restoran` would be lost without a word.
+    for industry in table:
+        if industry not in INDUSTRIES:
+            raise ConfigError(
+                f"industry_multipliers.{industry}: unknown industry; known: {', '.join(INDUSTRIES)} "
+                f"(renamed in SiteTriage 3.0, see {ADR_012})"
+            )
     for industry in INDUSTRIES:
         if industry not in table:
             raise ConfigError(f"industry_multipliers.{industry} nedostaje")

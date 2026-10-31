@@ -17,6 +17,14 @@ from typing import Any
 from sitetriage.models import BrowserSnapshot, SiteSnapshot, from_dict, to_jsonable
 
 SITE_NAME = "site.json"
+# Industry values before 3.0 (ADR-012). Field names did not change, so a 1.x or 2.x snapshot is
+# read as is; only `industry` is mapped, otherwise `recheck` would silently score it as `other`.
+LEGACY_INDUSTRIES = {
+    "restoran": "restaurant",
+    "zdravstvo": "healthcare",
+    "institucija": "institution",
+    "ostalo": "other",
+}
 BROWSER_NAME = "browser.json"
 _UNSAFE = re.compile(r"[^a-z0-9._-]+")
 
@@ -57,6 +65,13 @@ def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(raw.decode("utf-8"))
 
 
+def _migrate_site(data: dict[str, Any]) -> dict[str, Any]:
+    industry = data.get("industry")
+    if industry in LEGACY_INDUSTRIES:
+        data["industry"] = LEGACY_INDUSTRIES[industry]
+    return data
+
+
 def _find(folder: Path, name: str) -> Path | None:
     for candidate in (folder / name, folder / f"{name}.gz"):
         if candidate.is_file():
@@ -72,7 +87,7 @@ def read_all(directory: Path) -> Iterator[tuple[SiteSnapshot, BrowserSnapshot | 
         site_path = _find(folder, SITE_NAME)
         if site_path is None:
             continue
-        site = from_dict(SiteSnapshot, _read_json(site_path))
+        site = from_dict(SiteSnapshot, _migrate_site(_read_json(site_path)))
         browser_path = _find(folder, BROWSER_NAME)
         browser = from_dict(BrowserSnapshot, _read_json(browser_path)) if browser_path else None
         yield site, browser

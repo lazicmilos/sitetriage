@@ -71,12 +71,12 @@ Ulaz je CSV sa zaglavljem, ne gola lista domena:
 ```csv
 domain,industry,note
 hotel-planina.example,hotel,planina
-restoran-centar.example,restoran,
-klinika.example,zdravstvo,kontrolni čist sajt
+restoran-centar.example,restaurant,
+klinika.example,healthcare,kontrolni čist sajt
 ```
 
-`industry` je jedno od `hotel`, `restoran`, `zdravstvo`, `ecommerce`, `b2b`, `institucija` i
-`ostalo`. Prazno polje i nepoznata vrednost padaju na `ostalo`. Delatnost menja koliko koji nalaz
+`industry` je jedno od `hotel`, `restaurant`, `healthcare`, `ecommerce`, `b2b`, `institution` i
+`other`. Prazno polje i nepoznata vrednost padaju na `other`. Delatnost menja koliko koji nalaz
 vredi: slika za deljenje linka je hotelu važna, a b2b sajtu skoro nebitna.
 
 Lista najčešće stiže iz Excel-a, pa alat prihvata i ono što Excel pravi na srpskom Windows-u: kolone
@@ -206,7 +206,7 @@ generiše ponovo; CI proverava samo da u njoj nije izostala nijedna provera iz r
 | `social.og.description.missing` | 1 | social | medium | nedostaje <meta property=og:description> |
 | `social.og.image.missing` | 1 | social | medium | nedostaje <meta property=og:image> |
 | `social.og.title.missing` | 1 | social | high | nedostaje <meta property=og:title> |
-| `a11y.img.alt.missing` | 2 | a11y | low | ≥ 5 slika i udeo bez alt atributa > 0,5; > 0,8 uz ≥ 15 slika → high; zdravstvo/institucija → bar medium |
+| `a11y.img.alt.missing` | 2 | a11y | low | ≥ 5 slika i udeo bez alt atributa > 0,5; > 0,8 uz ≥ 15 slika → high; healthcare/institution → bar medium |
 | `perf.img.oversized` | 2 | perf | medium | ≥ 3 slike sa odnosom > 2,5 i izmerenim viškom, ili procenjen višak > 700 kB; SVG i data: slike se ne broje |
 | `perf.load.time` | 2 | perf | high | > 6 s medium · > 9 s high · prekid posle tvrdog limita = high |
 | `perf.page.weight` | 2 | perf | critical | preneto do load, bez videa: > 2 MB medium · > 4 MB high · > 7 MB critical |

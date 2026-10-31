@@ -80,7 +80,7 @@ def page(
     )
 
 
-def clean_site(*, domain: str = "cist.rs", industry: str = "ostalo", **overrides: Any) -> SiteSnapshot:
+def clean_site(*, domain: str = "cist.rs", industry: str = "other", **overrides: Any) -> SiteSnapshot:
     """Sajt bez ijednog problema. Sve provere nivoa 1 nad njim moraju biti `ok`."""
     home = page(f"https://{domain}/", raw_html=f"<html lang=sr><h1>Naslov</h1>{SRPSKI_TEKST}</html>")
     others = [
@@ -167,7 +167,7 @@ def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapsh
     return replace(snapshot, **overrides) if overrides else snapshot
 
 
-def run_level(level: int, snapshot: Any, industry: str = "ostalo", browser: Any = None) -> dict[str, Any]:
+def run_level(level: int, snapshot: Any, industry: str = "other", browser: Any = None) -> dict[str, Any]:
     ctx = registry.Context(domain=snapshot.domain, industry=industry, config=CONFIG, browser=browser)
     return {result.check_id: result for result in registry.run(level, snapshot, ctx)}
 
