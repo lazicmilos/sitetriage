@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-25, O-19 (with O-7)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md` (run D, 2026-09-27; 2026-10-06),
-`docs/izvestaj-testiranja-3.md` §6.1–§6.3, `CHANGELOG.md` (2.0.0) and the commit history.
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md` (run D, 2026-09-27; 2026-10-06),
+`docs/sr/izvestaj-testiranja-3.md` §6.1–§6.3, `CHANGELOG.md` (2.0.0) and the commit history.
 
 ## Context
 

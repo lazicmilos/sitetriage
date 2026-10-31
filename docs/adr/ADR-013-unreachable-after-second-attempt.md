@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-20 (with O-5, O-8, O-14)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md`, `docs/izvestaj-testiranja-100.md`,
-`docs/izvestaj-testiranja-2.md`, `docs/izvestaj-testiranja-3.md`, `CHANGELOG.md` (2.0.0),
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md`, `docs/sr/izvestaj-testiranja-100.md`,
+`docs/sr/izvestaj-testiranja-2.md`, `docs/sr/izvestaj-testiranja-3.md`, `CHANGELOG.md` (2.0.0),
 `skener.toml` and `tests/test_ne_rade.py`. The date is the date the requirement was accepted
 (run D on list A). The repository does not record when the decision itself was taken.
 

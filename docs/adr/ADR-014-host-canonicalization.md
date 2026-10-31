@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-26 (with O-12; risk R-2 of the v2 specification)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md` (entries of 2026-09-26 and 2026-09-27),
-`docs/izvestaj-testiranja-3.md` §6.1, `CHANGELOG.md` (2.0.0), `skener.toml` and the commit history.
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md` (entries of 2026-09-26 and 2026-09-27),
+`docs/sr/izvestaj-testiranja-3.md` §6.1, `CHANGELOG.md` (2.0.0), `skener.toml` and the commit history.
 
 ## Context
 
