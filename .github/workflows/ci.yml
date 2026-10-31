@@ -1,4 +1,4 @@
-name: testovi
+name: tests
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
 
 jobs:
   offline:
-    # Samo offline sloj: `live` testovi bi padali kad nekom sajtu istekne
-    # sertifikat, a to nije greška u alatu (§12.1).
+    # Only the offline layer: `live` tests would fail whenever some site's certificate
+    # expires, and that is not a bug in the tool.
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     strategy:
@@ -25,35 +25,35 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Instaliraj
+      - name: Install
         run: pip install -e '.[dev]'
 
       - name: Lint
         run: ruff check sitetriage/ tests/ scripts/
 
-      - name: Instaliraj Chromium
+      - name: Install Chromium
         run: playwright install --with-deps chromium
 
-      - name: Testovi
-        # Izlazni kriterijum iz plana testiranja: pokrivenost linija i grana ne pada ispod 95 %.
+      - name: Tests
+        # Exit criterion from the test plan: line and branch coverage does not drop below 95 %.
         run: pytest -q --cov=sitetriage --cov-branch --cov-report=term --cov-fail-under=95
 
-      - name: Tabela provera se ne razilazi sa README-om
+      - name: Check table matches the README
         # The registry does not depend on the Python version, so one run is enough.
         if: matrix.python-version == '3.11'
         run: |
-          sitetriage explain --all --markdown > /tmp/registar.md
-          while IFS= read -r red; do
-            check_id=$(printf '%s' "$red" | cut -d'`' -f2)
+          sitetriage explain --all --markdown > /tmp/registry.md
+          while IFS= read -r row; do
+            check_id=$(printf '%s' "$row" | cut -d'`' -f2)
             grep -qF "\`$check_id\`" README.md || {
-              echo "::error::$check_id nije u tabeli u README-u (pokreni: sitetriage explain --all --markdown)"
+              echo "::error::$check_id is not in the README table (run: sitetriage explain --all --markdown)"
               exit 1
             }
-          done < <(tail -n +3 /tmp/registar.md)
+          done < <(tail -n +3 /tmp/registry.md)
 
   docker:
-    # Isto okruženje u kome se pušta pravi prolaz. Bez ovog posla Dockerfile se tiho
-    # pokvari prvi put kad se promeni verzija Playwright-a u pyproject.toml.
+    # The same environment the real runs use. Without this job the Dockerfile breaks silently
+    # the first time the Playwright version in pyproject.toml changes.
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     steps:
@@ -62,5 +62,5 @@ jobs:
       - name: Build
         run: docker compose build
 
-      - name: Testovi u kontejneru
+      - name: Tests in the container
         run: docker compose run --rm --user "$(id -u):$(id -g)" sitetriage pytest -q
