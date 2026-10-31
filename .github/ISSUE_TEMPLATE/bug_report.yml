@@ -1,0 +1,74 @@
+name: Bug report
+description: The tool crashes, hangs, produces broken output or behaves differently from the docs.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If a finding is wrong or a problem was missed, use
+        **Wrong or missed finding** instead. For a security vulnerability, do not open an issue:
+        see [SECURITY.md](https://github.com/lazicmilos/skener/blob/main/SECURITY.md).
+
+        **Do not post private domains, lead lists or unredacted snapshots here.** Issues are public.
+        Replace real domains with `example.com` or attach a minimal reproduction.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, including the full error message or traceback.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact command, and the input (an anonymized CSV row or a snapshot) if it matters.
+      placeholder: |
+        1. docker compose run --rm skener skener scan /rad/list.csv --out /rad/out
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `skener --version`.
+      placeholder: skener 2.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it
+      options:
+        - Docker image from this repository
+        - pip install, with Playwright's Chromium
+        - pip install, with a system Chromium or Chrome (SKENER_CHROMIUM)
+        - As a library (pipeline API)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, and the Chromium version if level 2 is involved.
+      placeholder: Ubuntu 24.04, Python 3.12, Chromium 141
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration changes
+      description: Anything you changed from the default `skener.toml` (your `--config` file, without the identity).
+      render: toml
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant log lines, for example from `--debug-domain`. Remove real domains.
+      render: text

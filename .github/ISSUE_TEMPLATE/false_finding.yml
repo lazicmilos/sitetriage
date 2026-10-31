@@ -1,0 +1,92 @@
+name: Wrong or missed finding
+description: A finding that is wrong, a status that should be different, or a real problem the tool missed.
+labels: ["false finding"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every check returns `ok`, `finding`, `unknown` or `not_applicable`, and a client-facing
+        sentence may only claim what was measured. If that does not hold for a site, this is the
+        right template.
+
+        **Do not post private domains publicly.** Issues are public, and the sites you scan may be
+        prospective clients. Attach a minimal reproduction (for example a small HTML file) or a
+        snapshot from `snapshots/<domain>/` with the domain and identifying URLs replaced by
+        `example.com`. You can check that the anonymized snapshot still shows the problem with
+        `skener recheck <snapshots> --out <dir>`.
+  - type: input
+    id: check-id
+    attributes:
+      label: check_id
+      description: The check involved. `skener explain <check_id>` shows its threshold.
+      placeholder: seo.canonical.duplicate
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong
+      options:
+        - The tool reports a problem that is not there (false positive)
+        - The tool missed a real problem (false negative)
+        - The status should be different (for example finding instead of unknown)
+        - The sentence claims more than was measured, or a number in it is wrong
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status the check returned
+      description: For a missed problem, pick the status the check returned instead of `finding` (`ok` if it said nothing).
+      options:
+        - finding
+        - unknown
+        - not_applicable
+        - ok
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What the check should have returned, and why. Link the page or standard that supports it.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What the report says, including the sentence in the language you used (`--lang sr|en`).
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: |
+        The finding or unknown from `report.json` (`check_id`, `evidence`, `variant`, `reason`), or the
+        relevant part of the snapshot. Anonymize domains and URLs.
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `skener --version`.
+      placeholder: skener 2.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration changes
+      description: Thresholds or other settings you changed from the default `skener.toml`, and the `industry` of the domain.
+      render: toml
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This issue contains no private domains, lead lists or unredacted snapshots.
+          required: true
