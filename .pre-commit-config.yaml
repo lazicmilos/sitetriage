@@ -1,0 +1,20 @@
+# pip install pre-commit && pre-commit install
+# Lint only: the code base is not formatted with `ruff format`, so that hook is left out on purpose.
+# Test inputs and the sample report are byte-for-byte data; whitespace hooks must not touch them.
+exclude: ^(tests/fixtures/|tests/golden/|docs/primer-izvestaja\.html$)
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
