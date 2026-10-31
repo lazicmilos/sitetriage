@@ -1,5 +1,5 @@
-# Kraj reda je LF i u repou i na disku, i na Windows-u (Z-01). Bez ovoga core.autocrlf
-# ostavlja CRLF na disku, pa git u Linux kontejneru vidi 40 izmenjenih fajlova.
+# Line endings are LF in the repository and on disk, also on Windows. Without this,
+# core.autocrlf leaves CRLF on disk, and git in a Linux container sees 40 modified files.
 * text=auto eol=lf
 *.png binary
 *.gz binary
