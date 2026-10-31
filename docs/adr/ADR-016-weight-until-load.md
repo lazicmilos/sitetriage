@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-24 (with O-2, O-10, O-13, BUG-016)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md` (entries of 2026-09-24, 2026-09-26, 2026-09-27
-and 2026-09-28), `docs/izvestaj-testiranja-100.md`, `docs/izvestaj-testiranja-2.md`,
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md` (entries of 2026-09-24, 2026-09-26, 2026-09-27
+and 2026-09-28), `docs/sr/izvestaj-testiranja-100.md`, `docs/sr/izvestaj-testiranja-2.md`,
 `CHANGELOG.md` (2.0.0) and `README.md`.
 
 ## Context

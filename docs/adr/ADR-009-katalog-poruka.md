@@ -1,46 +1,52 @@
-# ADR-009: Rečenice se prave pri prikazu, iz kataloga
+# ADR-009: Sentences are built at display time, from a catalog
 
 ```
-Status:  Prihvaćeno
-Datum:   25.09.2026.
-Autor:   Milos Lazic
+Status:  Accepted
+Date:    2026-09-25
+Author:  Milos Lazic
 ```
 
-## Kontekst
+Originally written in Serbian; translated for v3.
 
-Rečenica za klijenta pravila se u trenutku provere (`registry.finding` → `message_template.format`),
-na srpskom, i čuvala se u nalazu. Dokaz je već sadržao složene srpske oblike („3 kopije",
-„(video dodatno 8 MB)", „175 odvojenih preuzimanja"). Takav nalaz ne može da se prikaže na
-engleskom, `diff` između dva prolaza bi poredio tekst umesto merenja, a stari prolaz ne može da
-dobije ispravljenu rečenicu.
+## Context
 
-## Odluka
+The client sentence used to be built at check time (`registry.finding` →
+`message_template.format`), in Serbian, and stored in the finding. The evidence already contained
+inflected Serbian phrases ("3 kopije", "(video dodatno 8 MB)", "175 odvojenih preuzimanja", that is
+"3 copies", "(plus 8 MB of video)", "175 separate downloads"). Such a finding cannot be shown in
+English, a `diff` between two runs would compare text instead of measurements, and an old run could
+never get a corrected sentence.
 
-- `Finding` nosi `check_id`, dokaz i opcioni `variant`, a ne rečenicu. Rečenicu pravi
-  `skener.messages.render(finding, lang)` pri prikazu.
-- Katalog je po jeziku (`skener/messages/sr.py`, `en.py`). Sadrži klijentsku i tehničku rečenicu
-  za svaku proveru, oznake HTML izveštaja, nacrt mejla i nazive tehničkih kodova iz dokaza.
-- Šablon je običan `str.format`, uz dva dodatka: `{broj:n:oblik|oblik|oblik}` za broj i
-  imenicu (srpski tri oblika, engleski dva) i `{lista:join: → }`. Decimalni broj u rečenici za
-  klijenta piše se po jeziku; tehnička rečenica ga ostavlja kakav jeste.
-- Dokaz sadrži samo brojeve, logičke vrednosti, URL-ove, tehničke kodove, sirove poruke grešaka i
-  tekst preuzet sa sajta (naslov, opis). Test dozvoljava rečenicu sa razmakom samo pod tim
-  ključevima.
-- Provera sa više oblika rečenice bira oblik preko `variant`, na primer težina sa videom i bez
-  njega.
-- Pre izmene je napravljen golden fajl (`tests/golden/poruke-sr.json`): 92 srpske rečenice za
-  svih 28 provera, sa ispitnog skupa i iz slučajeva koji menjaju oblik rečenice. Posle izmene
-  katalog daje iste rečenice.
+## Decision
 
-## Posledice
+- `Finding` carries `check_id`, the evidence and an optional `variant`, not a sentence. The sentence
+  is built at display time by `sitetriage.messages.render(finding, lang)`.
+- There is one catalog per language (`sitetriage/messages/sr.py`, `en.py`). It holds the client and
+  the technical sentence for every check, the labels of the HTML report, the draft email and the
+  names of the technical codes that appear in the evidence.
+- A template is plain `str.format` with two additions: `{count:n:form|form|form}` for a number with
+  its noun (three forms in Serbian, two in English) and `{list:join: → }`. A decimal number in a
+  client sentence is written the way the language writes it; the technical sentence leaves it as it
+  is.
+- Evidence contains only numbers, booleans, URLs, technical codes, raw error messages and text taken
+  from the site (title, description). A test allows a value with spaces only under those keys.
+- A check with more than one sentence form picks the form through `variant`, for example weight
+  with and without video.
+- Before the change a golden file was made (`tests/golden/messages-sr.json`): 92 Serbian sentences for
+  all 28 checks, from the test set and from the cases that change the form of a sentence. After the
+  change the catalog produces the same sentences.
 
-- `--lang sr|en` važi za `scan`, `recheck` i izveštaje, a `skener explain` ispisuje oba jezika.
-- Nova provera traži unos u oba kataloga; test pada ako neki fali ili ako jezik ima višak.
-- Engleska rečenica ne sme da tvrdi više od srpske. Isti testovi važe za oba jezika, a
-  englesku verziju pregleda vlasnik.
-- Razlozi za `unknown` i razlozi eskalacije isto su kod i podaci (`Reason`), a rečenicu pravi
-  `skener.messages.reason` (odluka vlasnika od 25.09.2026.). Golden fajl
-  `tests/golden/razlozi-sr.json` čuva srpske rečenice kakve su bile pre izmene.
-- Dokaz se promenio: nestali su složeni oblici, `uzorak` je kod (`sitemap`, `links`), nedostajuće
-  kodiranje je `null`, a lanac preusmerenja je lista. To je izmena koja lomi kompatibilnost i
-  upisana je u CHANGELOG.
+## Consequences
+
+- `--lang sr|en` applies to `scan`, `recheck` and the reports, and `sitetriage explain` prints both
+  languages.
+- A new check needs an entry in both catalogs; a test fails if one is missing or if a language has
+  an extra one.
+- The English sentence must not claim more than the Serbian one. The same tests apply to both
+  languages, and the owner reviews the English version.
+- Reasons for `unknown` and reasons for escalation are also code plus data (`Reason`), and the
+  sentence is built by `sitetriage.messages.reason` (owner decision of 2026-09-25). The golden file
+  `tests/golden/reasons-sr.json` keeps the Serbian sentences as they were before the change.
+- The evidence changed: the inflected phrases are gone, `sample` is a code (`sitemap`, `links`),
+  a missing encoding is `null`, and the redirect chain is a list. This is a breaking change and is
+  recorded in the CHANGELOG.

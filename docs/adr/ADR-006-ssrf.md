@@ -1,73 +1,81 @@
-# ADR-006: Skener ne otvara privatne adrese (zaštita od SSRF-a)
+# ADR-006: The scanner does not open private addresses (SSRF protection)
 
 ```
-Status:  Prihvaćeno
-Datum:   25.09.2026.
-Autor:   Milos Lazic
+Status:  Accepted
+Date:    2026-09-25
+Author:  Milos Lazic
 ```
 
-## Kontekst
+Originally written in Serbian; translated for v3.
 
-Skener otvara adrese koje zada korisnik. U komandnoj liniji to je lista samog operatera, ali u
-web aplikaciji korisnik može da upiše `localhost`, `10.0.0.5` ili `169.254.169.254` i da preko
-skenera pregleda server iznutra (Server-Side Request Forgery). Provera samog URL-a ne pomaže:
-javno ime može da se razreši u privatnu adresu, može da se prebaci na nju između dva DNS upita
-(DNS rebinding), a sajt može da preusmeri na nju.
+## Context
 
-## Odluka
+The scanner opens addresses that a user supplies. On the command line that is the operator's own
+list, but in a web application a user could enter `localhost`, `10.0.0.5` or `169.254.169.254` and
+use the scanner to look inside the server (Server-Side Request Forgery). Checking the URL alone does
+not help: a public name can resolve to a private address, it can switch to one between two DNS
+queries (DNS rebinding), and a site can redirect to one.
 
-Veza je dozvoljena samo ka globalnoj unicast adresi (`ipaddress.is_global` i nije multicast).
-IPv4 upakovan u IPv6 (`::ffff:127.0.0.1`) sudi se kao IPv4. Izuzetak su samo `host:port` parovi
-iz `[net] allowed_private`. Opšti prekidač koji isključuje zaštitu ne postoji. Klasifikacija
-adresa je čista funkcija u `skener/addresses.py`, koju pokriva i mutaciono testiranje.
+## Decision
 
-**Ulaz.** Domen sa IP adresom, portom ili korisničkim imenom ne dobija nijedan zahtev, osim kad
-je `host:port` izričito dozvoljen. Takav domen je `failed` sa razlogom.
+A connection is allowed only to a global unicast address (`ipaddress.is_global` and not multicast).
+IPv4 wrapped in IPv6 (`::ffff:127.0.0.1`) is judged as IPv4. The only exceptions are `host:port`
+pairs listed in `[net] allowed_private`. There is no global switch that turns the protection off.
+Address classification is a pure function in `sitetriage/addresses.py`, which mutation testing also
+covers.
 
-**Nivo 1.** `httpx` dobija sopstveni mrežni backend (`_PublicAddresses` u `fetch/http.py`). On
-razrešava ime, proverava svaku adresu i otvara TCP vezu baš na proverenu adresu. SNI i `Host`
-i dalje nose ime domena. Provera je na mestu gde se otvara veza, pa pokriva i svako
-preusmerenje, a DNS rebinding ne prolazi. Blokiran domen je `failed` sa razlogom „adresa nije
-javna", a ne „ne radi": sajt možda radi, samo ga namerno nismo otvorili.
+**Input.** A domain with an IP address, a port or a user name gets no request at all, unless its
+`host:port` is explicitly allowed. Such a domain is `failed` with a reason.
 
-`httpx` 0.28 nema javni parametar za mrežni backend, pa se postavlja kroz interno polje
-`_pool._network_backend`. Ako ga nova verzija preimenuje, alat odbija da radi (`RuntimeError`),
-a zaštita ne nestaje tiho. Klijent ne čita `HTTP(S)_PROXY` iz okruženja, jer proxy sam
-razrešava ime i zaobišao bi proveru.
+**Level 1.** `httpx` gets its own network backend (`_PublicAddresses` in `fetch/http.py`). It resolves
+the name, checks every address and opens the TCP connection to exactly the address it checked. SNI
+and `Host` still carry the domain name. The check sits where the connection is opened, so it covers
+every redirect as well, and DNS rebinding does not get through. A blocked domain is `failed` with
+the reason "address is not public", not "not working": the site may work, we just chose not to open
+it.
 
-**Nivo 2.** `context.route("**/*")` za svaki zahtev browsera razrešava ime i propušta ga samo
-ako su dozvoljene sve adrese, jer Chromium sam bira koju će koristiti. Šeme van `http` i `https`
-se odbijaju, kao i ime koje ne može da se razreši. Kontekst ima `service_workers="block"`, jer
-`route` ne vidi zahteve koje šalje service worker.
+`httpx` 0.28 has no public parameter for the network backend, so it is set through the internal
+field `_pool._network_backend`. If a new version renames it, the tool refuses to run
+(`RuntimeError`) instead of silently losing the protection. The client does not read
+`HTTP(S)_PROXY` from the environment, because a proxy resolves the name itself and would bypass the
+check.
 
-## Ograničenja nivoa 2
+**Level 2.** `context.route("**/*")` resolves the name for every browser request and lets it through
+only if all of its addresses are allowed, because Chromium picks which one to use on its own.
+Schemes other than `http` and `https` are refused, and so is a name that cannot be resolved. The
+context has `service_workers="block"`, because `route` does not see requests sent by a service
+worker.
 
-Nivo 2 je prva linija odbrane, a ne jedina:
+## Limits of level 2
 
-1. **Preusmerenje.** `route` vidi samo prvu adresu, a ne i cilj preusmerenja. Provereno na
-   Playwright 1.56: dozvoljena strana koja vraća 302 na privatni port odvede Chromium do tog
-   porta. Test `test_browser_does_not_follow_redirect_to_private_address` je označen kao
-   `xfail(strict=True)`; kad Playwright počne da vidi preusmerenja, test pada i ova tačka se
-   briše.
-2. **Vreme između provere i veze.** Chromium sam razrešava ime, pa između naše provere i
-   njegove veze postoji prozor u kom se DNS odgovor može promeniti.
-3. **WebSocket.** `route` ne presreće WebSocket veze.
+Level 2 is the first line of defence. It cannot be the only one:
 
-Nivo 2 ide samo na domene koji su prošli nivo 1, pa napadač mora da kontroliše javni sajt.
-Web aplikacija u produkciji zato mora da ima i **filter izlaznog saobraćaja na nivou mreže**
-(egress): radni proces sme da otvara samo javne adrese.
+1. **Redirects.** `route` sees only the first address, not the target of a redirect. Verified on
+   Playwright 1.56: an allowed page that answers 302 to a private port takes Chromium to that port.
+   The test `test_browser_does_not_follow_redirect_to_private_address` is marked
+   `xfail(strict=True)`; when Playwright starts seeing redirects, the test fails and this item is
+   removed.
+2. **Time between the check and the connection.** Chromium resolves the name itself, so there is a
+   window between our check and its connection in which the DNS answer can change.
+3. **WebSocket.** `route` does not intercept WebSocket connections.
 
-**Odluka vlasnika (25.09.2026.):** ograničenja nivoa 2 rešava filter izlaznog saobraćaja u web
-fazi, kao obavezan deo produkcije. Lokalni proxy za Chromium, koji bi u samom alatu proveravao
-svaku vezu, uključujući preusmerenja i WebSocket, ne pravi se: to je ozbiljan posao i menja
-merenje vremena, a filter na nivou mreže pokriva sve tri rupe odjednom.
+Level 2 runs only on domains that passed level 1, so an attacker has to control a public site. A
+web application in production must therefore also have an **egress filter at the network level**:
+the worker process may open public addresses only.
 
-## Posledice
+**Owner decision (2026-09-25):** the limits of level 2 are handled by the egress filter in the web
+phase, as a mandatory part of production. A local proxy for Chromium, which would check every
+connection inside the tool itself, including redirects and WebSocket, is not built: it is serious
+work and it changes the time measurement, while a network-level filter closes all three gaps at
+once.
 
-- Testovi otvaraju lokalni server na `127.0.0.1`. `conftest.py` dozvoljava tačno adrese
-  servera koji rade, a server napravljen sa `dozvoljen=False` ostaje zabranjen, kao u
-  produkciji.
-- Staging sa portom radi samo uz izričitu dozvolu: `[net] allowed_private = ["staging.rs:8123"]`.
-- `route` isključuje keš browsera i dodaje obradu po zahtevu. Kontekst je ionako nov za svaki
-  domen, pa keša nije ni bilo, ali vreme učitavanja može malo da poraste. To se meri u
-  kalibraciji na listi A.
+## Consequences
+
+- Tests open a local server on `127.0.0.1`. `conftest.py` allows exactly the addresses of the
+  servers that are running, and a server created with `allowed=False` stays forbidden, as in
+  production.
+- Staging with a port works only with explicit permission:
+  `[net] allowed_private = ["staging.example:8123"]`.
+- `route` disables the browser cache and adds per-request handling. The context is new for every
+  domain anyway, so there was no cache to begin with, but load time may grow slightly. This is
+  measured in the calibration on list A.

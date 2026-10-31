@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-31, Z-33 (with BUG-006)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md` (2026-09-24, 2026-09-27, 2026-09-28,
-2026-10-06), `docs/izvestaj-testiranja-100.md` (BUG-006), `docs/izvestaj-testiranja-3.md`,
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md` (2026-09-24, 2026-09-27, 2026-09-28,
+2026-10-06), `docs/sr/izvestaj-testiranja-100.md` (BUG-006), `docs/sr/izvestaj-testiranja-3.md`,
 `CHANGELOG.md` (2.0.0), `skener.toml` and the commit history. Builds on
 [ADR-010](ADR-010-mrezni-profil.md) (network profile, Z-30).
 
