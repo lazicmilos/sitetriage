@@ -33,6 +33,9 @@ SCHEMA_VERSION = "3.0"
 SEVERITY_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 INDUSTRIES: tuple[str, ...] = typing.get_args(Industry)
 CATEGORIES: tuple[str, ...] = typing.get_args(Category)
+# Content languages that `i18n.lang.mismatch` has a detector for (`sitetriage/checks/i18n.py`). A
+# profile turns them on through `thresholds.i18n.content_languages` (ADR-023).
+CONTENT_LANGUAGES: tuple[str, ...] = ("sr",)
 
 
 # --------------------------------------------------------------------------- #
@@ -480,6 +483,8 @@ class ScanResult:
     duration_s: dict[str, float] = field(default_factory=dict)
     # sha256 of the configuration that affects the result; same digest = same thresholds
     config_digest: str = ""
+    # the profile merged over the defaults (`--profile` or `profile` in the config, ADR-023); None = none
+    profile: str | None = None
     environment: dict[str, Any] = field(default_factory=dict)
     summary: dict[str, int] = field(default_factory=dict)
     # Exit criteria (ADR-015): the share of working domains that exhausted their budget, and for

@@ -7,8 +7,8 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "scanner_version", "started_at", "finished_at", "duration_s",
-    "config_digest", "environment", "summary", "budget_share", "unknown_share", "ranked", "unreachable",
-    "not_scanned"
+    "config_digest", "profile", "environment", "summary", "budget_share", "unknown_share", "ranked",
+    "unreachable", "not_scanned"
   ],
   "properties": {
     "schema_version": {"const": "3.0"},
@@ -26,6 +26,11 @@
       "description": "sha256 of the configuration that affects the result, without the operator identity, concurrency and browser path.",
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "profile": {
+      "description": "The profile merged over the defaults (--profile or profile in the config, ADR-023), e.g. \"rs\"; null when the run used none.",
+      "type": ["string", "null"],
+      "minLength": 1
     },
     "environment": {
       "type": "object",

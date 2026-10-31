@@ -11,7 +11,8 @@ The repository names no real site. You provide the list, through the environment
 
 The optional column `expected` lists space-separated `check_id`s the tool must find on
 level 1; the value `clean` marks the control clean site (a deliberately clean site must get
-no findings). Without the variable the tests are skipped.
+no findings). Without the variable the tests are skipped. `SITETRIAGE_LIVE_PROFILE` names a
+profile (ADR-023), e.g. `rs` for a list of Serbian sites that expects `i18n.lang.mismatch`.
 
 This is the only test that checks that real sites are in the state you expect.
 Fixtures do not do that: they are hand-written, over made-up domains (see
@@ -62,7 +63,7 @@ def live_run():
         pytest.skip("SITETRIAGE_LIVE_CSV is not set: there is no list of real domains")
     from sitetriage.fetch.http import scan_domains
 
-    config = load_config()
+    config = load_config(profile=os.environ.get("SITETRIAGE_LIVE_PROFILE") or None)
     registry.load_all()
     sites = asyncio.run(scan_domains(DOMAINS, config))
     return config, {site.domain: site for site in sites}

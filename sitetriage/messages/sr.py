@@ -348,6 +348,8 @@ TEXT: dict[str, str] = {
     "page_title": "SiteTriage — izveštaj",
     "heading": "SiteTriage — izveštaj",
     "run_of": "Prolaz od {generated} · verzija alata {version}",
+    "run_profile": "profil {profile}",
+    "run_no_profile": "bez profila",
     "card_domains": "Domena",
     "card_scanned": "Skenirano",
     "card_partial": "Delimično",
@@ -488,6 +490,11 @@ REASONS: dict[str, str] = {
     "pages_js": (
         "uzorak ima manje od {threshold:n:stranice|stranice|stranica}, a veze koje crta JavaScript nisu "
         "viđene (nivo 2 nije radio, a sirovi HTML početne je prazan ili bez h1)"
+    ),
+    # i18n.lang.mismatch without a content-language profile (ADR-023)
+    "no_content_language": (
+        "prepoznavanje jezika sadržaja je isključeno, jer ga nijedan profil ne uključuje "
+        "(na primer --profile rs)"
     ),
     "few_pages": (
         "sajt ima {address_count:n:internu adresu|interne adrese|internih adresa}, a za "

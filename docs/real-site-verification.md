@@ -32,12 +32,17 @@ In PowerShell, set the identity with `$env:SITETRIAGE_OPERATOR_NAME = "Operator 
 
 If any test is skipped because Chromium does not start, the image is broken. Stop there.
 
+The calibration lists are Serbian sites, so every command below runs with the `rs` profile
+([ADR-023](adr/ADR-023-profiles.md)). Without it, `i18n.lang.mismatch` is "not applicable" and
+the results cannot be compared with earlier runs. For a list from another market, leave out
+`--profile rs` and `SITETRIAGE_LIVE_PROFILE`.
+
 ## 1. Test set: specification against reality (10 min)
 
 ```bash
-docker compose run --rm -e SITETRIAGE_LIVE_CSV=/work/live.csv sitetriage pytest -m live -v 2>&1 | tee work/live.txt
-docker compose run --rm sitetriage sitetriage record /work/live.csv --out /work/recordings
-docker compose run --rm sitetriage python scripts/metrics.py /work/recordings | tee work/metrics-testset.txt
+docker compose run --rm -e SITETRIAGE_LIVE_CSV=/work/live.csv -e SITETRIAGE_LIVE_PROFILE=rs sitetriage pytest -m live -v 2>&1 | tee work/live.txt
+docker compose run --rm sitetriage sitetriage record /work/live.csv --profile rs --out /work/recordings
+docker compose run --rm sitetriage python scripts/metrics.py /work/recordings --profile rs | tee work/metrics-testset.txt
 ```
 
 `record` deliberately does not write over `tests/fixtures/`: look at the difference first, and only
@@ -56,14 +61,14 @@ Every failure in `live.txt` is one of three things. Say which one:
 Put the list in `work/leads.csv` (header `domain,industry,note`).
 
 ```bash
-time docker compose run --rm sitetriage sitetriage scan /work/leads.csv --out /work/report 2>&1 | tee work/run.log
-docker compose run --rm sitetriage python scripts/metrics.py /work/report/snapshots | tee work/metrics.txt
+time docker compose run --rm sitetriage sitetriage scan /work/leads.csv --profile rs --out /work/report 2>&1 | tee work/run.log
+docker compose run --rm sitetriage python scripts/metrics.py /work/report/snapshots --profile rs | tee work/metrics.txt
 ```
 
 When a domain looks odd:
 
 ```bash
-docker compose run --rm sitetriage sitetriage scan /work/leads.csv --only odd-site.example --debug-domain odd-site.example --out /work/debug
+docker compose run --rm sitetriage sitetriage scan /work/leads.csv --profile rs --only odd-site.example --debug-domain odd-site.example --out /work/debug
 ```
 
 ## 3. Criteria
@@ -101,7 +106,7 @@ tool, and your own TOML passed with `--config` overrides only what it sets. That
 image rebuild between two attempts and no second download of the sites:
 
 ```bash
-docker compose run --rm sitetriage sitetriage recheck /work/report/snapshots --config /work/calibration.toml --out /work/new
+docker compose run --rm sitetriage sitetriage recheck /work/report/snapshots --profile rs --config /work/calibration.toml --out /work/new
 ```
 
 Once a threshold is decided, it moves into `sitetriage.toml` and is committed, with its reasoning.

@@ -3,6 +3,10 @@
 Every threshold, multiplier and constant lives in TOML, not in code. The default config,
 `sitetriage.toml`, ships inside the package. `--config` is **merged over** it, so a partial
 user configuration keeps all the other thresholds.
+
+A profile (`sitetriage/profiles/<name>.toml`, also package data) sits between the two: package
+defaults → profile → user `--config` (ADR-023). It is chosen with `--profile NAME` or with a
+top-level `profile = "NAME"` in the user config; the flag wins.
 """
 
 from __future__ import annotations
@@ -19,15 +23,18 @@ from typing import Any
 
 from sitetriage import __version__
 from sitetriage.addresses import parse_allowed
-from sitetriage.models import CATEGORIES, INDUSTRIES
+from sitetriage.models import CATEGORIES, CONTENT_LANGUAGES, INDUSTRIES
 
 CONFIG_NAME = "sitetriage.toml"
+PROFILES_DIR = "profiles"
 
 # These do not change the result, so they stay out of the config digest: who scans, how much in
 # parallel and where the browser is. Two runs with the same digest have the same thresholds,
 # multipliers and points.
 NOT_IN_DIGEST = (
     "operator",
+    # The name of the profile is not a value: what the profile changes is already in the digest.
+    "profile",
     "http.concurrency",
     "http.per_host_concurrency",
     "http.domain_concurrency",
@@ -83,14 +90,48 @@ def default_config_path() -> Path:
     )
 
 
-def load_config(path: str | Path | None = None) -> dict[str, Any]:
-    cfg = _read(default_config_path())
+def available_profiles() -> list[str]:
+    """Names of the profiles that ship inside the package (`sitetriage/profiles/<name>.toml`)."""
+    folder = resources.files("sitetriage").joinpath(PROFILES_DIR)
+    if not folder.is_dir():
+        return []
+    return sorted(item.name.removesuffix(".toml") for item in folder.iterdir() if item.name.endswith(".toml"))
+
+
+def profile_path(name: str) -> Path:
+    """The packaged file of profile `name`; an unknown name fails and lists the available ones."""
+    names = available_profiles()
+    # Comparing with the list also keeps a name like `../x` from reading a file outside the package.
+    if name not in names:
+        raise ConfigError(f"unknown profile {name!r}; available profiles: {', '.join(names) or 'none'}")
+    return Path(str(resources.files("sitetriage").joinpath(PROFILES_DIR).joinpath(f"{name}.toml")))
+
+
+def load_config(path: str | Path | None = None, *, profile: str | None = None) -> dict[str, Any]:
+    """Package defaults → profile → user `--config`, then validation of the merged result.
+
+    `profile` is the `--profile` flag: when it is given (even empty, which means "no profile"), it
+    wins over `profile` in the user config. The chosen name is stored under `profile`, `""` = none.
+    """
+    defaults = default_config_path()
+    cfg = _read(defaults)
+    user: dict[str, Any] = {}
     if path is not None:
         user_path = Path(path)
         if not user_path.is_file():
             raise ConfigError(f"configuration file does not exist: {user_path}")
-        if user_path.resolve() != default_config_path().resolve():
-            _merge(cfg, _read(user_path))
+        if user_path.resolve() != defaults.resolve():
+            user = _read(user_path)
+    name = profile if profile is not None else user.get("profile", cfg.get("profile", ""))
+    if not isinstance(name, str):
+        raise ConfigError(f"profile must be the name of a profile as a string, got {name!r}")
+    if name:
+        layer = _read(profile_path(name))
+        if "profile" in layer:
+            raise ConfigError(f"profile {name!r}: a profile cannot choose another profile")
+        _merge(cfg, layer)
+    _merge(cfg, user)
+    cfg["profile"] = name
     _validate(cfg)
     return cfg
 
@@ -233,6 +274,12 @@ def _validate(cfg: dict[str, Any]) -> None:
         value = get(cfg, dotted)
         if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
             raise ConfigError(f"{dotted} must be > 0, got {value!r}")
+    languages = get(cfg, "thresholds.i18n.content_languages")
+    if not isinstance(languages, list) or any(code not in CONTENT_LANGUAGES for code in languages):
+        raise ConfigError(
+            f"thresholds.i18n.content_languages must be a list of languages with a detector "
+            f"({', '.join(CONTENT_LANGUAGES)}), got {languages!r}; a profile such as `rs` sets it"
+        )
     allowed = get(cfg, "net.allowed_private")
     if not isinstance(allowed, list):
         raise ConfigError(f"net.allowed_private must be a list of \"host:port\" pairs, got {allowed!r}")

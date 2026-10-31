@@ -34,7 +34,11 @@ from sitetriage.models import (
 )
 
 registry.load_all()
-CONFIG = load_config()
+# The test data is Serbian, and so are the boundary tests of `i18n.lang.mismatch`: they run with
+# the `rs` profile, which turns Serbian content detection on (ADR-023). Without a profile the check
+# is `not_applicable`; tests of that path use `NO_PROFILE`.
+CONFIG = load_config(profile="rs")
+NO_PROFILE = load_config()
 
 # Serbian text (test data), long enough for the language heuristic to be reliable and for the
 # page not to look empty to the escalation policy, which treats too little text as a signal.
@@ -169,8 +173,11 @@ def clean_browser(*, domain: str = "cist.rs", **overrides: Any) -> BrowserSnapsh
     return replace(snapshot, **overrides) if overrides else snapshot
 
 
-def run_level(level: int, snapshot: Any, industry: str = "other", browser: Any = None) -> dict[str, Any]:
-    ctx = registry.Context(domain=snapshot.domain, industry=industry, config=CONFIG, browser=browser)
+def run_level(
+    level: int, snapshot: Any, industry: str = "other", browser: Any = None, config: dict | None = None
+) -> dict[str, Any]:
+    config = CONFIG if config is None else config
+    ctx = registry.Context(domain=snapshot.domain, industry=industry, config=config, browser=browser)
     return {result.check_id: result for result in registry.run(level, snapshot, ctx)}
 
 

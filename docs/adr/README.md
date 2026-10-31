@@ -25,6 +25,7 @@ log they draw on are in [docs/sr/](../sr/README.md).
 | [ADR-020](ADR-020-threshold-calibration.md) | Thresholds come from percentiles of a calibration list, then are frozen and validated on a second list | Accepted | 2026-09-28 | Z-50, Z-51, Z-23 |
 | [ADR-021](ADR-021-manual-verification.md) | Acceptance is a manual, out-of-tool check of the top 10 and the bottom 5 | Accepted | 2026-10-06 | Z-52 |
 | [ADR-022](ADR-022-client-sentence-claims.md) | Client sentences claim only what the evidence proves | Accepted | 2026-09-26 | Z-27 |
+| [ADR-023](ADR-023-profiles.md) | Profiles, with Serbian content detection in the `rs` profile | Accepted | 2026-10-31 | wave C of ADR-012 |
 
 ADR-001 to ADR-005 and ADR-007 were never published in this repository. Their numbers stay
 unused.

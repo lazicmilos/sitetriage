@@ -331,6 +331,8 @@ TEXT: dict[str, str] = {
     "page_title": "SiteTriage — report",
     "heading": "SiteTriage — report",
     "run_of": "Run of {generated} · tool version {version}",
+    "run_profile": "profile {profile}",
+    "run_no_profile": "no profile",
     "card_domains": "Domains",
     "card_scanned": "Scanned",
     "card_partial": "Partial",
@@ -474,6 +476,10 @@ REASONS: dict[str, str] = {
     "pages_js": (
         "the sample has fewer than {threshold:n:page|pages}, and links drawn by JavaScript were not seen "
         "(level 2 did not run, and the raw HTML of the home page is empty or has no h1)"
+    ),
+    # i18n.lang.mismatch without a content-language profile (ADR-023)
+    "no_content_language": (
+        "content language detection is off, because no profile turns it on (for example --profile rs)"
     ),
     "few_pages": (
         "the site has {address_count:n:internal address|internal addresses}, and a comparison "
