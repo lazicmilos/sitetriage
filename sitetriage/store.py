@@ -9,6 +9,7 @@ new run, and diagnosis: checks receive a finished snapshot and never touch the n
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import re
 from collections.abc import Iterator
@@ -30,15 +31,26 @@ BROWSER_NAME = "browser.json"
 _UNSAFE = re.compile(r"[^a-z0-9._-]+")
 
 
+class SnapshotCollision(ValueError):
+    """The folder for a domain already holds the snapshot of another domain."""
+
+
 def slug(domain: str) -> str:
-    """Directory name from a domain.
+    """Directory name from a domain: readable, path-safe and different for every domain string.
 
     The domain comes from a CSV the user writes and can be a full origin with a port, so it
     must not go straight into a path: `../` in a domain name would write outside the output
-    directory.
+    directory. Cleaning alone is not injective (`localhost` and `localhost.`, or an origin with
+    and without a trailing `/`, clean to the same name), and two domains in one folder means
+    `recheck` silently loses one. So whenever cleaning changed anything, the name gets `~` and a
+    short hash of the exact domain string. A clean name never contains `~`, and a clean domain
+    keeps the name it had in 3.0.0. The same domain always gets the same folder, which level 1
+    and level 2 both rely on.
     """
-    cleaned = _UNSAFE.sub("_", domain.strip().lower()).strip("._-")
-    return cleaned or "unknown-domain"
+    cleaned = _UNSAFE.sub("_", domain.strip().lower()).strip("._-") or "unknown-domain"
+    if cleaned == domain:
+        return cleaned
+    return f"{cleaned}~{hashlib.sha256(domain.encode('utf-8')).hexdigest()[:8]}"
 
 
 def write_site(directory: Path, snapshot: SiteSnapshot, *, compress: bool = False) -> Path:
@@ -52,6 +64,7 @@ def write_browser(directory: Path, snapshot: BrowserSnapshot, *, compress: bool 
 def _write(directory: Path, domain: str, name: str, payload: Any, compress: bool) -> Path:
     target = Path(directory) / slug(domain)
     target.mkdir(parents=True, exist_ok=True)
+    _refuse_foreign(target, domain)
     text = json.dumps(to_jsonable(payload), ensure_ascii=False, indent=2)
     path = target / (f"{name}.gz" if compress else name)
     if compress:
@@ -59,6 +72,20 @@ def _write(directory: Path, domain: str, name: str, payload: Any, compress: bool
     else:
         path.write_text(text, encoding="utf-8")
     return path
+
+
+def _refuse_foreign(folder: Path, domain: str) -> None:
+    """Defence in depth: never overwrite or join the snapshot of another domain in its folder."""
+    for name in (SITE_NAME, BROWSER_NAME):
+        path = _find(folder, name)
+        if path is None:
+            continue
+        try:
+            existing = _read_json(path).get("domain")
+        except (OSError, ValueError):
+            continue  # a broken file from an interrupted run is simply replaced
+        if existing != domain:
+            raise SnapshotCollision(f"{folder} already holds the snapshot of {existing!r}, not {domain!r}")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
