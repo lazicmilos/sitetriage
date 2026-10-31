@@ -61,7 +61,9 @@ use Playwright's own Chromium, so treat that one as the reference.
 
 The defaults ship with the tool; your own TOML passed with `--config` overrides only what it sets.
 The defaults, with a comment on every value, are in `sitetriage/sitetriage.toml`. Keep trial thresholds in a
-small file of your own instead of editing the defaults.
+small file of your own instead of editing the defaults. A profile from `sitetriage/profiles/`
+(`--profile rs`) is merged between the two; see [Adding a profile or a content
+language](#adding-a-profile-or-a-content-language).
 
 ### Operator identity
 
@@ -96,7 +98,9 @@ pytest -m browser -rs                       # only level 2 tests, and why any we
   certificate on someone's site is not a defect in the tool. The repository names no real site: you
   give the list through `SITETRIAGE_LIVE_CSV`, a CSV in the format of `domains.example.csv`, and
   without it the tests are skipped. `tests/test_live.py` describes the optional column of expected
-  findings. Run them by hand when you change fetching or calibration.
+  findings. Run them by hand when you change fetching or calibration. `SITETRIAGE_LIVE_PROFILE`
+  names a profile for the run, for example `rs` for a list of Serbian sites that expects
+  `i18n.lang.mismatch`.
 - **Coverage gate.** CI fails if line and branch coverage drops below 95 %.
 - **Mutation testing** measures whether the tests notice changes in behaviour. mutmut only works on
   Linux and takes about 20 minutes, so it runs through Docker:
@@ -217,6 +221,43 @@ one of them will not be merged, however useful the feature.
    snapshots to see what the new check would report, without fetching the sites again.
 8. **Update `CHANGELOG.md`** (see [Pull requests](#pull-requests)). A new check changes
    `config_digest` and adds findings that users will see.
+
+## Adding a profile or a content language
+
+A profile is a TOML file in `sitetriage/profiles/` that ships with the package
+([ADR-023](docs/adr/ADR-023-profiles.md)). It is merged over the defaults and under the user's
+`--config`, and it is chosen with `--profile NAME` or `profile = "NAME"` in the user's config.
+
+### A new profile
+
+For values that only make sense in one market:
+
+1. Add `sitetriage/profiles/<name>.toml`. Set only the keys that differ from
+   `sitetriage/sitetriage.toml`, and say in a comment at the top what the profile is for. A profile
+   must not set `profile`. `pyproject.toml` already ships every `profiles/*.toml` as package data,
+   and mutmut copies the folder.
+2. Every key a check reads must stay in the defaults, so the merged config validates with or
+   without the profile. A profile only changes the values of keys the defaults already have.
+3. Test it in `tests/test_profiles.py`: it loads from the package, and what it changes is what you
+   expect. `test_available_profiles` lists the names, so add yours there.
+4. Mention it in the [Profiles](README.md#profiles) section of the README and in `CHANGELOG.md`.
+
+### A new content language
+
+So that a profile can turn it on for `i18n.lang.mismatch`:
+
+1. Write a detector in `sitetriage/checks/i18n.py`: a function `(text, ctx) -> bool` that says
+   whether the text is reliably in that language, with its thresholds in `[thresholds.i18n]` of
+   `sitetriage/sitetriage.toml`. Add it to `DETECTORS` together with the `lang` codes it cannot tell
+   apart from its language; a `lang` among them is never a mismatch.
+2. Add the language code to `CONTENT_LANGUAGES` in `sitetriage/models.py`. The config accepts only
+   codes from that list in `content_languages`, and a test checks that it matches `DETECTORS`.
+3. The client sentence of `i18n.lang.mismatch` names Serbian. Add a variant for the new language in
+   both `sitetriage/messages/sr.py` and `sitetriage/messages/en.py`, and pass it as `variant=` from
+   the check.
+4. Add a profile that lists the language in `thresholds.i18n.content_languages`, and give the
+   detector boundary value tests (`gv-`) that run with that profile, as the Serbian ones run with
+   `rs` through `tests/factories.py`.
 
 ## Changing `report.json`
 
