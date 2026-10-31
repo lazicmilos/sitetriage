@@ -32,7 +32,7 @@ never get a corrected sentence.
   from the site (title, description). A test allows a value with spaces only under those keys.
 - A check with more than one sentence form picks the form through `variant`, for example weight
   with and without video.
-- Before the change a golden file was made (`tests/golden/poruke-sr.json`): 92 Serbian sentences for
+- Before the change a golden file was made (`tests/golden/messages-sr.json`): 92 Serbian sentences for
   all 28 checks, from the test set and from the cases that change the form of a sentence. After the
   change the catalog produces the same sentences.
 
@@ -46,7 +46,7 @@ never get a corrected sentence.
   languages, and the owner reviews the English version.
 - Reasons for `unknown` and reasons for escalation are also code plus data (`Reason`), and the
   sentence is built by `sitetriage.messages.reason` (owner decision of 2026-09-25). The golden file
-  `tests/golden/razlozi-sr.json` keeps the Serbian sentences as they were before the change.
+  `tests/golden/reasons-sr.json` keeps the Serbian sentences as they were before the change.
 - The evidence changed: the inflected phrases are gone, `sample` is a code (`sitemap`, `links`),
   a missing encoding is `null`, and the redirect chain is a list. This is a breaking change and is
   recorded in the CHANGELOG.

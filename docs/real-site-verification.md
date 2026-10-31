@@ -37,7 +37,7 @@ If any test is skipped because Chromium does not start, the image is broken. Sto
 ```bash
 docker compose run --rm -e SITETRIAGE_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v 2>&1 | tee rad/live.txt
 docker compose run --rm sitetriage sitetriage record /rad/live.csv --out /rad/recordings
-docker compose run --rm sitetriage python scripts/metrike.py /rad/recordings | tee rad/metrics-testset.txt
+docker compose run --rm sitetriage python scripts/metrics.py /rad/recordings | tee rad/metrics-testset.txt
 ```
 
 `record` deliberately does not write over `tests/fixtures/`: look at the difference first, and only
@@ -57,7 +57,7 @@ Put the list in `rad/leads.csv` (header `domain,industry,note`).
 
 ```bash
 time docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --out /rad/report 2>&1 | tee rad/run.log
-docker compose run --rm sitetriage python scripts/metrike.py /rad/report/snapshots | tee rad/metrics.txt
+docker compose run --rm sitetriage python scripts/metrics.py /rad/report/snapshots | tee rad/metrics.txt
 ```
 
 When a domain looks odd:
@@ -91,7 +91,7 @@ check that no bad sites were missed. For the full acceptance check on a validati
 5. anything that caught your eye, even if you cannot explain why
 
 Do not send snapshots. They contain the raw HTML of other people's sites, and everything needed from
-them comes out of `metrike.py`.
+them comes out of `metrics.py`.
 
 ## 5. Afterwards
 

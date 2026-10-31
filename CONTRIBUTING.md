@@ -102,7 +102,7 @@ pytest -m browser -rs                       # only level 2 tests, and why any we
   Linux and takes about 20 minutes, so it runs through Docker:
 
   ```bash
-  docker compose run --rm sitetriage python scripts/mutacije.py
+  docker compose run --rm sitetriage python scripts/mutation.py
   ```
 
   Which modules are mutated is set in `[tool.mutmut]` in `pyproject.toml`. mutmut 3.2.3 does not
@@ -162,7 +162,7 @@ breaks one of them will not be merged, however useful the feature.
    snapshot instead.
 2. **The order of phases lives only in `sitetriage.pipeline`**
    ([ADR-008](docs/adr/ADR-008-pipeline.md)). `cli` does not import `fetch.http`, `fetch.browser` or
-   `score`. `tests/test_arhitektura.py` enforces both rules.
+   `score`. `tests/test_architecture.py` enforces both rules.
 3. **Thresholds live in `sitetriage.toml`, not in code.** Read them through the check context
    (`ctx.th("thresholds.perf.html_size_kb")`). A threshold change comes with its reasoning: in the
    commit message, in an ADR when it is a decision users will notice, and, for user-visible
@@ -207,7 +207,7 @@ breaks one of them will not be merged, however useful the feature.
      tests fail until you do.
    - Add boundary value tests (`gv-`) for every threshold, and a decision table (`tab-`) if the rule
      has several conditions, in `tests/test_granice.py`.
-   - Add message cases to `tests/poruke_slucajevi.py`, including the plural forms.
+   - Add message cases to `tests/message_cases.py`, including the plural forms.
    - Add an `unknown` or `not_applicable` case for each reason the check can give.
 6. **Update the README table.** Run `sitetriage explain --all --markdown` and paste the result over
    the table of checks in `README.md`. CI fails if a registered `check_id` is missing from the

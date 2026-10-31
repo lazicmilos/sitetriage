@@ -292,7 +292,7 @@ it is saved on disk.
 | `score` | scoring, ranking, escalation | no | no |
 | `store`, `report.*` | snapshots and reports | no | writes |
 
-Two architecture rules are enforced by `tests/test_arhitektura.py`:
+Two architecture rules are enforced by `tests/test_architecture.py`:
 
 - `checks.*` does not import `httpx`, `playwright` or `fetch.*` (except `fetch.urls`), nor
   `pipeline`, `messages` or `report`. If a check needs something from the network, the snapshot is
@@ -442,7 +442,7 @@ mutate check bodies (`@check`). It runs through Docker, because mutmut does not 
 takes about 20 minutes:
 
 ```bash
-docker compose run --rm sitetriage python scripts/mutacije.py
+docker compose run --rm sitetriage python scripts/mutation.py
 ```
 
 > The fixtures in `tests/fixtures/` are hand-written, not recorded from real sites. They describe
