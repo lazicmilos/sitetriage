@@ -308,7 +308,7 @@ Kako se testira i šta je nađeno opisuju [plan testiranja](docs/plan-testiranja
 ## Etika
 
 ```
-User-Agent: SiteTriage/2.0.0 (+kontakt@primer.rs; Web studio Primer)
+User-Agent: SiteTriage/3.0.0 (+kontakt@primer.rs; Web studio Primer)
 ```
 
 Ime alata, ko skenira i kako da ga kontaktira moraju biti u svakom zahtevu. Bez toga si anonimni bot
