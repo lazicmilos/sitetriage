@@ -13,7 +13,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
+from sitetriage.fetch.urls import normalize
 from sitetriage.models import INDUSTRIES, DomainInput
+
+DOMAIN_LIST_COLUMNS = ("domain", "industry", "note")
 
 
 class InputError(ValueError):
@@ -44,6 +47,9 @@ def read_excel_csv(data: bytes, source: str) -> CsvTable:
     Without the "CSV UTF-8" option Excel saves in windows-1250, and the Serbian Windows settings
     separate columns with `;`, not with a comma. The row number counts records, not lines in
     the file: a cell with a line break is one row in Excel and two lines in the file.
+
+    Header names are stripped of surrounding whitespace and lower-cased: `domain, industry` with a
+    space after the comma, or `Domain,Industry` capitalised by Excel, name the usual columns.
     """
     warnings: list[InputWarning] = []
     try:
@@ -58,7 +64,7 @@ def read_excel_csv(data: bytes, source: str) -> CsvTable:
     header_at = next((i for i, values in enumerate(records) if values), None)
     if header_at is None:
         return CsvTable([], [], warnings=warnings)
-    fieldnames = records[header_at]
+    fieldnames = [name.strip().lower() for name in records[header_at]]
     rows = [
         (i + 1, dict(zip(fieldnames, values, strict=False)))
         for i, values in enumerate(records)
@@ -70,24 +76,40 @@ def read_excel_csv(data: bytes, source: str) -> CsvTable:
 def read_domain_list(data: bytes, source: str) -> tuple[list[DomainInput], list[InputWarning]]:
     """The domain list: a CSV with the header `domain,industry,note`, not a bare list.
 
-    The same domain twice would mean two passes through someone else's site, so the first
-    occurrence wins.
+    The same site twice would mean two passes through someone else's site, so the first
+    occurrence wins and every later row that denotes the same site (see `site_key`) is skipped
+    with a warning that names the earlier row.
+
+    A column the tool does not know is ignored with one warning for the header row, so that a typo
+    such as `industy` is visible instead of silently scoring every site as `other`.
     """
     table = read_excel_csv(data, source)
     warnings = table.warnings
     if "domain" not in table.fieldnames:
         raise InputError(f"{source}, row {table.header_row}: the header has no `domain` column")
+    unknown = [name for name in table.fieldnames if name and name not in DOMAIN_LIST_COLUMNS]
+    if unknown:
+        names = ", ".join(f"`{name}`" for name in unknown)
+        what = "column" if len(unknown) == 1 else "columns"
+        them = "it" if len(unknown) == 1 else "them"
+        known = ", ".join(DOMAIN_LIST_COLUMNS)
+        message = f"unknown {what} {names} in the header, ignoring {them} (known: {known})"
+        warnings.append(InputWarning(message, table.header_row))
 
     domains: list[DomainInput] = []
-    seen: set[str] = set()
+    seen: dict[str, tuple[int, str]] = {}
     for row_no, row in table.rows:
         domain = (row.get("domain") or "").strip()
         if not domain or domain.startswith("#"):
             continue
-        if domain.lower() in seen:
-            warnings.append(InputWarning("domain is repeated in the list, skipping it", row_no, domain))
+        key = site_key(domain)
+        if key in seen:
+            first_row, first = seen[key]
+            warnings.append(
+                InputWarning(f"same site as row {first_row} ({first}), skipping it", row_no, domain)
+            )
             continue
-        seen.add(domain.lower())
+        seen[key] = (row_no, domain)
         industry = (row.get("industry") or "").strip().lower() or "other"
         if industry not in INDUSTRIES:
             warnings.append(
@@ -98,6 +120,29 @@ def read_domain_list(data: bytes, source: str) -> tuple[list[DomainInput], list[
     if not domains:
         raise InputError(f"{source}: no domain was read")
     return domains, warnings
+
+
+def site_key(domain: str) -> str:
+    """The identity of a site in the domain list: two rows with the same key are one site.
+
+    - the host in lower case, without a trailing dot and without a leading `www.` (`www.x.example`
+      and `x.example` are the same site, and the fetcher already gives them one queue);
+    - the scheme is ignored (the entry request tries https, then http, anyway);
+    - an explicit port is kept only if it differs from the default of the scheme: `x.example:443`
+      and `https://x.example:443` are `x.example`, `http://x.example:443` is not;
+    - a path is kept, because the fetcher starts at it (`entry_candidates`): `x.example/en` and
+      `x.example/sr` are two entry pages the user asked for, `x.example/en/` is the first one again.
+      A trailing `/`, a fragment and tracking parameters are ignored.
+
+    A value that is not a usable URL is compared as written, in lower case.
+    """
+    url = normalize(domain if "://" in domain else f"https://{domain}")
+    if url is None:
+        return domain.lower()
+    parts = urlsplit(url)
+    host = parts.netloc.removeprefix("www.")
+    path = "" if parts.path == "/" else parts.path
+    return f"{host}{path}?{parts.query}" if parts.query else f"{host}{path}"
 
 
 # --------------------------------------------------------------------------- #

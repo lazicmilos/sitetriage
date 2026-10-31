@@ -120,6 +120,23 @@ def around_load():
         yield capture_one(site)
 
 
+def test_level_2_milestones_are_debug_records_for_the_domain(caplog):
+    """BUG-11: `--debug-domain` shows how level 2 went: goto, load and what was measured."""
+    import logging
+
+    caplog.set_level(logging.DEBUG, logger="sitetriage")
+    with FakeSite() as site:
+        capture_one(site)
+    messages = [
+        r.getMessage()
+        for r in caplog.records
+        if r.levelno == logging.DEBUG and r.name == "sitetriage.browser" and r.domain == site.base_url
+    ]
+    assert any(m.startswith(f"goto {site.base_url}/") for m in messages)
+    assert any(m.startswith("reached load") for m in messages)
+    assert any(m.startswith("measured ") and "requests" in m and "bytes" in m for m in messages)
+
+
 def test_request_after_load_is_not_in_the_weight(around_load):
     network = around_load.network
     assert network.bytes_at_load < 200_000, "posle.bin (200 kB) is not in the weight"

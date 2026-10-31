@@ -55,7 +55,9 @@ of the JSON report. `perf.load.time` is `unknown`:
 
 - with reason `link_slow` when the link is slower than `min_link_ratio` × profile
   (2 × 4.8 = 9.6 Mb/s);
-- with reason `requires.link` when the link was not measured, with one warning in the log.
+- with reason `requires.link` when the link was not measured, with one warning in the log. A
+  `probe_url` on a private address that `[net] allowed_private` does not list is not opened, and
+  counts as not measured (ADR-006).
 
 The ratio is 2 because while one site loads, two others are scrolling (`skener.toml`). Tests never go
 to the network: `conftest.py` replaces the probe, and the probe itself is tested against the local

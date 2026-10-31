@@ -177,7 +177,8 @@ class DomainBudget:
     When it is used up, what was collected goes on, and the rest is `unknown`.
     """
 
-    def __init__(self, max_requests: int, max_seconds: float) -> None:
+    def __init__(self, max_requests: int, max_seconds: float, domain: str | None = None) -> None:
+        self.domain = domain  # only for the `domain` field of log records (`--debug-domain`)
         self.max_requests = max_requests
         self.max_seconds = max_seconds
         self.started = time.monotonic()
@@ -292,7 +293,9 @@ class _PublicAddresses(httpcore.AsyncNetworkBackend):
         ips = list(dict.fromkeys(info[4][0] for info in infos))
         public = [ip for ip in ips if addresses.may_connect(ip, host, port, self._allowed)]
         if not public:
-            raise addresses.BlockedAddress(f"address is not public: {host} → {', '.join(ips) or '—'}")
+            # host:port of the refused connection: after a redirect it is not the domain from the list.
+            target = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+            raise addresses.BlockedAddress(f"address is not public: {target} → {', '.join(ips) or '—'}")
         error: Exception | None = None
         accepted = False
         for ip in public:
@@ -310,6 +313,22 @@ class _PublicAddresses(httpcore.AsyncNetworkBackend):
         if accepted:
             raise error  # type: ignore[misc]
         raise NoConnection(f"{', '.join(public)}:{port} {error}") from error
+
+
+def public_transport(config: dict, *, verify: bool, max_connections: int) -> httpx.AsyncHTTPTransport:
+    """A transport that opens only addresses that pass the check (ADR-006), with the allowlist of `config`.
+
+    Every client that sends a request goes through it, the link probe included (BUG-05). The client must
+    also have `trust_env=False`: a proxy from the environment would resolve the name itself.
+    """
+    transport = httpx.AsyncHTTPTransport(verify=verify, limits=httpx.Limits(max_connections=max_connections))
+    # httpx 0.28 has no public parameter for the network backend. If this field is renamed,
+    # the protection must not disappear silently, so the tool then refuses to run.
+    pool = transport._pool
+    if not hasattr(pool, "_network_backend"):
+        raise RuntimeError("httpcore no longer has _network_backend; SSRF protection cannot be installed")
+    pool._network_backend = _PublicAddresses(pool._network_backend, addresses.allowlist(config))
+    return transport
 
 
 class Fetcher:
@@ -335,17 +354,10 @@ class Fetcher:
                 await client.aclose()
 
     def _make_client(self, *, verify: bool) -> httpx.AsyncClient:
-        transport = httpx.AsyncHTTPTransport(
-            verify=verify, limits=httpx.Limits(max_connections=get(self.config, "http.concurrency") * 2)
-        )
-        # httpx 0.28 has no public parameter for the network backend. If this field is renamed,
-        # the protection must not disappear silently, so the tool then refuses to run.
-        pool = transport._pool
-        if not hasattr(pool, "_network_backend"):
-            raise RuntimeError("httpcore no longer has _network_backend; SSRF protection cannot be installed")
-        pool._network_backend = _PublicAddresses(pool._network_backend, addresses.allowlist(self.config))
         return httpx.AsyncClient(
-            transport=transport,
+            transport=public_transport(
+                self.config, verify=verify, max_connections=get(self.config, "http.concurrency") * 2
+            ),
             # No HTTP(S)_PROXY from the environment: a proxy resolves the name itself, bypassing the check.
             trust_env=False,
             follow_redirects=True,
@@ -395,6 +407,15 @@ class Fetcher:
                 outcome = await self._send(url, verify=verify, stop_at=stop_at)
                 outcome.elapsed_ms = int((time.monotonic() - started) * 1000)
             self._host_next_allowed[host] = time.monotonic() + random.uniform(*self._delay_range)
+        log.debug(
+            "GET %s %s, %d ms, %d redirect hops, truncated %s",
+            url,
+            f"status {outcome.status}" if outcome.status is not None else f"error {outcome.error_kind}",
+            outcome.elapsed_ms or 0,
+            max(len(outcome.redirect_chain) - 1, 0),
+            outcome.truncated,
+            extra={"domain": budget.domain},
+        )
 
         if outcome.status in GIVE_UP_STATUSES:
             budget.abort(f"server returned {outcome.status}, giving up on the domain for this run")
@@ -482,7 +503,11 @@ async def measure_link(config: dict) -> float | None:
     received, started = 0, time.monotonic()
     try:
         async with asyncio.timeout(max_s), httpx.AsyncClient(
-            trust_env=False, headers={"User-Agent": user_agent(config)}, timeout=None
+            # The same address check and allowlist as level 1, and no proxy from the environment (ADR-006).
+            transport=public_transport(config, verify=True, max_connections=1),
+            trust_env=False,
+            headers={"User-Agent": user_agent(config)},
+            timeout=None,
         ) as client, client.stream("GET", url) as response:
             response.raise_for_status()
             async for chunk in response.aiter_raw():
@@ -490,7 +515,8 @@ async def measure_link(config: dict) -> float | None:
     except TimeoutError:
         pass  # the deadline passed mid-download: what arrived is measured
     except Exception as exc:  # noqa: BLE001 — without a measurement the load time is `unknown`, the run goes on
-        log.warning("real link not measured (%s): %s", url, exc)
+        kind, detail = _classify(exc)
+        log.warning("real link not measured (%s): %s: %s", url, kind, detail)
         return None
     if not received:
         log.warning("real link not measured (%s): no byte arrived in %g s", url, max_s)
@@ -515,7 +541,7 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
     cfg = fetcher.config
     domain = target.domain
     budget = DomainBudget(
-        get(cfg, "http.max_requests_per_domain"), get(cfg, "http.max_seconds_per_domain")
+        get(cfg, "http.max_requests_per_domain"), get(cfg, "http.max_seconds_per_domain"), domain
     )
     fetched_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     snapshot = SiteSnapshot(
