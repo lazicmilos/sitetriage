@@ -17,10 +17,10 @@ import time
 import pytest
 from localserver import FakeSite
 
-from skener.config import load_config
-from skener.fetch.http import scan_domains
-from skener.models import DomainInput
-from skener.score import analyze, rank
+from sitetriage.config import load_config
+from sitetriage.fetch.http import scan_domains
+from sitetriage.models import DomainInput
+from sitetriage.score import analyze, rank
 
 BROJ_SAJTOVA = 12
 
@@ -61,7 +61,7 @@ def test_u2_koliko_udje_toliko_izadje(veliki_prolaz):
 
 
 def test_pokvareni_domeni_su_failed_a_ne_izuzetak(veliki_prolaz):
-    from skener.checks import registry
+    from sitetriage.checks import registry
 
     config, _targets, snapshots, _elapsed = veliki_prolaz
     registry.load_all()

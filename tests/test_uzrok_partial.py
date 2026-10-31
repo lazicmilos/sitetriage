@@ -10,11 +10,11 @@ import jsonschema
 from factories import clean_browser, clean_site
 from test_json import SEMA
 
-from skener import pipeline, store
-from skener.config import load_config
-from skener.models import Entry, to_jsonable
-from skener.report import html_out
-from skener.score import analyze, partial_shares
+from sitetriage import pipeline, store
+from sitetriage.config import load_config
+from sitetriage.models import Entry, to_jsonable
+from sitetriage.report import html_out
+from sitetriage.score import analyze, partial_shares
 
 
 def _sajt(domain: str, *, budzet: bool = False, unknown: bool = False):

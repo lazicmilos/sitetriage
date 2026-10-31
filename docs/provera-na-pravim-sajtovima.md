@@ -17,7 +17,7 @@ mkdir -p rad                                    # ulaz i izlaz; kod ostaje u sli
 export SKENER_NAZIV="Ime operatera" SKENER_KONTAKT="kontakt@primer.rs"  # ko skenira; bez ovoga nema zahteva
 export SKENER_UID=$(id -u) SKENER_GID=$(id -g)  # Linux: da izveštaji pripadaju tebi
 docker compose build
-docker compose run --rm skener pytest -q        # svi testovi moraju da prođu pre ičega drugog
+docker compose run --rm sitetriage pytest -q        # svi testovi moraju da prođu pre ičega drugog
 ```
 
 U PowerShell-u se identitet postavlja sa `$env:SKENER_NAZIV = "Ime operatera"` i
@@ -28,9 +28,9 @@ Ako ijedan test preskoči sa „Chromium se ne pokreće", slika nije dobra i dal
 ## 1. Ispitni skup: specifikacija naspram stvarnosti (10 min)
 
 ```bash
-docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv skener pytest -m live -v 2>&1 | tee rad/live.txt
-docker compose run --rm skener skener record /rad/live.csv --out /rad/snimci
-docker compose run --rm skener python scripts/metrike.py /rad/snimci | tee rad/metrike-ispitni.txt
+docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v 2>&1 | tee rad/live.txt
+docker compose run --rm sitetriage sitetriage record /rad/live.csv --out /rad/snimci
+docker compose run --rm sitetriage python scripts/metrike.py /rad/snimci | tee rad/metrike-ispitni.txt
 ```
 
 `record` namerno ne piše preko `tests/fixtures/`: prvo gledamo razliku, pa tek onda menjamo fixture-e.
@@ -48,14 +48,14 @@ Svaki pad u `live.txt` je jedno od tri, i treba reći koje:
 Stavi listu u `rad/leads.csv` (zaglavlje `domain,industry,note`).
 
 ```bash
-time docker compose run --rm skener skener scan /rad/leads.csv --out /rad/izvestaj 2>&1 | tee rad/prolaz.log
-docker compose run --rm skener python scripts/metrike.py /rad/izvestaj/snapshots | tee rad/metrike.txt
+time docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --out /rad/izvestaj 2>&1 | tee rad/prolaz.log
+docker compose run --rm sitetriage python scripts/metrike.py /rad/izvestaj/snapshots | tee rad/metrike.txt
 ```
 
 Kad neki domen izgleda čudno:
 
 ```bash
-docker compose run --rm skener skener scan /rad/leads.csv --only cudan.rs --debug-domain cudan.rs --out /rad/debug
+docker compose run --rm sitetriage sitetriage scan /rad/leads.csv --only cudan.rs --debug-domain cudan.rs --out /rad/debug
 ```
 
 ## 3. Kriterijumi — uslov za v2
@@ -89,7 +89,7 @@ Svaka odluka ide u `docs/kalibracija.md` u obliku **prag — zapažanje — odlu
 Tako nema rebuild-a slike između dva pokušaja, a nema ni ponovnog skidanja sajtova:
 
 ```bash
-docker compose run --rm skener skener recheck /rad/izvestaj/snapshots --config /rad/kalibracija.toml --out /rad/novi
+docker compose run --rm sitetriage sitetriage recheck /rad/izvestaj/snapshots --config /rad/kalibracija.toml --out /rad/novi
 ```
 
 Kad je prag odlučen, prenosi se u `skener.toml` i ide u commit.

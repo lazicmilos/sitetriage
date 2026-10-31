@@ -8,12 +8,12 @@ import json
 import pytest
 from localserver import FakeSite, Response, html
 
-from skener import cli
-from skener.config import load_config
-from skener.inputs import InputError
-from skener.models import DomainReport, Finding
-from skener.report import csv_out, html_out
-from skener.score import rank
+from sitetriage import cli
+from sitetriage.config import load_config
+from sitetriage.inputs import InputError
+from sitetriage.models import DomainReport, Finding
+from sitetriage.report import csv_out, html_out
+from sitetriage.score import rank
 
 
 # --------------------------------------------------------------------------- #
@@ -164,7 +164,7 @@ def test_html_je_samostalan(prolaz):
 
 def test_record_snima_gzipovane_fixture_e(tmp_path):
     """§12.2: bez sirovog HTML-a ostalih strana, inače repo naraste."""
-    from skener import store
+    from sitetriage import store
 
     config = tmp_path / "brzo.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
@@ -263,7 +263,7 @@ def test_html_bezi_od_html_a_iz_sadrzaja_sajta():
 
 
 def test_unknown_razlozi_se_prikazuju():
-    from skener.models import Reason, Unknown
+    from sitetriage.models import Reason, Unknown
 
     report = _izvestaj(
         unknowns=[Unknown("perf.page.weight", Reason("unmeasured_responses", {"nemereno": 9, "prag": 5}))]
@@ -305,7 +305,7 @@ def test_explain_all_bez_markdown_a(capsys):
 
 def test_argumenti_komandne_linije_menjaju_konfiguraciju(tmp_path, monkeypatch):
     """`--concurrency` menja oba semafora, `--max-level2` limit, a `--format csv` piše samo CSV."""
-    from skener.models import ScanResult
+    from sitetriage.models import ScanResult
 
     primljeno = {}
 
@@ -338,7 +338,7 @@ def test_explain_nepoznate_provere_predlaze_slicne():
 
 
 def test_explain_all_markdown_pokriva_sve_provere(capsys):
-    from skener.checks import registry
+    from sitetriage.checks import registry
 
     assert cli.main(["explain", "--all", "--markdown"]) == 0
     ispis = capsys.readouterr().out
@@ -363,13 +363,13 @@ def test_verzija_je_ista_u_paketu_cli_i_user_agentu(capsys, monkeypatch):
     """Administrator sajta vidi verziju u User-Agent-u, pa ona mora biti ona koja stvarno radi."""
     from importlib.metadata import version
 
-    from skener import __version__
-    from skener.config import user_agent
+    from sitetriage import __version__
+    from sitetriage.config import user_agent
 
-    assert version("skener") == __version__, "pyproject.toml čita verziju iz skener/__init__.py"
+    assert version("sitetriage") == __version__, "pyproject.toml čita verziju iz sitetriage/__init__.py"
     with pytest.raises(SystemExit):
         cli.main(["--version"])
-    assert capsys.readouterr().out.strip() == f"skener {__version__}"
+    assert capsys.readouterr().out.strip() == f"sitetriage {__version__}"
     monkeypatch.setenv("SKENER_NAZIV", "Web studio Primer")
     monkeypatch.setenv("SKENER_KONTAKT", "kontakt@primer.rs")
     assert f"/{__version__} " in user_agent(load_config())
@@ -447,7 +447,7 @@ def test_scan_auto_salje_na_pun_nivo_2_samo_kandidate(tmp_path):
 
 
 def test_bez_playwright_nivo_2_se_preskace_uz_poruku(tmp_path, monkeypatch, caplog):
-    """`pip install skener` bez `[browser]`: nivo 1 radi, a nivo 2 se preskače uz razlog.
+    """`pip install sitetriage` bez `[browser]`: nivo 1 radi, a nivo 2 se preskače uz razlog.
 
     CLI je hvatao `ImportError` samo pri uvozu modula `fetch.browser`, a on se uvozi i
     bez Playwright-a. Playwright se uvozi tek u `capture_all`, pa je prolaz pucao.
@@ -519,9 +519,9 @@ def test_debug_domain_propusta_samo_taj_domen():
 
     cli.setup_logging("institucija.example")
     tok = io.StringIO()
-    handler = logging.getLogger("skener").handlers[0]
+    handler = logging.getLogger("sitetriage").handlers[0]
     handler.stream = tok
-    log = logging.getLogger("skener.test")
+    log = logging.getLogger("sitetriage.test")
     log.debug("ovaj se vidi", extra={"domain": "institucija.example"})
     log.debug("ovaj ne", extra={"domain": "restoran-ugao.example"})
     redovi = [json.loads(red) for red in tok.getvalue().splitlines()]
@@ -539,7 +539,7 @@ def test_vreme_u_logu_je_zaista_utc(monkeypatch):
     monkeypatch.setenv("TZ", "Europe/Belgrade")
     time.tzset()
     try:
-        zapis = logging.LogRecord("skener", logging.INFO, __file__, 1, "poruka", None, None)
+        zapis = logging.LogRecord("sitetriage", logging.INFO, __file__, 1, "poruka", None, None)
         zapis.created = 1_790_000_000  # 2026-09-21T14:13:20Z; u Beogradu je tada 16:13
         assert json.loads(cli.JsonLines().format(zapis))["ts"] == "2026-09-21T14:13:20Z"
     finally:

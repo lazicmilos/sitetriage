@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 
-from skener.checks.registry import Context, check, finding, ok, unknown
-from skener.models import SiteSnapshot
+from sitetriage.checks.registry import Context, check, finding, ok, unknown
+from sitetriage.models import SiteSnapshot
 
 BCP47 = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$")
 NEODREDJEN_KOD = {"zxx", "und", "xx"}

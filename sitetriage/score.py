@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 
-from skener.config import get, multiplier
-from skener.models import (
+from sitetriage.config import get, multiplier
+from sitetriage.models import (
     SEVERITY_ORDER,
     BrowserSnapshot,
     CheckResult,
@@ -97,7 +97,7 @@ def partial_shares(reports: Sequence[DomainReport]) -> tuple[float, dict[str, fl
     Imenilac za proveru su domeni koji rade i na kojima je pokrenuta: nivo 2 samo gde je radio.
     `failed`, `unreachable` i izuzeti ne ulaze, jer tamo nijedna provera nije ni imala šta da vidi.
     """
-    from skener.checks import registry
+    from sitetriage.checks import registry
 
     registry.load_all()
     rade = [r for r in reports if r.status in RADE]
@@ -219,7 +219,7 @@ def analyze(
     escalation: Sequence[Reason] = (),
 ) -> DomainReport:
     """Snapshoti → provere → bodovan izveštaj. Bez I/O, pa `recheck` ide bez mreže."""
-    from skener.checks import registry
+    from sitetriage.checks import registry
 
     registry.load_all()
     # Nivo 1 vidi i nivo 2: provera duplikata broji i veze iz renderovanog DOM-a (Z-21).

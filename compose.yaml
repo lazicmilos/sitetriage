@@ -1,8 +1,8 @@
-# docker compose run --rm skener <komanda> — vidi docs/provera-na-pravim-sajtovima.md
+# docker compose run --rm sitetriage <komanda> — vidi docs/provera-na-pravim-sajtovima.md
 services:
-  skener:
+  sitetriage:
     build: .
-    image: skener:dev
+    image: sitetriage:dev
     init: true          # Chromium pravi podprocese; bez init-a ostaju zombiji
     shm_size: "1gb"     # podrazumevanih 64 MB /dev/shm obara Chromium na težim stranama
     # Izlaz u ./rad mora da pripada tebi, ne korisniku iz slike. 1000 je prvi nalog na

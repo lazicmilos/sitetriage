@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 from factories import CONFIG, clean_site, run_level
 
-from skener.models import CheckResult, Finding, Reason
-from skener.score import (
+from sitetriage.models import CheckResult, Finding, Reason
+from sitetriage.score import (
     build_report,
     escalation_reasons,
     level1_score,

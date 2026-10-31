@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
 
-from skener.messages import en, sr
+from sitetriage.messages import en, sr
 
 LANGS: tuple[str, ...] = ("sr", "en")
 _CATALOGS: dict[str, ModuleType] = {"sr": sr, "en": en}

@@ -5,11 +5,11 @@ from __future__ import annotations
 import pytest
 from factories import clean_browser, findings, run_level, statuses
 
-from skener.checks import registry
-from skener.config import load_config
-from skener.fetch.browser import network_conditions, network_profile
-from skener.messages import LANGS, reason, render
-from skener.models import DomStats, NetworkStats, OversizedImage, TimingStats
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.fetch.browser import network_conditions, network_profile
+from sitetriage.messages import LANGS, reason, render
+from sitetriage.models import DomStats, NetworkStats, OversizedImage, TimingStats
 
 LEVEL2_IDS = sorted(s.check_id for s in registry.REGISTRY.values() if s.level == 2)
 

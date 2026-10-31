@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from skener.fetch.browser import CONSOLE_SAMPLES, _Recorder, _resource_type
+from sitetriage.fetch.browser import CONSOLE_SAMPLES, _Recorder, _resource_type
 
 
 class Odgovor:

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 
-from skener.checks.registry import Context, check, finding, not_applicable, ok, unknown
-from skener.fetch.urls import host_of
-from skener.models import HostVariant, SiteSnapshot
+from sitetriage.checks.registry import Context, check, finding, not_applicable, ok, unknown
+from sitetriage.fetch.urls import host_of
+from sitetriage.models import HostVariant, SiteSnapshot
 
 SIMILARITY_CHARS = 2000
 # Samo ovi statusi tvrde da nečega nema. 401, 403, 429 i 5xx znače da je pristup

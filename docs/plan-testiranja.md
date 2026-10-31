@@ -44,7 +44,7 @@ izvedena iz registra) i u `skener.toml`.
 |---|---|---|---|
 | jedinično | provere nad snapshotima, bodovanje, normalizacija URL-a, konfiguracija, poruke, klasifikacija adresa | pytest | svaki commit (CI) |
 | integraciono | fetcher i browser protiv lokalnog servera; pipeline i CLI od kraja do kraja | pytest, pravi Chromium | svaki commit (CI, i u Docker slici) |
-| sistemsko | ceo prolaz nad listom A (kalibracija), zatim nad listom B (validacija) | `skener scan` u Docker-u | pred izdanje v2 |
+| sistemsko | ceo prolaz nad listom A (kalibracija), zatim nad listom B (validacija) | `sitetriage scan` u Docker-u | pred izdanje v2 |
 | prijemno | ručna ocena prvih 10 i poslednjih 5 u rangiranju na listi B | vlasnik proizvoda | pred izdanje v2 |
 
 Lista A je istih 100 domena iz IT-SKENER-001 i IT-SKENER-002. Na njoj se kalibrišu pragovi. Lista B

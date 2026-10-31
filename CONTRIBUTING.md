@@ -7,7 +7,7 @@ full manual audit. The repository, Python package and command are still called `
 > commit history are in Serbian. Contributor-facing material is moving to English. Write new comments,
 > docs, commit messages, issues and PRs in English. Translating a Serbian comment you happen to touch
 > is welcome, but keep translation-only changes in their own commit, so reviewers can tell a
-> translation apart from a change in behaviour. The Serbian message catalog (`skener/messages/sr.py`)
+> translation apart from a change in behaviour. The Serbian message catalog (`sitetriage/messages/sr.py`)
 > is a product feature and stays Serbian.
 
 ## Development setup
@@ -19,11 +19,11 @@ The image is the official Playwright image, with exactly the Chromium revision t
 same on every machine. CI runs the same image.
 
 ```bash
-git clone https://github.com/lazicmilos/skener.git
-cd skener
+git clone https://github.com/lazicmilos/sitetriage.git
+cd sitetriage
 mkdir rad
 docker compose build
-docker compose run --rm skener pytest -q
+docker compose run --rm sitetriage pytest -q
 ```
 
 The source is copied into the image, not mounted, so run `docker compose build` again after you change
@@ -68,7 +68,7 @@ export SKENER_NAZIV="Your name or studio" SKENER_KONTAKT="you@example.com"
 
 ```bash
 pytest -q                                   # offline layer, the default; CI runs this
-pytest -q --cov=skener --cov-branch --cov-report=term --cov-fail-under=95   # what CI runs
+pytest -q --cov=sitetriage --cov-branch --cov-report=term --cov-fail-under=95   # what CI runs
 pytest -m live -v                           # real sites from the test set; needs network
 pytest -m browser -rs                       # only level 2 tests, and why any were skipped
 ```
@@ -80,7 +80,7 @@ pytest -m browser -rs                       # only level 2 tests, and why any we
 - **`browser` marker.** These tests need a working Chromium. `tests/conftest.py` tries to launch
   Chromium once per session and skips every `browser` test, with the reason, when Playwright is
   missing or Chromium does not start. A local skip means level 2 was not tested, so run them before
-  you open a PR that touches `skener/fetch/browser.py`, `pipeline.py` or level 2 checks. CI installs
+  you open a PR that touches `sitetriage/fetch/browser.py`, `pipeline.py` or level 2 checks. CI installs
   Chromium and runs them.
 - **`live` marker.** These tests hit the real domains from the test set and are off by default,
   because a site's expired certificate is not a defect in the tool. Run them by hand when you change
@@ -90,7 +90,7 @@ pytest -m browser -rs                       # only level 2 tests, and why any we
   Linux and takes about 20 minutes, so it runs through Docker:
 
   ```bash
-  docker compose run --rm skener python scripts/mutacije.py
+  docker compose run --rm sitetriage python scripts/mutacije.py
   ```
 
   Which modules are mutated is set in `[tool.mutmut]` in `pyproject.toml`. mutmut 3.2.3 does not
@@ -111,7 +111,7 @@ pytest -m browser -rs                       # only level 2 tests, and why any we
 ## Lint and pre-commit
 
 ```bash
-ruff check skener/ tests/ scripts/
+ruff check sitetriage/ tests/ scripts/
 ```
 
 Rules and line length (110) are in `[tool.ruff]` in `pyproject.toml`. The code base is not formatted
@@ -132,26 +132,26 @@ These rules are what make the tool testable without a network and its reports de
 breaks one of them will not be merged, however useful the feature.
 
 1. **Checks never touch the network.** Code that fetches and code that draws conclusions are separate
-   layers. A check receives a snapshot that was already collected and returns results. `skener/checks/`
-   does not import `httpx`, `playwright`, `skener.fetch` (except `skener.fetch.urls`),
-   `skener.pipeline`, `skener.messages` or `skener.report`. If a check needs something from the
+   layers. A check receives a snapshot that was already collected and returns results. `sitetriage/checks/`
+   does not import `httpx`, `playwright`, `sitetriage.fetch` (except `sitetriage.fetch.urls`),
+   `sitetriage.pipeline`, `sitetriage.messages` or `sitetriage.report`. If a check needs something from the
    network, the snapshot is missing a field: add the field to the snapshot instead.
-2. **Phase order lives only in `skener.pipeline`** ([ADR-008](docs/adr/ADR-008-pipeline.md)). `cli`
+2. **Phase order lives only in `sitetriage.pipeline`** ([ADR-008](docs/adr/ADR-008-pipeline.md)). `cli`
    does not import `fetch.http`, `fetch.browser` or `score`. Both rules are enforced by
    `tests/test_arhitektura.py`.
 3. **Thresholds live in `skener.toml`, not in code.** Read them through the check context
    (`ctx.th("thresholds.perf.html_size_kb")`). A threshold change comes with its reasoning in
    `docs/kalibracija.md` and, for user-visible ones, in the README table of thresholds.
 4. **Every check returns one of four states**: `ok`, `finding`, `unknown` or `not_applicable`. Use the
-   helpers in `skener/checks/registry.py`. `unknown` and `not_applicable` require a reason code. A
+   helpers in `sitetriage/checks/registry.py`. `unknown` and `not_applicable` require a reason code. A
    check that could not verify something says `unknown`. It never reports `ok` for something it did
    not see, and never crashes on an older snapshot that lacks a field.
 5. **Findings carry evidence, not sentences.** Evidence is data: numbers, URLs and technical codes.
-   The sentence is built from it at display time by the catalogs in `skener/messages/`
+   The sentence is built from it at display time by the catalogs in `sitetriage/messages/`
    ([ADR-009](docs/adr/ADR-009-katalog-poruka.md)).
 6. **Client-facing sentences claim only what was measured.** Every number in a sentence comes from
    the evidence, and numbers agree with nouns in both languages. A sentence must exist in **both**
-   `skener/messages/sr.py` and `skener/messages/en.py`, and the English one claims exactly what the
+   `sitetriage/messages/sr.py` and `sitetriage/messages/en.py`, and the English one claims exactly what the
    Serbian one claims, no more and no less. `tests/test_poruke.py` enforces this.
 7. **Politeness and safety guarantees are not negotiable.** One request at a time per site, a pause
    between requests (longer if `Crawl-delay` asks for it), `robots.txt` `Disallow` respected, a hard
@@ -164,14 +164,14 @@ breaks one of them will not be merged, however useful the feature.
 ## Adding a new check
 
 1. **Register it.** Add a function with the `@check(...)` decorator in the module for its category
-   under `skener/checks/` (`seo.py`, `perf.py`, ...). Give it a `check_id` of the form
+   under `sitetriage/checks/` (`seo.py`, `perf.py`, ...). Give it a `check_id` of the form
    `category.subject.problem`, its level, base severity, the snapshot parts it `requires`, a short
    description and the threshold in words. The registry feeds the engine, the README table and
-   `skener explain` from one place.
+   `sitetriage explain` from one place.
 2. **Put the threshold in `skener.toml`** under `[thresholds.<category>]` and read it with `ctx.th`.
 3. **Return all states deliberately**: `finding(...)` with evidence, `ok(...)`, and `unknown(...)` or
    `not_applicable(...)` with a reason code whenever the input does not allow a verdict.
-4. **Write the messages** in both `skener/messages/sr.py` and `skener/messages/en.py`: a `FINDINGS`
+4. **Write the messages** in both `sitetriage/messages/sr.py` and `sitetriage/messages/en.py`: a `FINDINGS`
    entry with the client and technical sentence, and an entry in `REASONS` for every new reason code.
    The catalog and the registry must have the same keys.
 5. **Test it.**
@@ -181,17 +181,17 @@ breaks one of them will not be merged, however useful the feature.
      has several conditions, in `tests/test_granice.py`.
    - Add message cases to `tests/poruke_slucajevi.py`, including the plural forms.
    - Add an `unknown` / `not_applicable` case for each reason the check can give.
-6. **Update the README table.** Run `skener explain --all --markdown` and paste the result over the
+6. **Update the README table.** Run `sitetriage explain --all --markdown` and paste the result over the
    table of checks in `README.md`. CI fails if a registered `check_id` is missing from the README.
-7. **Calibrate.** Use `skener recheck <snapshots> --config <trial.toml> --out <dir>` on saved
+7. **Calibrate.** Use `sitetriage recheck <snapshots> --config <trial.toml> --out <dir>` on saved
    snapshots to see what the new check would report, without fetching sites again.
 8. **Update `CHANGELOG.md`** (see below). A new check changes `config_digest` and adds findings that
    users will see.
 
 ## Changing `report.json`
 
-`report.json` is a contract for programs (the web app, `skener diff`, CRMs). Its shape is described by
-`skener/schema/report-2.json`, which ships with the package. The rules are in
+`report.json` is a contract for programs (the web app, `sitetriage diff`, CRMs). Its shape is described by
+`sitetriage/schema/report-2.json`, which ships with the package. The rules are in
 [ADR-011](docs/adr/ADR-011-json-sema.md):
 
 - The schema rejects unknown fields, so a new field goes into the schema in the **same commit** as the
@@ -199,7 +199,7 @@ breaks one of them will not be merged, however useful the feature.
 - An added field raises the minor version (`2.0` → `2.1`), because an older reader can skip it.
 - A removed field, a changed type or meaning, or a renamed `check_id` raises the major version
   (`2.x` → `3.0`), and is listed under breaking changes in `CHANGELOG.md`.
-- Snapshots are internal and may change, as long as `skener recheck` still reads old ones. A check
+- Snapshots are internal and may change, as long as `sitetriage recheck` still reads old ones. A check
   that misses a field introduced later returns `unknown` with a reason, never `ok` and never a crash.
 
 ## Commits
@@ -208,7 +208,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) in English:
 
 ```
 fix(BUG-030): count a repeated oversized image once
-feat: compare two runs with skener diff
+feat: compare two runs with sitetriage diff
 docs: explain level 2 limits in ADR-006
 ```
 

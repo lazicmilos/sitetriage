@@ -16,9 +16,9 @@ import pytest
 from factories import run_level
 from localserver import FakeSite, Response, html
 
-from skener import store
-from skener.config import load_config
-from skener.fetch.http import (
+from sitetriage import store
+from sitetriage.config import load_config
+from sitetriage.fetch.http import (
     DomainBudget,
     Fetcher,
     Outcome,
@@ -28,8 +28,8 @@ from skener.fetch.http import (
     probe_urls,
     scan_domains,
 )
-from skener.messages import render
-from skener.models import DomainInput
+from sitetriage.messages import render
+from sitetriage.models import DomainInput
 
 
 def scan(site: FakeSite, **config_overrides) -> object:
@@ -317,7 +317,7 @@ def test_preusmerenje_na_vec_preuzetu_adresu_se_ne_prati(stop_at, trazeno, statu
 
 
 def merenje_veze(site: FakeSite, putanja: str, max_s: float = 5):
-    from skener.fetch.http import measure_link
+    from sitetriage.fetch.http import measure_link
 
     cfg = load_config()
     cfg["network_profile"] |= {"probe_url": f"{site.base_url}{putanja}", "probe_max_s": max_s}
@@ -754,7 +754,8 @@ class TabelaIshoda(Fetcher):
     ],
 )
 def test_prelazi_stanja_ulaznog_zahteva(monkeypatch, tabela, ulaz, sertifikat, prvi_zahtevi):
-    monkeypatch.setattr("skener.fetch.http.random.uniform", lambda *_: 0)  # bez pauze pred ponovni pokušaj
+    # bez pauze pred ponovni pokušaj
+    monkeypatch.setattr("sitetriage.fetch.http.random.uniform", lambda *_: 0)
     cfg = load_config()
     cfg["http"]["delay_ms"] = [0, 0]
     fetcher = TabelaIshoda(cfg, tabela)
@@ -810,7 +811,7 @@ def test_pokvarena_mapa_u_indeksu_pada_na_interne_linkove():
 
 def test_izuzetak_u_domenu_daje_red_a_ne_pad(monkeypatch):
     """U2: izuzetak iz sklapanja snapshota ostaje u tom domenu."""
-    import skener.fetch.http as http
+    import sitetriage.fetch.http as http
 
     async def puca(_fetcher, _target):
         raise RuntimeError("neočekivano")

@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
-from skener.models import INDUSTRIES, DomainInput
+from sitetriage.models import INDUSTRIES, DomainInput
 
 
 class InputError(ValueError):

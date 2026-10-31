@@ -17,11 +17,11 @@ from test_checks_level1 import POZITIVNI as NIVO1
 from test_checks_level2 import POZITIVNI as NIVO2
 from test_ispitni_skup import spec_config
 
-from skener import store
-from skener.checks import registry
-from skener.config import load_config
-from skener.models import Finding
-from skener.score import analyze
+from sitetriage import store
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.models import Finding
+from sitetriage.score import analyze
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GOLDEN = Path(__file__).parent / "golden" / "poruke-sr.json"
@@ -108,8 +108,8 @@ def _nepoznati(level: int, snapshot: Any) -> Iterator[tuple[str, Any]]:
 
 def razlozi() -> Iterator[tuple[str, str, Any]]:
     """(slučaj, provera ili „eskalacija", razlog) za svaki put koji daje razlog."""
-    from skener.models import BrowserSnapshot, Entry, SiteSnapshot, SnapshotError, Soft404Probe
-    from skener.score import escalation_reasons
+    from sitetriage.models import BrowserSnapshot, Entry, SiteSnapshot, SnapshotError, Soft404Probe
+    from sitetriage.score import escalation_reasons
 
     def site(izmena: Callable[[Any], None]) -> Any:
         return _site(izmena)

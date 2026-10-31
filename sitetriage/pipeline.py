@@ -18,13 +18,13 @@ from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from skener import store
-from skener.checks import registry
-from skener.config import digest, user_agent
-from skener.fetch.browser import capture_all
-from skener.fetch.http import scan_domains
-from skener.inputs import InputError, is_excluded
-from skener.models import (
+from sitetriage import store
+from sitetriage.checks import registry
+from sitetriage.config import digest, user_agent
+from sitetriage.fetch.browser import capture_all
+from sitetriage.fetch.http import scan_domains
+from sitetriage.inputs import InputError, is_excluded
+from sitetriage.models import (
     BrowserSnapshot,
     DomainInput,
     DomainReport,
@@ -34,9 +34,9 @@ from skener.models import (
     ScanResult,
     SiteSnapshot,
 )
-from skener.score import analyze, escalation_reasons, partial_shares, rank, select_for_level2
+from sitetriage.score import analyze, escalation_reasons, partial_shares, rank, select_for_level2
 
-log = logging.getLogger("skener")
+log = logging.getLogger("sitetriage")
 
 LEVELS = ("1", "2", "auto")
 OnEvent = Callable[[Event], None]
@@ -203,11 +203,11 @@ async def _level2(
 
 
 def _playwright_installed(posledica: str) -> bool:
-    """Nivo 2 je opcion (`pip install 'skener[browser]'`); bez njega nivo 1 i dalje radi."""
+    """Nivo 2 je opcion (`pip install 'sitetriage[browser]'`); bez njega nivo 1 i dalje radi."""
     try:
         import playwright.async_api  # noqa: F401
     except ImportError:
-        log.error("Playwright nije instaliran; %s (pip install 'skener[browser]')", posledica)
+        log.error("Playwright nije instaliran; %s (pip install 'sitetriage[browser]')", posledica)
         return False
     return True
 

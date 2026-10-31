@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from skener.inputs import InputError, is_excluded, read_domain_list, read_excel_csv, read_exclusions
+from sitetriage.inputs import InputError, is_excluded, read_domain_list, read_excel_csv, read_exclusions
 
 
 def procitaj(sadrzaj: str | bytes):

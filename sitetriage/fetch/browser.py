@@ -23,12 +23,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from skener import __version__, addresses, store
-from skener.config import get, user_agent
-from skener.fetch.http import measure_link
-from skener.fetch.page import LINKS_KEPT, TEXT_SAMPLE_CHARS, internal
-from skener.fetch.urls import collapse_ws
-from skener.models import (
+from sitetriage import __version__, addresses, store
+from sitetriage.config import get, user_agent
+from sitetriage.fetch.http import measure_link
+from sitetriage.fetch.page import LINKS_KEPT, TEXT_SAMPLE_CHARS, internal
+from sitetriage.fetch.urls import collapse_ws
+from sitetriage.models import (
     BrowserSnapshot,
     ConsoleStats,
     DomStats,
@@ -40,7 +40,7 @@ from skener.models import (
     TimingStats,
 )
 
-log = logging.getLogger("skener.browser")
+log = logging.getLogger("sitetriage.browser")
 
 CONSOLE_SAMPLES = 5
 CLOSE_TIMEOUT_S = 10

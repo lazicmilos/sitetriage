@@ -17,12 +17,12 @@ from pathlib import Path
 
 import pytest
 
-from skener import store
-from skener.checks import registry
-from skener.config import load_config
-from skener.messages import LANGS, render
-from skener.models import SEVERITY_ORDER
-from skener.score import analyze, escalation_reasons, rank
+from sitetriage import store
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.messages import LANGS, render
+from sitetriage.models import SEVERITY_ORDER
+from sitetriage.score import analyze, escalation_reasons, rank
 
 FIXTURES = Path(__file__).parent / "fixtures"
 MAX_STAROST_DANA = 90
@@ -189,8 +189,8 @@ def test_klinika_je_na_dnu_rangiranja(izvestaji):
 
 def test_recheck_kroz_pipeline_daje_isto_rangiranje(izvestaji):
     """`izvestaji` ide starim putem iz `cmd_recheck`. Pipeline ne sme ništa da promeni."""
-    from skener import pipeline
-    from skener.models import to_jsonable
+    from sitetriage import pipeline
+    from sitetriage.models import to_jsonable
 
     stari = rank(list(izvestaji.values()))
     novi = pipeline.recheck(FIXTURES, spec_config()).ranked
@@ -212,7 +212,7 @@ def test_fixture_starost_upozorava_a_ne_pada():
             stari.append(f"{site.domain} ({(danas - snimljeno).days} dana)")
     if stari:
         warnings.warn(
-            "Fixture-i su stariji od 90 dana; osveži ih sa `skener record` i pogledaj git diff: "
+            "Fixture-i su stariji od 90 dana; osveži ih sa `sitetriage record` i pogledaj git diff: "
             + ", ".join(stari),
             stacklevel=1,
         )

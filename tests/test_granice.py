@@ -11,9 +11,9 @@ from __future__ import annotations
 import pytest
 from factories import CONFIG, clean_browser, clean_site, run_level
 
-from skener.fetch.http import DomainBudget
-from skener.models import CheckResult, Finding, OversizedImage, Reason, Unknown
-from skener.score import _status, build_report, escalation_reasons, select_for_level2
+from sitetriage.fetch.http import DomainBudget
+from sitetriage.models import CheckResult, Finding, OversizedImage, Reason, Unknown
+from sitetriage.score import _status, build_report, escalation_reasons, select_for_level2
 
 
 def nalaz(check_id: str, category: str, severity: str) -> CheckResult:
@@ -446,7 +446,7 @@ def test_budzet_zahteva_granica():
 )
 def test_budzet_vremena_granica(monkeypatch, proteklo, dozvoljen):
     sat = {"sada": 1000.0}
-    monkeypatch.setattr("skener.fetch.http.time.monotonic", lambda: sat["sada"])
+    monkeypatch.setattr("sitetriage.fetch.http.time.monotonic", lambda: sat["sada"])
     budzet = DomainBudget(max_requests=16, max_seconds=40)
     sat["sada"] = 1000.0 + proteklo
     assert budzet.take() is dozvoljen

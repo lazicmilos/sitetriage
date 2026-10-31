@@ -10,11 +10,11 @@ import socket
 import pytest
 from localserver import FakeSite, Response, html
 
-from skener.config import load_config
-from skener.fetch import http
-from skener.fetch.http import Fetcher, fetch_site
-from skener.models import DomainInput
-from skener.score import analyze
+from sitetriage.config import load_config
+from sitetriage.fetch import http
+from sitetriage.fetch.http import Fetcher, fetch_site
+from sitetriage.models import DomainInput
+from sitetriage.score import analyze
 
 
 # --------------------------------------------------------------------------- #
@@ -152,7 +152,7 @@ class LaznaRuta:
     ],
 )
 def test_nivo_2_upisuje_zasto_odbija_zahtev(monkeypatch, caplog, razresi, razlog):
-    from skener.fetch.browser import _cuvar
+    from sitetriage.fetch.browser import _cuvar
 
     def lazni_dns(*_args, **_kwargs):
         if isinstance(razresi, Exception):
@@ -161,7 +161,7 @@ def test_nivo_2_upisuje_zasto_odbija_zahtev(monkeypatch, caplog, razresi, razlog
 
     monkeypatch.setattr(socket, "getaddrinfo", lazni_dns)
     ruta = LaznaRuta("https://primer.rs/")
-    caplog.set_level("INFO", logger="skener")
+    caplog.set_level("INFO", logger="sitetriage")
     asyncio.run(_cuvar(frozenset(), RuntimeError, "primer.rs")(ruta))
     assert ruta.ishod == "blockedbyclient"
     [zapis] = [r for r in caplog.records if "odbija" in r.getMessage()]
@@ -171,7 +171,7 @@ def test_nivo_2_upisuje_zasto_odbija_zahtev(monkeypatch, caplog, razresi, razlog
 
 def test_nivo_2_ponavlja_privremenu_dns_gresku(monkeypatch):
     """Presuda važi za ceo domen, pa bi jedna privremena greška blokirala sve zahteve ka hostu."""
-    from skener.fetch.browser import _cuvar
+    from sitetriage.fetch.browser import _cuvar
 
     javna = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 443))]
     odgovori = [socket.gaierror(socket.EAI_AGAIN, "privremeno"), javna]
@@ -192,8 +192,8 @@ def test_nivo_2_ponavlja_privremenu_dns_gresku(monkeypatch):
 # Nivo 2: `route` proverava svaki zahtev browsera
 # --------------------------------------------------------------------------- #
 def _nivo2(site: FakeSite):
-    from skener.fetch.browser import capture_all
-    from skener.models import Entry, PageSnapshot, SiteSnapshot
+    from sitetriage.fetch.browser import capture_all
+    from sitetriage.models import Entry, PageSnapshot, SiteSnapshot
 
     snimak = SiteSnapshot(
         domain=site.base_url,

@@ -18,7 +18,7 @@ vulnerability** (GitHub private vulnerability reporting). Only the maintainer ca
 
 Please include:
 
-- the version (`skener --version`) and how you run it (Docker image, `pip install`, web app on top of
+- the version (`sitetriage --version`) and how you run it (Docker image, `pip install`, web app on top of
   the library);
 - what an attacker controls (the domain list, a scanned site's responses, DNS, the config file);
 - steps or a minimal reproduction, for example a small local server or a snapshot, without real

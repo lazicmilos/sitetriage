@@ -14,9 +14,9 @@ import statistics
 import sys
 from pathlib import Path
 
-from skener import store
-from skener.config import get, load_config
-from skener.score import analyze
+from sitetriage import store
+from sitetriage.config import get, load_config
+from sitetriage.score import analyze
 
 
 def raspodela(ime: str, vrednosti: list[float], napomena: str = "") -> None:

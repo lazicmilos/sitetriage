@@ -6,8 +6,8 @@ import gzip
 
 import pytest
 
-from skener.fetch import robots, sitemap
-from skener.fetch.page import STUB_MAX_TEXT, build, internal_links, redirect_stub
+from sitetriage.fetch import robots, sitemap
+from sitetriage.fetch.page import STUB_MAX_TEXT, build, internal_links, redirect_stub
 
 # --------------------------------------------------------------------------- #
 # robots.txt (§4.3)

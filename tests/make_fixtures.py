@@ -18,8 +18,8 @@ from __future__ import annotations
 import gzip
 from pathlib import Path
 
-from skener import store
-from skener.models import (
+from sitetriage import store
+from sitetriage.models import (
     BrowserSnapshot,
     ConsoleStats,
     DomStats,

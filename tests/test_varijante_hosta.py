@@ -11,10 +11,10 @@ import pytest
 from factories import clean_site, run_level
 from localserver import html
 
-from skener.config import load_config
-from skener.fetch.http import Fetcher, Outcome, fetch_site
-from skener.messages import render
-from skener.models import DomainInput, HostVariant
+from sitetriage.config import load_config
+from sitetriage.fetch.http import Fetcher, Outcome, fetch_site
+from sitetriage.messages import render
+from sitetriage.models import DomainInput, HostVariant
 
 DOMEN = "primer.rs"
 BEZ, SA = f"https://{DOMEN}", f"https://www.{DOMEN}"
@@ -71,7 +71,7 @@ class Sajt(Fetcher):
 
 
 def skeniraj(monkeypatch, ponasanje: dict[str, str], *, canonical=None, budzet: int | None = None):
-    monkeypatch.setattr("skener.fetch.http.random.uniform", lambda *_: 0)
+    monkeypatch.setattr("sitetriage.fetch.http.random.uniform", lambda *_: 0)
     cfg = load_config()
     cfg["http"]["delay_ms"] = [0, 0]
     if budzet is not None:

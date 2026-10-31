@@ -26,11 +26,11 @@ from pathlib import Path
 
 import pytest
 
-from skener.checks import registry
-from skener.config import load_config
-from skener.inputs import read_domain_list, read_excel_csv
-from skener.models import DomainInput
-from skener.score import analyze
+from sitetriage.checks import registry
+from sitetriage.config import load_config
+from sitetriage.inputs import read_domain_list, read_excel_csv
+from sitetriage.models import DomainInput
+from sitetriage.score import analyze
 
 pytestmark = pytest.mark.live
 
@@ -59,7 +59,7 @@ def prolaz():
     """Jedan pravi prolaz nivoa 1 nad listom iz `SKENER_LIVE_CSV`."""
     if not DOMENI:
         pytest.skip("SKENER_LIVE_CSV nije zadat: nema liste pravih domena")
-    from skener.fetch.http import scan_domains
+    from sitetriage.fetch.http import scan_domains
 
     config = load_config()
     registry.load_all()

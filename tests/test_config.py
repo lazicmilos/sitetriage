@@ -1,7 +1,7 @@
 import pytest
 
-from skener import __version__
-from skener.config import ConfigError, _validate, digest, get, load_config, multiplier, user_agent
+from sitetriage import __version__
+from sitetriage.config import ConfigError, _validate, digest, get, load_config, multiplier, user_agent
 
 
 def test_ucitava_podrazumevanu_konfiguraciju():
@@ -217,7 +217,7 @@ def test_vremenski_budzet_mora_biti_pozitivan(tmp_path, vrednost, ispravna):
 def test_konfiguracija_iz_radnog_direktorijuma_ima_prednost(tmp_path, monkeypatch):
     import shutil
 
-    from skener.config import default_config_path
+    from sitetriage.config import default_config_path
 
     kopija = tmp_path / "skener.toml"
     shutil.copy(default_config_path(), kopija)
@@ -226,7 +226,7 @@ def test_konfiguracija_iz_radnog_direktorijuma_ima_prednost(tmp_path, monkeypatc
 
 
 def test_bez_podrazumevane_konfiguracije_puca_i_kaze_sta_da_se_uradi(monkeypatch):
-    monkeypatch.setattr("skener.config.CONFIG_NAME", "nepostojeci.toml")
+    monkeypatch.setattr("sitetriage.config.CONFIG_NAME", "nepostojeci.toml")
     with pytest.raises(ConfigError, match="--config"):
         load_config()
 

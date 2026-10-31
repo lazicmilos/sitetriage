@@ -15,9 +15,9 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from skener import __version__
-from skener.addresses import parse_allowed
-from skener.models import CATEGORIES, INDUSTRIES
+from sitetriage import __version__
+from sitetriage.addresses import parse_allowed
+from sitetriage.models import CATEGORIES, INDUSTRIES
 
 CONFIG_NAME = "skener.toml"
 

@@ -22,14 +22,14 @@ from factories import clean_site
 from localserver import html
 from test_json import SEMA
 
-from skener import pipeline, store
-from skener.config import load_config
-from skener.fetch import http
-from skener.fetch.http import Outcome, _classify
-from skener.messages import reason, render
-from skener.models import DomainInput, Entry, SnapshotError, to_jsonable
-from skener.report import csv_out, html_out
-from skener.score import analyze
+from sitetriage import pipeline, store
+from sitetriage.config import load_config
+from sitetriage.fetch import http
+from sitetriage.fetch.http import Outcome, _classify
+from sitetriage.messages import reason, render
+from sitetriage.models import DomainInput, Entry, SnapshotError, to_jsonable
+from sitetriage.report import csv_out, html_out
+from sitetriage.score import analyze
 
 DOMEN = "ne-rade.test"
 ISHODI = {
@@ -48,7 +48,7 @@ def _prolaz(monkeypatch, tabela: dict, *, posle_s: float = 0.0):
     `tabela[(pokušaj, šema)]` je ishod zahteva za početnu: ime iz `ISHODI` ili HTTP status.
     Čega nema u tabeli, vraća 200. Vraća snapshot i (početak, kraj) svakog pokušaja.
     """
-    monkeypatch.setattr("skener.fetch.http.random.uniform", lambda *_: 0)
+    monkeypatch.setattr("sitetriage.fetch.http.random.uniform", lambda *_: 0)
     pokusaji: list[tuple[float, float]] = []
     pravi = http.fetch_site
 

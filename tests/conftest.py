@@ -25,7 +25,7 @@ def dozvoli_lokalne_servere():
     """
     from localserver import dozvoljene_adrese
 
-    from skener import addresses
+    from sitetriage import addresses
 
     pravi = addresses.allowlist
     with pytest.MonkeyPatch.context() as mp:
@@ -42,7 +42,7 @@ def veza_bez_interneta():
         return 100.0
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("skener.fetch.browser.measure_link", brza)
+        mp.setattr("sitetriage.fetch.browser.measure_link", brza)
         yield
 
 
@@ -60,8 +60,8 @@ def chromium_se_pokrece() -> str | None:
     except ImportError:
         return "Playwright nije instaliran"
 
-    from skener.config import load_config
-    from skener.fetch.browser import _launch_options
+    from sitetriage.config import load_config
+    from sitetriage.fetch.browser import _launch_options
 
     async def probaj() -> None:
         async with playwright_api.async_playwright() as pw:

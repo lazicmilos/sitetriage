@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Zavisnosti pre ostatka repoa: izmena testa ili dokumentacije ne reinstalira pakete.
 COPY pyproject.toml README.md ./
-COPY skener/ skener/
+COPY sitetriage/ sitetriage/
 RUN pip install -e '.[dev]'
 
 COPY . .
@@ -26,4 +26,4 @@ COPY . .
 # Alat čita tuđe sajtove — nema razloga da to radi kao root.
 USER pwuser
 
-CMD ["skener", "--help"]
+CMD ["sitetriage", "--help"]

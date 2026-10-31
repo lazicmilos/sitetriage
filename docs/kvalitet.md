@@ -60,7 +60,7 @@ integracija nije napravljena. Nju pravi onaj ko ga čita.
 | Potkarakteristika | Kako | Dokaz |
 |---|---|---|
 | prepoznatljivost | izveštaj daje rangiranu listu i gotove rečenice za mejl | `docs/primer-izvestaja.html` |
-| učljivost | `skener explain <check_id>` objašnjava prag i poruku | `test_explain_ispisuje_prag_i_recenicu` |
+| učljivost | `sitetriage explain <check_id>` objašnjava prag i poruku | `test_explain_ispisuje_prag_i_recenicu` |
 | zaštita od greške | CSV bez kolone `domain` puca razumljivo; nepoznata provera predlaže slične | `test_csv_bez_kolone_domain_puca_razumljivo` |
 | zaštita od greške | lista iz Excel-a radi i sa `;` i u windows-1250; duplikati se skeniraju jednom; nula ili negativan broj u konfiguraciji se odbija | `test_csv_iz_excela_sa_tackom_zarezom`, `test_paralelizam_i_budzet_moraju_biti_pozitivni` |
 | pristupačnost | ozbiljnost ima oznaku i znak, ne samo boju | `test_ozbiljnost_ima_oznaku_i_znak_a_ne_samo_boju` |
@@ -138,4 +138,4 @@ na 17 Mb/s je 20,5 % domena potrošilo budžet, a na 107 Mb/s 7,8 %. Između nem
 | proces | ISO/IEC/IEEE 29119 (testiranje) | [`plan-testiranja.md`](plan-testiranja.md), izveštaji o testiranju, prijave defekata BUG-001 do BUG-016; nivoi: jedinični, integracioni (lokalni server, pravi Chromium), sistemski (100 pravih domena) |
 | proces | ISO/IEC/IEEE 12207 (životni ciklus) | faze 0–7 u istoriji commit-a; CI na push u `main` i na svaki PR |
 | dokumentacija | IEEE 1016 (opis dizajna) | README „Kako je podeljen": moduli, odgovornosti, pristup mreži i disku |
-| dokumentacija | ISO/IEC/IEEE 26511/26515 (korisnička) | README „Upotreba", `skener explain` |
+| dokumentacija | ISO/IEC/IEEE 26511/26515 (korisnička) | README „Upotreba", `sitetriage explain` |

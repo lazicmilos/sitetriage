@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from typing import Literal
 from xml.etree import ElementTree
 
-from skener.fetch.urls import normalize, path_group, same_site
+from sitetriage.fetch.urls import normalize, path_group, same_site
 
 SitemapKind = Literal["index", "urlset", "unknown"]
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from factories import SRPSKI_TEKST, clean_browser, clean_site, run_level
 
-from skener.messages import reason
+from sitetriage.messages import reason
 
 I18N = ("i18n.lang.invalid", "i18n.lang.mismatch", "i18n.lang.missing")
 

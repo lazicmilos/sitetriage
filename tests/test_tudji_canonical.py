@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from factories import clean_site, page, run_level
 
-from skener.messages import render
+from sitetriage.messages import render
 
 POCETNA = "https://cist.rs/"
 

@@ -12,8 +12,8 @@ from urllib.parse import urljoin
 
 from selectolax.lexbor import LexborHTMLParser
 
-from skener.fetch.urls import collapse_ws, normalize, same_site
-from skener.models import OpenGraph, PageSnapshot
+from sitetriage.fetch.urls import collapse_ws, normalize, same_site
+from sitetriage.models import OpenGraph, PageSnapshot
 
 RELEVANT_HEADERS = ("content-encoding", "content-type", "content-length", "cache-control", "vary")
 TEXT_SAMPLE_CHARS = 4000
