@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,21 @@ description = "Skener sajtova — rangira domene po tome koji zaslužuju pun ru�
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Milos Lazic", email = "miloslazic458@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["website audit", "seo", "accessibility", "performance", "crawler", "lead triage"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Site Management",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = [
     "httpx>=0.27",
     "selectolax>=0.3.21",
@@ -19,6 +34,12 @@ browser = ["playwright>=1.44"]
 # Playwright je zakucan: paket traži tačno svoju reviziju Chromium-a, pa nadogradnja
 # bez `playwright install` obori sve browser testove (vidi `chromium_se_pokrece`).
 dev = ["pytest>=8", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18"]
+
+[project.urls]
+Homepage = "https://github.com/lazicmilos/skener"
+Repository = "https://github.com/lazicmilos/skener"
+Issues = "https://github.com/lazicmilos/skener/issues"
+Changelog = "https://github.com/lazicmilos/skener/blob/main/CHANGELOG.md"
 
 [project.scripts]
 skener = "skener.cli:main"
