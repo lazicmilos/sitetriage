@@ -1,17 +1,17 @@
-"""Pristupačnost (§7.4).
+"""Accessibility checks.
 
-U HTML-u postoje **tri** stanja, ne dva: nema `alt` atributa (greška), `alt=""`
-(namerno, dekorativna slika, ispravno po WCAG-u) i `alt="tekst"` (ispravno).
-Alat koji prijavljuje `alt=""` kao grešku prijavljuje korektno urađen sajt kao
-pokvaren, i to pošalješ u mejlu (§15, zamka 1).
+HTML has **three** states, not two: no `alt` attribute (an error), `alt=""`
+(deliberate, a decorative image, correct under WCAG) and `alt="text"` (correct).
+A tool that reports `alt=""` as an error reports a correctly built site as
+broken, and you send that in an email.
 """
 
 from __future__ import annotations
 
 from sitetriage.checks.registry import Context, check, finding, ok, unknown
 
-# Zakonska izloženost po pristupačnosti je veća, pa je prag ozbiljnosti niži.
-IZLOZENE_DELATNOSTI = {"healthcare", "institution"}
+# Legal exposure on accessibility is higher, so the severity threshold is lower.
+EXPOSED_INDUSTRIES = {"healthcare", "institution"}
 
 
 @check(
@@ -39,7 +39,7 @@ def img_alt_missing(snapshot, ctx: Context):
     if ratio <= ctx.th("thresholds.a11y.missing_ratio"):
         return ok(img_alt_missing.spec)
 
-    severity = "medium" if ctx.industry in IZLOZENE_DELATNOSTI else "low"
+    severity = "medium" if ctx.industry in EXPOSED_INDUSTRIES else "low"
     if ratio > ctx.th("thresholds.a11y.high_ratio") and dom.images_total >= ctx.th(
         "thresholds.a11y.high_min_images"
     ):

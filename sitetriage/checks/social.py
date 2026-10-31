@@ -1,8 +1,8 @@
-"""Open Graph provere (§5).
+"""Open Graph checks.
 
-Hotelski i ugostiteljski link se deli u porukama i grupama; gost koji dobije golu
-adresu bez slike i naslova ne klikne. Zato `social` na hotelu nosi množilac 1,5,
-a na b2b 0,7 (§9.2).
+Hotel and restaurant links get shared in messages and groups; a guest who gets a bare
+URL without an image and a title does not click. That is why `social` carries a
+multiplier of 1.5 for hotels and 0.7 for b2b (`[industry_multipliers]` in `sitetriage.toml`).
 """
 
 from __future__ import annotations
