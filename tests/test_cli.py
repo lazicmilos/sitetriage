@@ -30,7 +30,9 @@ def test_only_filtrira(tmp_path):
 
 def test_upozorenja_iz_liste_idu_u_log_sa_brojem_reda(tmp_path, caplog):
     path = tmp_path / "d.csv"
-    path.write_text("domain,industry\ninstitucija.example,institucija\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8")
+    path.write_text(
+        "domain,industry\ninstitucija.example,institucija\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8"
+    )
     cli.read_domains(path)
     assert "red 3: domen se ponavlja" in caplog.text
 

@@ -3,19 +3,20 @@
 **Ovi snapshoti su ručno napisani, nisu snimljeni sa pravih sajtova.**
 
 Napravljeni su bez pristupa mreži, generatorom [`../make_fixtures.py`](../make_fixtures.py), i
-opisuju ono što §12.4 specifikacije tvrdi da je na tih osam domena — **ne ono što je tamo danas**.
+opisuju stanje koje §12.4 specifikacije zadaje za osam tipičnih sajtova. Domeni su izmišljeni,
+pod rezervisanim TLD-om `.example` (RFC 2606) — nijedan ne pripada stvarnom sajtu.
 
 Šta zato jesu, a šta nisu:
 
 - **Jesu** provera da lanac `snapshot → provere → bodovanje → rangiranje` daje očekivane
   `check_id`-eve i tačne brojeve iz §9.4.
-- **Nisu** provera da su ti domeni zaista u tom stanju. Za to služi `pytest -m live`.
+- **Nisu** provera da je ijedan pravi sajt u tom stanju. Za to služi `pytest -m live` nad
+  tvojom listom domena (`SKENER_LIVE_CSV`, vidi [`../test_live.py`](../test_live.py)).
 
-Zameni ih pravim snimcima čim budeš imao mrežu:
+Posle izmene generatora napravi ih ponovo:
 
 ```bash
-skener record domains.example.csv --out tests/fixtures/
+python tests/make_fixtures.py
 ```
 
-pa pogledaj `git diff` — razlika pokazuje šta se na sajtovima promenilo otkad su poslednji put
-snimljeni, a to je samo po sebi korisna informacija za prodaju.
+Generator piše gzip bez vremena u zaglavlju, pa `git diff` pokazuje samo stvarne izmene.

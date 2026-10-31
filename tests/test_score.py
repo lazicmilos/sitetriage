@@ -123,26 +123,26 @@ def test_rank_key_iz_specifikacije(domain, max_weight, total):
 
 
 def test_jedan_critical_nadjacava_cetiri_srednja_nalaza():
-    """§9.4, prvi red: restoran_centar iznad angola iako ima manje nalaza."""
-    restoran, restoran_ugao = izvestaj("restoran-centar.example"), izvestaj("restoran-ugao.example")
-    assert len(restoran.findings) < len(restoran_ugao.findings)
-    assert rank([restoran_ugao, restoran])[0].domain == "restoran-centar.example"
+    """§9.4, prvi red: restoran-centar iznad restoran-ugla iako ima manje nalaza."""
+    restoran, ugao = izvestaj("restoran-centar.example"), izvestaj("restoran-ugao.example")
+    assert len(restoran.findings) < len(ugao.findings)
+    assert rank([ugao, restoran])[0].domain == "restoran-centar.example"
 
 
 def test_najtezi_nalaz_nadjacava_veci_zbir():
     """§9.4, drugi red — ceo smisao pravila.
 
-    Aria ima veći zbir (99,4 prema 80), ali Institucija ima skuplji pojedinačni
+    Hotel ima veći zbir (99,4 prema 80), ali institucija ima skuplji pojedinačni
     problem. Ako implementacija ovo obrne, greška je u `rank_key`, ne u pragovima.
     """
-    institucija, aria = izvestaj("institucija.example"), izvestaj("hotel-planina.example")
-    assert aria.total_score > institucija.total_score
-    poredak = [r.domain for r in rank([aria, institucija])]
+    institucija, hotel = izvestaj("institucija.example"), izvestaj("hotel-planina.example")
+    assert hotel.total_score > institucija.total_score
+    poredak = [r.domain for r in rank([hotel, institucija])]
     assert poredak == ["institucija.example", "hotel-planina.example"]
 
 
 def test_rangiranje_dodeljuje_redne_brojeve():
-    """Aria i restoran_ugao su izjednačeni na 30; zbir ih razrešava (99,4 > 75,6)."""
+    """Hotel i restoran-ugao su izjednačeni na 30; zbir ih razrešava (99,4 > 75,6)."""
     poredak = rank([izvestaj(d) for d in ISPITNI_SKUP])
     assert [r.rank for r in poredak] == [1, 2, 3, 4]
     assert [r.domain for r in poredak] == [
@@ -195,7 +195,7 @@ def test_cist_i_brz_sajt_ne_ide_na_nivo_2():
 
 
 def test_prazan_sirovi_html_salje_na_nivo_2():
-    """Ovo je Institucija: sadržaj se crta iz JS-a, nivo 1 ne vidi ništa (§6)."""
+    """Ovo je institucija: sadržaj se crta iz JS-a, nivo 1 ne vidi ništa (§6)."""
     site = clean_site()
     site.home.text_length = 120
     site.home.h1_count_raw = 0
