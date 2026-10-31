@@ -5,7 +5,41 @@ izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) 
 
 ## Neobjavljeno
 
-Projekat je otvoren pod imenom SiteTriage, uz licencu MIT. Paket i komanda se i dalje zovu `skener`.
+Projekat je otvoren pod imenom SiteTriage, uz licencu MIT.
+
+### Breaking changes (3.0)
+
+The public interface is now English, with no aliases for the old names. The complete old → new
+mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
+
+- The package, the distribution and the command are `sitetriage` instead of `skener`
+  (`sitetriage scan`, `sitetriage recheck`, `pip install 'sitetriage[browser]'`). The Docker Compose
+  service and image are `sitetriage`, and the logger names in JSON log lines are `sitetriage`,
+  `sitetriage.fetch` and `sitetriage.browser`.
+- The default config file is `sitetriage.toml` instead of `skener.toml`, with comments in English.
+- `[identitet]` with `naziv`, `kontakt` and `izuzeti` is now `[operator]` with `name`, `contact` and
+  `exclude_file`. A config that still has `[identitet]` fails and names the new keys. The
+  `http.user_agent` placeholders are `{version}`, `{contact}` and `{name}`.
+- Environment variables: `SKENER_NAZIV` → `SITETRIAGE_OPERATOR_NAME`, `SKENER_KONTAKT` →
+  `SITETRIAGE_OPERATOR_CONTACT`, `SKENER_CHROMIUM` → `SITETRIAGE_CHROMIUM`, `SKENER_LIVE_CSV` →
+  `SITETRIAGE_LIVE_CSV`, `SKENER_UID`/`SKENER_GID` → `SITETRIAGE_UID`/`SITETRIAGE_GID`.
+- Industry values in the input CSV, in `[industry_multipliers.*]` and in the reports: `restoran` →
+  `restaurant`, `zdravstvo` → `healthcare`, `institucija` → `institution`, `ostalo` → `other`
+  (`hotel`, `ecommerce` and `b2b` are unchanged). An empty or unknown value still falls back to
+  `other`. Multipliers for an unknown industry now fail instead of being ignored. Snapshots from
+  before 3.0 are mapped to the new values when `recheck` reads them.
+- `report.json` follows the new schema `sitetriage/schema/report-3.json` (`schema_version` `3.0`);
+  `report-2.json` is removed. Every evidence key of findings and reasons is English (for example
+  `stranica` → `page` or `page_count`, `uzorak` → `sample`, `prag` → `threshold`, `bajtova` →
+  `bytes`), and so are the Serbian evidence codes: `source` is `raw_html` or `rendered` instead of
+  `sirovi_html` or `nivo2`, the `infra.host.duplicate` variant is `same_canonical` instead of
+  `isti_canonical`, and a TLS error without a message is `unknown` instead of `nepoznata`. The same
+  keys appear in `evidence_json` in `findings.csv`. Field names, `check_id`s, reason codes and CSV
+  columns are unchanged, and the Serbian and English sentences are word for word the same.
+- `config_digest` changes, because the industry multiplier tables are renamed.
+- The HTML report is titled `SiteTriage — izveštaj` / `SiteTriage — report`.
+- A domain with no usable name is stored under `snapshots/unknown-domain/` instead of
+  `snapshots/nepoznat-domen/`.
 
 ### Izmene koje lome kompatibilnost
 
