@@ -123,6 +123,44 @@ def test_input_with_ip_address_sends_no_request():
 
 
 # --------------------------------------------------------------------------- #
+# The link probe before level 2 (ADR-018) goes through the same check as level 1
+# --------------------------------------------------------------------------- #
+def _probe(url: str, config: dict | None = None):
+    cfg = config or load_config()
+    cfg["network_profile"] |= {"probe_url": url, "probe_max_s": 2}
+    return asyncio.run(http.measure_link(cfg))
+
+
+def test_pg_probe_on_private_address_sends_no_request(caplog):
+    """BUG-05: `probe_url` on a private address got a `GET /` although level 1 would refuse it."""
+    caplog.set_level("WARNING", logger="sitetriage")
+    with FakeSite(allowed=False, extra={"/": Response(b"x" * 100_000)}) as private:
+        speed = _probe(f"{private.base_url}/")
+    assert private.requests == [], "the probe must not open a private address"
+    assert speed is None, "a blocked probe is a failed measurement: load time becomes unknown"
+    [record] = [r for r in caplog.records if "not measured" in r.getMessage()]
+    assert "address is not public" in record.getMessage()
+
+
+def test_ke_probe_on_explicitly_allowed_private_address_is_measured():
+    """The probe uses the same `[net] allowed_private` as level 1."""
+    with FakeSite(allowed=False, extra={"/": Response(b"x" * 100_000)}) as private:
+        cfg = load_config()
+        host, port = private.address
+        cfg["net"]["allowed_private"] = [f"{host}:{port}"]
+        speed = _probe(f"{private.base_url}/", cfg)
+    assert private.requests == ["/"]
+    assert speed is not None and speed > 0
+
+
+def test_ke_probe_on_allowed_server_is_measured():
+    with FakeSite(extra={"/": Response(b"x" * 100_000)}) as site:
+        speed = _probe(f"{site.base_url}/")
+    assert site.requests == ["/"]
+    assert speed is not None and speed > 0
+
+
+# --------------------------------------------------------------------------- #
 # Level 2: the log says why a request was refused. Chromium reports the same for both
 # cases, ERR_BLOCKED_BY_CLIENT, and a failed DNS lookup is not a private address.
 # --------------------------------------------------------------------------- #
