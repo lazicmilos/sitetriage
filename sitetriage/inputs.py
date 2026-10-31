@@ -16,6 +16,8 @@ from urllib.parse import urlsplit
 from sitetriage.fetch.urls import normalize
 from sitetriage.models import INDUSTRIES, DomainInput
 
+DOMAIN_LIST_COLUMNS = ("domain", "industry", "note")
+
 
 class InputError(ValueError):
     """Input that cannot be processed. The message names the source and, when known, the row number."""
@@ -45,6 +47,9 @@ def read_excel_csv(data: bytes, source: str) -> CsvTable:
     Without the "CSV UTF-8" option Excel saves in windows-1250, and the Serbian Windows settings
     separate columns with `;`, not with a comma. The row number counts records, not lines in
     the file: a cell with a line break is one row in Excel and two lines in the file.
+
+    Header names are stripped of surrounding whitespace and lower-cased: `domain, industry` with a
+    space after the comma, or `Domain,Industry` capitalised by Excel, name the usual columns.
     """
     warnings: list[InputWarning] = []
     try:
@@ -59,7 +64,7 @@ def read_excel_csv(data: bytes, source: str) -> CsvTable:
     header_at = next((i for i, values in enumerate(records) if values), None)
     if header_at is None:
         return CsvTable([], [], warnings=warnings)
-    fieldnames = records[header_at]
+    fieldnames = [name.strip().lower() for name in records[header_at]]
     rows = [
         (i + 1, dict(zip(fieldnames, values, strict=False)))
         for i, values in enumerate(records)
@@ -74,11 +79,22 @@ def read_domain_list(data: bytes, source: str) -> tuple[list[DomainInput], list[
     The same site twice would mean two passes through someone else's site, so the first
     occurrence wins and every later row that denotes the same site (see `site_key`) is skipped
     with a warning that names the earlier row.
+
+    A column the tool does not know is ignored with one warning for the header row, so that a typo
+    such as `industy` is visible instead of silently scoring every site as `other`.
     """
     table = read_excel_csv(data, source)
     warnings = table.warnings
     if "domain" not in table.fieldnames:
         raise InputError(f"{source}, row {table.header_row}: the header has no `domain` column")
+    unknown = [name for name in table.fieldnames if name and name not in DOMAIN_LIST_COLUMNS]
+    if unknown:
+        names = ", ".join(f"`{name}`" for name in unknown)
+        what = "column" if len(unknown) == 1 else "columns"
+        them = "it" if len(unknown) == 1 else "them"
+        known = ", ".join(DOMAIN_LIST_COLUMNS)
+        message = f"unknown {what} {names} in the header, ignoring {them} (known: {known})"
+        warnings.append(InputWarning(message, table.header_row))
 
     domains: list[DomainInput] = []
     seen: dict[str, tuple[int, str]] = {}
