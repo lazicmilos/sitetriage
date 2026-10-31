@@ -233,6 +233,7 @@ def _result(
         finished_at=_now(),
         duration_s={name: round(seconds, 2) for name, seconds in durations.items()},
         config_digest=digest(config),
+        profile=config.get("profile") or None,
         environment=_environment(browsers),
         summary=summary,
         budget_share=budget_share,

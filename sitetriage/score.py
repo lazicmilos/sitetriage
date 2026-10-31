@@ -106,14 +106,14 @@ def partial_shares(reports: Sequence[DomainReport]) -> tuple[float, dict[str, fl
     budget = sum("budget" in r.partial_causes for r in working)
     per_check = {}
     for spec in sorted(registry.REGISTRY.values(), key=lambda s: s.check_id):
-        # A check with an unmet requirement did not even run, e.g. time on light level 2 (BUG-020).
+        # A check with an unmet requirement did not even run, e.g. time on light level 2 (BUG-020),
+        # and neither did one the configuration switched off (ADR-023).
         ran_on = [
             r
             for r in working
             if (spec.level == 1 or r.level2_ran)
             and not any(
-                n.check_id == spec.check_id and n.reason.code.startswith("requires.")
-                for n in r.not_applicable
+                n.check_id == spec.check_id and registry.did_not_run(n.reason) for n in r.not_applicable
             )
         ]
         if ran_on:

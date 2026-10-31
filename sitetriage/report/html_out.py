@@ -157,6 +157,10 @@ def render(
         duration = number(duration_s, lang) if duration_s < 10 else f"{duration_s:.0f}"
         cards.append((t("card_duration"), f"{duration} s"))
 
+    # The profile changes what is checked (ADR-023), so the reader sees which one the run used.
+    profile = config.get("profile") or ""
+    run_profile = t("run_profile", profile=profile) if profile else t("run_no_profile")
+
     speed = get(config, "network_profile.download_mbps")
     overhead = get(config, "report.mobile_overhead_s")
     # Numbers, not text: the language formatter writes them with a comma or a point.
@@ -177,7 +181,7 @@ def render(
 <style>{CSS}</style></head>
 <body><div class="wrap">
 <h1>{t("heading")}</h1>
-<p class="sub">{t("run_of", generated=generated, version=__version__)}</p>
+<p class="sub">{t("run_of", generated=generated, version=__version__)} · {run_profile}</p>
 
 <div class="cards">
 {"".join(f'<div class="card"><b>{_e(v)}</b><span>{k}</span></div>' for k, v in cards)}
