@@ -38,7 +38,7 @@ ISHODI = {
     "dns_privremeno": ("dns_temporary", "[Errno -3] Temporary failure in name resolution"),
     "bez_veze": ("no_connection", "[Errno 111] Connection refused"),
     "rukovanje": ("tls_handshake", "[SSL: UNEXPECTED_EOF_WHILE_READING]"),
-    "blokada": ("blocked", "adresa nije javna: ne-rade.test → 10.0.0.5"),
+    "blokada": ("blocked", "address is not public: ne-rade.test → 10.0.0.5"),
 }
 
 
@@ -167,7 +167,7 @@ def test_eai_again_nije_unreachable(monkeypatch):
     async def privremeno(host, port):
         raise socket.gaierror(socket.EAI_AGAIN, "Temporary failure in name resolution")
 
-    monkeypatch.setattr(http, "_razresi", privremeno)
+    monkeypatch.setattr(http, "_resolve", privremeno)
     cfg = load_config()
     cfg["http"]["second_attempt_after_s"] = 0
     [snapshot] = asyncio.run(http.scan_domains([DomainInput(DOMEN)], cfg))
@@ -243,8 +243,8 @@ def test_tcp_greska_koja_jeste_i_nije_bez_veze(monkeypatch, greska, uzrok, bez_v
         async def connect_tcp(self, host, port, **_kwargs):
             raise greska
 
-    monkeypatch.setattr(http, "_razresi", javna)
-    backend = http._JavneAdrese(Pada(), frozenset())
+    monkeypatch.setattr(http, "_resolve", javna)
+    backend = http._PublicAddresses(Pada(), frozenset())
     with pytest.raises(httpcore.ConnectError) as uhvacena:
         asyncio.run(backend.connect_tcp("primer.rs", 443))
     assert isinstance(uhvacena.value, http.NoConnection) is bez_veze
