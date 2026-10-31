@@ -72,7 +72,7 @@ once.
 ## Consequences
 
 - Tests open a local server on `127.0.0.1`. `conftest.py` allows exactly the addresses of the
-  servers that are running, and a server created with `dozvoljen=False` stays forbidden, as in
+  servers that are running, and a server created with `allowed=False` stays forbidden, as in
   production.
 - Staging with a port works only with explicit permission:
   `[net] allowed_private = ["staging.example:8123"]`.

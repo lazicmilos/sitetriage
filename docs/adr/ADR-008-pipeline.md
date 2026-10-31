@@ -36,7 +36,7 @@ async def record(targets, config, *, out_dir, level="auto") -> int
   `finally`, and the snapshots of finished domains stay on disk.
 - Level 2 installs its exception handler only while it runs, and then restores the previous one.
 - `cli.py` does not import `fetch.http`, `fetch.browser` or `score`, which
-  `tests/test_arhitektura.py` checks.
+  `tests/test_architecture.py` checks.
 
 ## Consequences
 

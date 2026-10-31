@@ -41,7 +41,7 @@ per-domain results stay out of the repository (`rad/`).
 ### Z-50: percentiles of list A (owner decision, 2026-09-28)
 
 Input is run H (list A, fast link,
-107 Mb/s), without a new scan. `scripts/raspodela.py` prints the distribution from the snapshots.
+107 Mb/s), without a new scan. `scripts/distribution.py` prints the distribution from the snapshots.
 60 sites were measured under the profile, 58 reached `load`, and 2 timeouts were counted as 25 s.
 
 | | p50 | p75 | p90 | p95 | max |

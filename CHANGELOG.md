@@ -151,7 +151,7 @@ Every such change is recorded here in the same commit in which it is made.
   ([ADR-018](docs/adr/ADR-018-load-time-validity.md)).
 - The level-2 snapshot records the duration of level 2 for the domain (`elapsed_ms`), without
   waiting in the load queue: the same time that `browser.max_seconds_per_domain` limits. The script
-  `scripts/raspodela.py` prints, from the snapshots, the distribution of weight, request count and
+  `scripts/distribution.py` prints, from the snapshots, the distribution of weight, request count and
   time to `load`, the level-2 duration and the canonical findings, for threshold calibration
   ([ADR-020](docs/adr/ADR-020-threshold-calibration.md)).
 - The switch `browser.serial_load` (default `true`). With `false`, sites on level 2 load in parallel
