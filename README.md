@@ -213,8 +213,9 @@ The output folder holds:
 | `report.json` | the whole run, for programs |
 | `snapshots/` | the raw data collected for each domain |
 
-`--format` chooses which of the first four are written (`html`, `csv`, `json`, default all three
-formats); snapshots are always written. `--lang en|sr` sets the language of the report and its
+`--format` chooses which of the first four are written (`html`, `csv`, `json` or several separated
+by commas, e.g. `--format html,json`; default all three formats). Case and spaces do not matter, and
+any other name is an error before anything runs. Snapshots are always written. `--lang en|sr` sets the language of the report and its
 sentences. Without it the tool uses `report.lang`: `en` by default, `sr` with the `rs` profile.
 `--csv-bom` writes the CSV files as UTF-8 with a BOM, for Excel.
 

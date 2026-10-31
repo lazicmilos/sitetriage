@@ -548,3 +548,45 @@ def test_log_time_is_really_utc(monkeypatch):
     finally:
         monkeypatch.delenv("TZ")
         time.tzset()
+
+
+# --------------------------------------------------------------------------- #
+# --format (BUG-07): an unknown format is an argparse error, not an empty folder and exit 0
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("html", ["html"]),
+        ("csv,json", ["csv", "json"]),
+        (" HTML ", ["html"]),
+        ("Html, CSV ,json", ["html", "csv", "json"]),
+        ("json,json", ["json"]),
+    ],
+    ids=["ke-one", "ke-several", "ke-spaces-and-case", "ke-mixed", "ke-repeated"],
+)
+def test_format_accepts_a_subset_of_the_three(text, expected):
+    assert cli._formats(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["pdf", "", " ", ",", "html,pdf", "html,,csv", "xml, json"],
+    ids=["nv-unknown", "nv-empty", "nv-blank", "nv-only-comma", "nv-one-unknown", "nv-empty-item", "nv-xml"],
+)
+@pytest.mark.parametrize("command", ["scan", "recheck"])
+def test_unknown_format_is_an_argument_error(tmp_path, capsys, command, text):
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit) as raised:
+        cli.main([command, str(tmp_path / "x"), "--out", str(out), "--format", text])
+    assert raised.value.code == 2
+    err = capsys.readouterr().err
+    assert "--format" in err and "html, csv, json" in err
+    assert not out.exists()
+
+
+def test_format_writes_only_what_was_asked_for(tmp_path):
+    from pathlib import Path
+
+    fixtures = Path(__file__).parent / "fixtures"
+    assert cli.main(["recheck", str(fixtures), "--out", str(tmp_path), "--format", " JSON , csv"]) == 0
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["findings.csv", "report.json", "summary.csv"]
