@@ -6,12 +6,12 @@ services:
     init: true          # Chromium pravi podprocese; bez init-a ostaju zombiji
     shm_size: "1gb"     # podrazumevanih 64 MB /dev/shm obara Chromium na težim stranama
     # Izlaz u ./rad mora da pripada tebi, ne korisniku iz slike. 1000 je prvi nalog na
-    # većini Linux-a; ako je tvoj drugačiji: `export SKENER_UID=$(id -u) SKENER_GID=$(id -g)`.
+    # većini Linux-a; ako je tvoj drugačiji: `export SITETRIAGE_UID=$(id -u) SITETRIAGE_GID=$(id -g)`.
     # Docker Desktop (Mac, Windows) ionako mapira vlasništvo.
-    user: "${SKENER_UID:-1000}:${SKENER_GID:-1000}"
-    # Ko skenira — vidi [identitet] u skener.toml. Bez ova dva alat odbija da skenira.
+    user: "${SITETRIAGE_UID:-1000}:${SITETRIAGE_GID:-1000}"
+    # Ko skenira — vidi [operator] u sitetriage.toml. Bez ova dva alat odbija da skenira.
     environment:
-      - SKENER_NAZIV
-      - SKENER_KONTAKT
+      - SITETRIAGE_OPERATOR_NAME
+      - SITETRIAGE_OPERATOR_CONTACT
     volumes:
       - ./rad:/rad      # ulaz (CSV) i izlaz (izveštaji, snapshoti); kod ostaje u slici

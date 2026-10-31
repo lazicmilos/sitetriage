@@ -48,7 +48,7 @@ def test_izuzeti_iz_konfiguracije_i_sa_komandne_linije(tmp_path):
         sa_komandne_linije = tmp_path / "jos.txt"
         sa_komandne_linije.write_text(f"{host}\n", encoding="utf-8")
         config = tmp_path / "moj.toml"
-        config.write_text(f'[identitet]\nizuzeti = "{iz_konfiguracije.as_posix()}"\n', encoding="utf-8")
+        config.write_text(f'[operator]\nexclude_file = "{iz_konfiguracije.as_posix()}"\n', encoding="utf-8")
         out = tmp_path / "izlaz"
         argumenti = ["--config", str(config), "--exclude", str(sa_komandne_linije), "--level", "1"]
         assert cli.main(["scan", str(domains), "--out", str(out), *argumenti]) == 0
@@ -83,7 +83,7 @@ def prolaz(tmp_path_factory):
     ispod gledaju isti rezultat.
     """
     tmp_path = tmp_path_factory.mktemp("prolaz")
-    # `--config` se spaja preko skener.toml; ovde gasimo pauze da testovi ne traju minut.
+    # `--config` se spaja preko sitetriage.toml; ovde gasimo pauze da testovi ne traju minut.
     config = tmp_path / "brzo.toml"
     config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
 
@@ -349,12 +349,12 @@ def test_explain_all_markdown_pokriva_sve_provere(capsys):
 
 def test_scan_bez_identiteta_odbija_pre_ijednog_zahteva(tmp_path, monkeypatch):
     """Bez imena i kontakta operatera nema skeniranja — ni jednog zahteva."""
-    monkeypatch.delenv("SKENER_NAZIV", raising=False)
-    monkeypatch.delenv("SKENER_KONTAKT", raising=False)
+    monkeypatch.delenv("SITETRIAGE_OPERATOR_NAME", raising=False)
+    monkeypatch.delenv("SITETRIAGE_OPERATOR_CONTACT", raising=False)
     with FakeSite() as site:
         domains = tmp_path / "d.csv"
         domains.write_text(f"domain,industry\n{site.base_url},ostalo\n", encoding="utf-8")
-        with pytest.raises(SystemExit, match="identitet"):
+        with pytest.raises(SystemExit, match=r"\[operator\] name"):
             cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), "--level", "1"])
         assert site.requests == [], f"zahtevi pre provere identiteta: {site.requests}"
 
@@ -370,8 +370,8 @@ def test_verzija_je_ista_u_paketu_cli_i_user_agentu(capsys, monkeypatch):
     with pytest.raises(SystemExit):
         cli.main(["--version"])
     assert capsys.readouterr().out.strip() == f"sitetriage {__version__}"
-    monkeypatch.setenv("SKENER_NAZIV", "Web studio Primer")
-    monkeypatch.setenv("SKENER_KONTAKT", "kontakt@primer.rs")
+    monkeypatch.setenv("SITETRIAGE_OPERATOR_NAME", "Web studio Primer")
+    monkeypatch.setenv("SITETRIAGE_OPERATOR_CONTACT", "kontakt@primer.rs")
     assert f"/{__version__} " in user_agent(load_config())
 
 

@@ -646,9 +646,9 @@ def test_sistemski_chromium_iz_konfiguracije_i_okruzenja(monkeypatch):
     from sitetriage.fetch.browser import _launch_options
 
     cfg = load_config()
-    monkeypatch.delenv("SKENER_CHROMIUM", raising=False)
+    monkeypatch.delenv("SITETRIAGE_CHROMIUM", raising=False)
     assert "executable_path" not in _launch_options(cfg)
-    monkeypatch.setenv("SKENER_CHROMIUM", "/usr/bin/chromium")
+    monkeypatch.setenv("SITETRIAGE_CHROMIUM", "/usr/bin/chromium")
     assert _launch_options(cfg)["executable_path"] == "/usr/bin/chromium"
     cfg["browser"]["executable_path"] = "/opt/chrome"
     assert _launch_options(cfg)["executable_path"] == "/opt/chrome", "fajl ima prednost"

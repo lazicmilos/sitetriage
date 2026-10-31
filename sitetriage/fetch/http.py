@@ -81,7 +81,7 @@ class Outcome:
 
 
 class DomainBudget:
-    """Tvrd budžet po domenu (§4.2): broj zahteva i sekundi iz `[http]` u skener.toml.
+    """Tvrd budžet po domenu (§4.2): broj zahteva i sekundi iz `[http]` u sitetriage.toml.
 
     Kad se potroši, ono što je prikupljeno ide dalje, ostalo je `unknown`.
     """

@@ -30,7 +30,7 @@ važi samo za prolaz sa adrese u Srbiji (kalibracija, 28.09.).
 | Potkarakteristika | Kako | Dokaz |
 |---|---|---|
 | vremensko ponašanje | domeni idu paralelno; budžet vremena teče tek kad domen dobije red | `test_domeni_idu_paralelno_a_ne_jedan_za_drugim`, `test_budzet_vremena_krece_tek_kad_domen_dobije_red` |
-| iskorišćenje resursa | nivo 2 na 3 konteksta (svaki su stotine MB), gornji limit od 60 domena | `skener.toml [browser]`, `score.select_for_level2` |
+| iskorišćenje resursa | nivo 2 na 3 konteksta (svaki su stotine MB), gornji limit od 60 domena | `sitetriage.toml [browser]`, `score.select_for_level2` |
 | kapacitet | tvrd budžet: 19 zahteva i 40 s po domenu; tvrd limit od 60 s za nivo 2 | `test_budzet_se_postuje_na_svakom_domenu`, `test_tvrdi_limit_po_domenu_prekida_nivo_2` |
 | vremensko ponašanje | vreme učitavanja se meri pod fiksnim mrežnim profilom i bez tuđeg saobraćaja na vezi; na 10 pravih sajtova u prolazu je 19 od 20 odnosa 0,8–1,25× vremena kad se sajt meri sam | `test_profil_usporava_ucitavanje`, `test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju`, [`kalibracija.md`](kalibracija.md) (Z-31) |
 
@@ -103,7 +103,7 @@ sajta. Izuzetak je TLS nalaz. `tests/fixtures/` posle `record` sadrže javni HTM
 | modularnost | provere ne uvoze mrežu; sloj mreže i sloj zaključaka su odvojeni | README „Kako je podeljen", `checks/registry.py` |
 | ponovna upotrebljivost | nova provera = jedna funkcija sa dekoratorom | `@check(...)` u `checks/*.py` |
 | analizabilnost | `--debug-domain`, sirovi snapshoti na disku | `cli.setup_logging` |
-| izmenljivost | svi pragovi u `skener.toml`; `git diff` nad njim je istorija kalibracije | `test_config.py` |
+| izmenljivost | svi pragovi u `sitetriage.toml`; `git diff` nad njim je istorija kalibracije | `test_config.py` |
 | testabilnost | preko 1000 testova bez mreže, lokalni server umesto pravih sajtova; pokrivenost linija i grana 98 %; mutacioni skor v2 944 od 944 neekvivalentnih mutanata (100 %), bez tela provera, jer mutmut 3.2.3 funkcije sa dekoratorom ne mutira | `tests/`, CI (`--cov-fail-under=95`), `[tool.mutmut]`, `scripts/mutacije.py` |
 
 **Rupe.** `fetch/http.py` ima 800 linija i nosi četiri odgovornosti (klijent, budžet, sklapanje
@@ -117,7 +117,7 @@ pri importu modula, pa se takvi preživeli proveravaju ručno.
 |---|---|---|
 | instalabilnost | `pip install -e .`; nivo 2 opcion (`.[browser]`) | `pyproject.toml` |
 | instalabilnost | Docker slika zaključana digest-om, sa Chromium-om za tačnu verziju Playwright-a; radi bez root-a | `Dockerfile`, `compose.yaml`, CI posao `docker` |
-| prilagodljivost | sistemski Chromium preko `SKENER_CHROMIUM` / `browser.executable_path` | `browser._launch_options` |
+| prilagodljivost | sistemski Chromium preko `SITETRIAGE_CHROMIUM` / `browser.executable_path` | `browser._launch_options` |
 | prilagodljivost | nivo 2 meri pod istim simuliranim mrežnim profilom na svakoj mašini; kad je stvarna veza sporija od dvostrukog profila, vreme je `unknown`, a ne precenjeno | `test_profil_je_u_snapshotu_i_jsonu`, `test_vreme_na_vezi_sporijoj_od_profila_je_unknown`, [ADR-010](adr/ADR-010-mrezni-profil.md) |
 | prilagodljivost | browser testovi se preskaču uz razlog kad Chromium ne može da se pokrene | `chromium_se_pokrece` u `test_fetch_browser.py` |
 | zamenljivost | Playwright je zakucan u `dev`, jer paket traži tačno svoju reviziju Chromium-a | `pyproject.toml` |

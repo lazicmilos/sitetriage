@@ -28,7 +28,7 @@ docker compose run --rm sitetriage pytest -q
 
 The source is copied into the image, not mounted, so run `docker compose build` again after you change
 code. Dependencies sit in their own layer, so a rebuild after a code-only change is quick. On Linux, set
-`SKENER_UID=$(id -u)` and `SKENER_GID=$(id -g)` so files written to `rad/` belong to you.
+`SITETRIAGE_UID=$(id -u)` and `SITETRIAGE_GID=$(id -g)` so files written to `rad/` belong to you.
 
 ### Without Docker
 
@@ -45,10 +45,10 @@ revision. If you upgrade Playwright without running `playwright install chromium
 launch. The browser tests are then skipped, not failed (see [Running tests](#running-tests)).
 
 To use a Chromium or Chrome that is already on the machine instead of Playwright's download, point
-`SKENER_CHROMIUM` at the executable, or set `[browser] executable_path` in your own config file:
+`SITETRIAGE_CHROMIUM` at the executable, or set `[browser] executable_path` in your own config file:
 
 ```bash
-export SKENER_CHROMIUM=/usr/bin/chromium
+export SITETRIAGE_CHROMIUM=/usr/bin/chromium
 ```
 
 A system browser can differ from the revision Playwright was built against. CI and the Docker image
@@ -61,7 +61,7 @@ administrator sees them in the User-Agent. Offline tests set a placeholder ident
 `tests/conftest.py`. To scan real sites, including `pytest -m live`, set your own:
 
 ```bash
-export SKENER_NAZIV="Your name or studio" SKENER_KONTAKT="you@example.com"
+export SITETRIAGE_OPERATOR_NAME="Your name or studio" SITETRIAGE_OPERATOR_CONTACT="you@example.com"
 ```
 
 ## Running tests
@@ -139,7 +139,7 @@ breaks one of them will not be merged, however useful the feature.
 2. **Phase order lives only in `sitetriage.pipeline`** ([ADR-008](docs/adr/ADR-008-pipeline.md)). `cli`
    does not import `fetch.http`, `fetch.browser` or `score`. Both rules are enforced by
    `tests/test_arhitektura.py`.
-3. **Thresholds live in `skener.toml`, not in code.** Read them through the check context
+3. **Thresholds live in `sitetriage.toml`, not in code.** Read them through the check context
    (`ctx.th("thresholds.perf.html_size_kb")`). A threshold change comes with its reasoning in
    `docs/kalibracija.md` and, for user-visible ones, in the README table of thresholds.
 4. **Every check returns one of four states**: `ok`, `finding`, `unknown` or `not_applicable`. Use the
@@ -168,7 +168,7 @@ breaks one of them will not be merged, however useful the feature.
    `category.subject.problem`, its level, base severity, the snapshot parts it `requires`, a short
    description and the threshold in words. The registry feeds the engine, the README table and
    `sitetriage explain` from one place.
-2. **Put the threshold in `skener.toml`** under `[thresholds.<category>]` and read it with `ctx.th`.
+2. **Put the threshold in `sitetriage.toml`** under `[thresholds.<category>]` and read it with `ctx.th`.
 3. **Return all states deliberately**: `finding(...)` with evidence, `ok(...)`, and `unknown(...)` or
    `not_applicable(...)` with a reason code whenever the input does not allow a verdict.
 4. **Write the messages** in both `sitetriage/messages/sr.py` and `sitetriage/messages/en.py`: a `FINDINGS`

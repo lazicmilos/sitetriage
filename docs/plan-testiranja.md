@@ -22,7 +22,7 @@ Plan pokriva razvoj v2: ispravke otvorenih zapažanja iz
 [`izvestaj-testiranja-2.md`](izvestaj-testiranja-2.md), izdvajanje jezgra iz CLI-ja, JSON izveštaj,
 poruke na srpskom i engleskom, zaštitu od SSRF-a, merenje pod fiksnim mrežnim profilom i komande
 `diff` i `outcomes`. Pravila i pragovi koje alat mora da poštuje su u README-u (tabela provera je
-izvedena iz registra) i u `skener.toml`.
+izvedena iz registra) i u `sitetriage.toml`.
 
 ## 2. Kontekst
 

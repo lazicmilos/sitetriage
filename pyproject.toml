@@ -59,7 +59,7 @@ version = { attr = "sitetriage.__version__" }
 testpaths = ["tests"]
 addopts = "-m 'not live' --strict-markers"
 markers = [
-    "live: pravi mrežni prolaz nad listom iz SKENER_LIVE_CSV; iskljucen po defaultu (pytest -m live)",
+    "live: pravi mrežni prolaz nad listom iz SITETRIAGE_LIVE_CSV; iskljucen po defaultu (pytest -m live)",
     "browser: trazi instaliran Playwright/Chromium; preskace se ako ga nema",
 ]
 
@@ -75,7 +75,7 @@ do_not_mutate = [
     "sitetriage/__init__.py", "sitetriage/cli.py", "sitetriage/pipeline.py", "sitetriage/models.py", "sitetriage/store.py",
     "sitetriage/fetch/*", "sitetriage/report/*",
 ]
-also_copy = ["skener.toml", "sitetriage/schema/"]
+also_copy = ["sitetriage.toml", "sitetriage/schema/"]
 
 [tool.ruff]
 line-length = 110

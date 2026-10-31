@@ -1,6 +1,6 @@
 """Učitavanje pragova iz TOML-a (§11.2). Čita disk, ništa drugo ne radi.
 
-`skener.toml` iz repoa je podrazumevana konfiguracija. `--config` se **spaja
+`sitetriage.toml` iz repoa je podrazumevana konfiguracija. `--config` se **spaja
 preko** nje, pa parcijalna korisnička konfiguracija ne gubi ostale pragove.
 """
 
@@ -19,12 +19,12 @@ from sitetriage import __version__
 from sitetriage.addresses import parse_allowed
 from sitetriage.models import CATEGORIES, INDUSTRIES
 
-CONFIG_NAME = "skener.toml"
+CONFIG_NAME = "sitetriage.toml"
 
 # Ne menjaju rezultat, pa ne ulaze u otisak konfiguracije: ko skenira, koliko paralelno i
 # gde je browser. Dva prolaza sa istim otiskom imaju iste pragove, množioce i bodove.
 BEZ_UTICAJA_NA_REZULTAT = (
-    "identitet",
+    "operator",
     "http.concurrency",
     "http.per_host_concurrency",
     "http.domain_concurrency",
@@ -44,6 +44,18 @@ _U_LATINICU = str.maketrans(
         "đ": "dj", "Đ": "Dj",
     }
 )
+
+
+# Who is scanning, from the environment; takes precedence over `[operator]` (Docker, CI).
+ENV_OPERATOR_NAME = "SITETRIAGE_OPERATOR_NAME"
+ENV_OPERATOR_CONTACT = "SITETRIAGE_OPERATOR_CONTACT"
+
+# Sections renamed in 3.0 (ADR-012). A user config that still uses one would be merged and
+# silently ignored, so it fails loudly and names the new keys.
+RENAMED_SECTIONS = {
+    "identitet": ("operator", {"naziv": "name", "kontakt": "contact", "izuzeti": "exclude_file"}),
+}
+ADR_012 = "docs/adr/ADR-012-english-public-interface.md"
 
 
 class ConfigError(Exception):
@@ -98,17 +110,18 @@ def user_agent(cfg: dict[str, Any]) -> str:
 
     Administrator sajta u svom logu vidi ko ga skenira i kako da ga kontaktira. To je
     operater koji je pokrenuo alat, ne autor alata; bez oba podatka nema
-    skeniranja. `SKENER_NAZIV` i `SKENER_KONTAKT` imaju prednost nad fajlom (Docker).
+    skeniranja. `SITETRIAGE_OPERATOR_NAME` i `SITETRIAGE_OPERATOR_CONTACT` imaju prednost nad
+    fajlom (Docker).
     """
-    naziv = _ascii(os.environ.get("SKENER_NAZIV") or get(cfg, "identitet.naziv") or "")
-    kontakt = _ascii(os.environ.get("SKENER_KONTAKT") or get(cfg, "identitet.kontakt") or "")
+    naziv = _ascii(os.environ.get(ENV_OPERATOR_NAME) or get(cfg, "operator.name") or "")
+    kontakt = _ascii(os.environ.get(ENV_OPERATOR_CONTACT) or get(cfg, "operator.contact") or "")
     if not naziv or not kontakt:
         raise ConfigError(
-            "[identitet] naziv i kontakt nisu postavljeni. Administrator sajta mora da zna ko ga "
+            "[operator] name i contact nisu postavljeni. Administrator sajta mora da zna ko ga "
             "skenira i kako da ga kontaktira: upiši ih u svoj --config fajl ili postavi "
-            "SKENER_NAZIV i SKENER_KONTAKT."
+            f"{ENV_OPERATOR_NAME} i {ENV_OPERATOR_CONTACT}."
         )
-    return get(cfg, "http.user_agent").format(verzija=__version__, naziv=naziv, kontakt=kontakt)
+    return get(cfg, "http.user_agent").format(version=__version__, name=naziv, contact=kontakt)
 
 
 def digest(cfg: dict[str, Any]) -> str:
@@ -158,7 +171,15 @@ POZITIVNI_CELI = (
 )
 
 
+def _renamed(cfg: dict[str, Any]) -> None:
+    for old, (new, keys) in RENAMED_SECTIONS.items():
+        if old in cfg:
+            pairs = ", ".join(f"{k} → {v}" for k, v in keys.items())
+            raise ConfigError(f"[{old}] was renamed to [{new}] in SiteTriage 3.0 ({pairs}); see {ADR_012}")
+
+
 def _validate(cfg: dict[str, Any]) -> None:
+    _renamed(cfg)
     for severity in ("critical", "high", "medium", "low"):
         if severity not in cfg.get("severity_points", {}):
             raise ConfigError(f"severity_points.{severity} nedostaje")

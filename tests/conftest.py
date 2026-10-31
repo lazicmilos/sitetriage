@@ -11,8 +11,8 @@ import os
 
 import pytest
 
-os.environ.setdefault("SKENER_NAZIV", "skener testovi")
-os.environ.setdefault("SKENER_KONTAKT", "test@example.invalid")
+os.environ.setdefault("SITETRIAGE_OPERATOR_NAME", "sitetriage tests")
+os.environ.setdefault("SITETRIAGE_OPERATOR_CONTACT", "test@example.invalid")
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -44,7 +44,7 @@ def test_parcijalni_mnozilac_ne_razbija_tabelu(tmp_path):
 
 
 def test_nepotpuna_tabela_mnozilaca_puca():
-    """Prava granica: neko obriše red u samom skener.toml tokom kalibracije."""
+    """Prava granica: neko obriše red u samom sitetriage.toml tokom kalibracije."""
     broken = {
         "severity_points": {"critical": 40, "high": 20, "medium": 8, "low": 3},
         "industry_multipliers": {"hotel": {"seo": 1.2}},
@@ -53,18 +53,27 @@ def test_nepotpuna_tabela_mnozilaca_puca():
         _validate(broken)
 
 
+def test_old_operator_section_fails_and_names_the_new_keys(tmp_path):
+    """3.0 renamed `[identitet]` to `[operator]` (ADR-012); merged and ignored, it would only
+    surface later as a missing identity, with no hint why."""
+    override = tmp_path / "old.toml"
+    override.write_text('[identitet]\nnaziv = "Web studio Primer"\n', encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"\[identitet\] was renamed to \[operator\].*naziv → name"):
+        load_config(override)
+
+
 # --------------------------------------------------------------------------- #
 # Identitet operatera: User-Agent predstavlja onog ko skenira, ne autora alata.
 # Alat pokreću različiti operateri, pa bi inače svako skenirao sa autorovim mejlom.
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def bez_okruzenja(monkeypatch):
-    monkeypatch.delenv("SKENER_NAZIV", raising=False)
-    monkeypatch.delenv("SKENER_KONTAKT", raising=False)
+    monkeypatch.delenv("SITETRIAGE_OPERATOR_NAME", raising=False)
+    monkeypatch.delenv("SITETRIAGE_OPERATOR_CONTACT", raising=False)
 
 
 def test_podrazumevana_konfiguracija_nema_identitet(bez_okruzenja):
-    with pytest.raises(ConfigError, match="identitet"):
+    with pytest.raises(ConfigError, match=r"\[operator\] name"):
         user_agent(load_config())
 
 
@@ -78,24 +87,24 @@ def test_podrazumevana_konfiguracija_nema_identitet(bez_okruzenja):
 )
 def test_nepotpun_identitet_puca(bez_okruzenja, naziv, kontakt):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": naziv, "kontakt": kontakt}
-    with pytest.raises(ConfigError, match="identitet"):
+    cfg["operator"] = {"name": naziv, "contact": kontakt}
+    with pytest.raises(ConfigError, match=r"\[operator\] name"):
         user_agent(cfg)
 
 
 def test_user_agent_nosi_operatera_a_ne_autora(bez_okruzenja):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "Web studio Primer", "kontakt": "kontakt@primer.rs"}
+    cfg["operator"] = {"name": "Web studio Primer", "contact": "kontakt@primer.rs"}
     # Tačno ono što je operater upisao, ništa više: ni autor alata ni podrazumevani kontakt.
     assert user_agent(cfg) == f"SiteTriage/{__version__} (+kontakt@primer.rs; Web studio Primer)"
 
 
 def test_identitet_iz_okruzenja_ima_prednost(monkeypatch):
-    """Za Docker: `SKENER_NAZIV` i `SKENER_KONTAKT` se prosleđuju iz compose.yaml."""
-    monkeypatch.setenv("SKENER_NAZIV", "Iz okruženja")
-    monkeypatch.setenv("SKENER_KONTAKT", "env@primer.rs")
+    """Za Docker: `SITETRIAGE_OPERATOR_NAME` i `SITETRIAGE_OPERATOR_CONTACT` se prosleđuju iz compose.yaml."""
+    monkeypatch.setenv("SITETRIAGE_OPERATOR_NAME", "Iz okruženja")
+    monkeypatch.setenv("SITETRIAGE_OPERATOR_CONTACT", "env@primer.rs")
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "Iz fajla", "kontakt": "fajl@primer.rs"}
+    cfg["operator"] = {"name": "Iz fajla", "contact": "fajl@primer.rs"}
     ua = user_agent(cfg)
     assert "Iz okruzenja" in ua and "env@primer.rs" in ua  # ASCII: ž → z
 
@@ -115,7 +124,7 @@ def test_identitet_iz_okruzenja_ima_prednost(monkeypatch):
 )
 def test_identitet_se_presipa_u_ascii(bez_okruzenja, naziv, ocekivano):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": naziv, "kontakt": "kontakt@primer.rs"}
+    cfg["operator"] = {"name": naziv, "contact": "kontakt@primer.rs"}
     ua = user_agent(cfg)
     assert ua.isascii(), ua
     assert ocekivano in ua
@@ -124,15 +133,15 @@ def test_identitet_se_presipa_u_ascii(bez_okruzenja, naziv, ocekivano):
 def test_identitet_ne_moze_da_ubaci_novo_zaglavlje(bez_okruzenja):
     """Novi red u imenu bi u HTTP zahtevu započeo novo zaglavlje."""
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "Studio\r\nX-Napad: 1", "kontakt": "kontakt@primer.rs"}
+    cfg["operator"] = {"name": "Studio\r\nX-Napad: 1", "contact": "kontakt@primer.rs"}
     ua = user_agent(cfg)
     assert "\r" not in ua and "\n" not in ua
 
 
 def test_identitet_od_samih_ne_ascii_znakova_puca(bez_okruzenja):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "😀😀", "kontakt": "kontakt@primer.rs"}
-    with pytest.raises(ConfigError, match="identitet"):
+    cfg["operator"] = {"name": "😀😀", "contact": "kontakt@primer.rs"}
+    with pytest.raises(ConfigError, match=r"\[operator\] name"):
         user_agent(cfg)
 
 
@@ -219,7 +228,7 @@ def test_konfiguracija_iz_radnog_direktorijuma_ima_prednost(tmp_path, monkeypatc
 
     from sitetriage.config import default_config_path
 
-    kopija = tmp_path / "skener.toml"
+    kopija = tmp_path / "sitetriage.toml"
     shutil.copy(default_config_path(), kopija)
     monkeypatch.chdir(tmp_path)
     assert default_config_path() == kopija
@@ -244,7 +253,7 @@ def test_nedostaje_cela_sekcija(sekcija):
 # --------------------------------------------------------------------------- #
 def test_otisak_ne_zavisi_od_identiteta_i_paralelizma():
     prva, druga = load_config(), load_config()
-    druga["identitet"] = {"naziv": "Drugi studio", "kontakt": "drugi@primer.rs"}
+    druga["operator"] = {"name": "Drugi studio", "contact": "drugi@primer.rs"}
     druga["http"]["concurrency"] = druga["http"]["domain_concurrency"] = 2
     druga["browser"]["concurrency"] = 1
     druga["browser"]["light_concurrency"] = 5

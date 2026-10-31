@@ -14,21 +14,21 @@ tvoj rezultat razlikuje od mog, razlika je u mreži i sajtovima, ne u okruženju
 ```bash
 git pull
 mkdir -p rad                                    # ulaz i izlaz; kod ostaje u slici
-export SKENER_NAZIV="Ime operatera" SKENER_KONTAKT="kontakt@primer.rs"  # ko skenira; bez ovoga nema zahteva
-export SKENER_UID=$(id -u) SKENER_GID=$(id -g)  # Linux: da izveštaji pripadaju tebi
+export SITETRIAGE_OPERATOR_NAME="Ime operatera" SITETRIAGE_OPERATOR_CONTACT="kontakt@primer.rs"  # ko skenira; bez ovoga nema zahteva
+export SITETRIAGE_UID=$(id -u) SITETRIAGE_GID=$(id -g)  # Linux: da izveštaji pripadaju tebi
 docker compose build
 docker compose run --rm sitetriage pytest -q        # svi testovi moraju da prođu pre ičega drugog
 ```
 
-U PowerShell-u se identitet postavlja sa `$env:SKENER_NAZIV = "Ime operatera"` i
-`$env:SKENER_KONTAKT = "kontakt@primer.rs"`, a `SKENER_UID` ti na Windows-u ne treba.
+U PowerShell-u se identitet postavlja sa `$env:SITETRIAGE_OPERATOR_NAME = "Ime operatera"` i
+`$env:SITETRIAGE_OPERATOR_CONTACT = "kontakt@primer.rs"`, a `SITETRIAGE_UID` ti na Windows-u ne treba.
 
 Ako ijedan test preskoči sa „Chromium se ne pokreće", slika nije dobra i dalje se ne ide.
 
 ## 1. Ispitni skup: specifikacija naspram stvarnosti (10 min)
 
 ```bash
-docker compose run --rm -e SKENER_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v 2>&1 | tee rad/live.txt
+docker compose run --rm -e SITETRIAGE_LIVE_CSV=/rad/live.csv sitetriage pytest -m live -v 2>&1 | tee rad/live.txt
 docker compose run --rm sitetriage sitetriage record /rad/live.csv --out /rad/snimci
 docker compose run --rm sitetriage python scripts/metrike.py /rad/snimci | tee rad/metrike-ispitni.txt
 ```
@@ -40,7 +40,7 @@ Svaki pad u `live.txt` je jedno od tri, i treba reći koje:
 | Uzrok | Primer | Šta se radi |
 |---|---|---|
 | sajt se promenio | institucija.example popravila canonical | beleška u `kalibracija.md`; fixture se osvežava |
-| prag je loš | `lang.mismatch` ne pali na očigledno srpskom sajtu | izmena u `skener.toml`, proveri sa `recheck` |
+| prag je loš | `lang.mismatch` ne pali na očigledno srpskom sajtu | izmena u `sitetriage.toml`, proveri sa `recheck` |
 | bag | provera kaže `ok`, a ručno vidiš problem | test koji pada + popravka, kao B1–B4 |
 
 ## 2. Pravi prolaz: 30–50 domena iz tvoje liste leadova (20 min)
@@ -85,13 +85,13 @@ Snapshote ne šalji. Sadrže sirovi HTML tuđih sajtova, a sve što nam treba iz
 ## 5. Posle toga
 
 Svaka odluka ide u `docs/kalibracija.md` u obliku **prag — zapažanje — odluka**. Pragovi se probaju u
-`rad/kalibracija.toml`, koji sadrži samo ono što menjaš, jer se `--config` spaja preko `skener.toml`.
+`rad/kalibracija.toml`, koji sadrži samo ono što menjaš, jer se `--config` spaja preko `sitetriage.toml`.
 Tako nema rebuild-a slike između dva pokušaja, a nema ni ponovnog skidanja sajtova:
 
 ```bash
 docker compose run --rm sitetriage sitetriage recheck /rad/izvestaj/snapshots --config /rad/kalibracija.toml --out /rad/novi
 ```
 
-Kad je prag odlučen, prenosi se u `skener.toml` i ide u commit.
+Kad je prag odlučen, prenosi se u `sitetriage.toml` i ide u commit.
 
 Tek kad su svi kriterijumi iz tačke 3 zeleni: novi snimak u `tests/fixtures/`, `git diff`, i v2.

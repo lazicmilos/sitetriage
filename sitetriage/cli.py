@@ -122,9 +122,9 @@ def read_domains(path: Path, only: Sequence[str] = ()) -> list[DomainInput]:
 
 
 def read_excluded(config: dict, args: argparse.Namespace) -> list[str]:
-    """Domeni iz `[identitet] izuzeti` i iz `--exclude`; oba važe."""
+    """Domeni iz `[operator] exclude_file` i iz `--exclude`; oba važe."""
     domeni: list[str] = []
-    for putanja in (get(config, "identitet.izuzeti"), getattr(args, "exclude", None)):
+    for putanja in (get(config, "operator.exclude_file"), getattr(args, "exclude", None)):
         if not putanja:
             continue
         if not Path(putanja).is_file():
@@ -276,7 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     def add_common(sub: argparse.ArgumentParser) -> None:
-        sub.add_argument("--config", metavar="FILE", help="TOML koji se spaja preko skener.toml")
+        sub.add_argument("--config", metavar="FILE", help="TOML koji se spaja preko sitetriage.toml")
         sub.add_argument("--out", default="out", metavar="DIR", help="gde idu izveštaji (podrazumevano: out)")
         sub.add_argument(
             "--format", default="html,csv,json", help="html, csv, json ili više njih (podrazumevano: sva tri)"
@@ -294,7 +294,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--concurrency",
         type=_ceo_broj(1),
         metavar="N",
-        help="globalni semafor i domena odjednom (podrazumevano iz skener.toml)",
+        help="globalni semafor i domena odjednom (podrazumevano iz sitetriage.toml)",
     )
     scan.add_argument("--max-level2", type=_ceo_broj(0), metavar="N", help="gornji limit za nivo 2 (60)")
     scan.add_argument(

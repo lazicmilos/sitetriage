@@ -5,9 +5,9 @@ nekom sajtu istekne sertifikat ili kad ga vlasnik popravi — nijedno nije greš
 alatu, pa nemaju šta da traže u CI-ju.
 
 Repozitorijum ne imenuje nijedan pravi sajt. Listu daješ ti, kroz promenljivu
-okruženja `SKENER_LIVE_CSV` koja pokazuje na CSV u formatu `domains.example.csv`:
+okruženja `SITETRIAGE_LIVE_CSV` koja pokazuje na CSV u formatu `domains.example.csv`:
 
-    SKENER_LIVE_CSV=moji-domeni.csv pytest -m live
+    SITETRIAGE_LIVE_CSV=moji-domeni.csv pytest -m live
 
 Opciona kolona `ocekivano` navodi `check_id`-eve razdvojene razmakom koje alat mora
 da nađe na nivou 1; vrednost `cist` označava kontrolni čist sajt (U4 iz §1.2). Bez
@@ -38,8 +38,8 @@ CIST = "cist"
 
 
 def _lista() -> tuple[list[DomainInput], dict[str, set[str]]]:
-    """Domeni i očekivani nalazi iz `SKENER_LIVE_CSV`; prazno kad promenljiva nije zadata."""
-    putanja = os.environ.get("SKENER_LIVE_CSV")
+    """Domeni i očekivani nalazi iz `SITETRIAGE_LIVE_CSV`; prazno kad promenljiva nije zadata."""
+    putanja = os.environ.get("SITETRIAGE_LIVE_CSV")
     if not putanja:
         return [], {}
     data = Path(putanja).read_bytes()
@@ -56,9 +56,9 @@ DOMENI, OCEKIVANO = _lista()
 
 @pytest.fixture(scope="module")
 def prolaz():
-    """Jedan pravi prolaz nivoa 1 nad listom iz `SKENER_LIVE_CSV`."""
+    """Jedan pravi prolaz nivoa 1 nad listom iz `SITETRIAGE_LIVE_CSV`."""
     if not DOMENI:
-        pytest.skip("SKENER_LIVE_CSV nije zadat: nema liste pravih domena")
+        pytest.skip("SITETRIAGE_LIVE_CSV nije zadat: nema liste pravih domena")
     from sitetriage.fetch.http import scan_domains
 
     config = load_config()

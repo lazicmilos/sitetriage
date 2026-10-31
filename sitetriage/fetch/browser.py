@@ -574,7 +574,7 @@ def _launch_options(config: dict) -> dict[str, Any]:
     Bez izolacije sajtova: pun Chromium iframe sa drugog sajta (YouTube, mape) učitava u poseban
     proces, a mrežni profil postavljen na stranicu taj proces ne usporava (ADR-010).
     """
-    path = get(config, "browser.executable_path") or os.environ.get("SKENER_CHROMIUM", "")
+    path = get(config, "browser.executable_path") or os.environ.get("SITETRIAGE_CHROMIUM", "")
     options: dict[str, Any] = {"args": ["--disable-site-isolation-trials"]}
     return options | ({"executable_path": path} if path else {})
 
