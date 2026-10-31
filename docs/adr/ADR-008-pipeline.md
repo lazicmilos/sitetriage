@@ -1,21 +1,24 @@
-# ADR-008: Prolaz kao funkcija jezgra, ne komandne linije
+# ADR-008: A scan is a core function, not a command-line one
 
 ```
-Status:  Prihvaćeno
-Datum:   25.09.2026.
-Autor:   Milos Lazic
+Status:  Accepted
+Date:    2026-09-25
+Author:  Milos Lazic
 ```
 
-## Kontekst
+Originally written in Serbian; translated for v3.
 
-Redosled nivo 1 → eskalacija → izbor → nivo 2 → bodovanje → rangiranje postojao je samo u `cli.py`.
-Web worker bi morao da ga kopira, a dve kopije istog redosleda se vremenom raziđu. Uz to je svaki
-nivo pokretao svoj `asyncio.run`, a nivo 2 je petlji postavljao rukovalac izuzetaka (BUG-007) i
-nije ga vraćao. U procesu koji dugo živi to trajno menja globalno stanje.
+## Context
 
-## Odluka
+The order level 1 → escalation → selection → level 2 → scoring → ranking existed only in `cli.py`.
+A web worker would have had to copy it, and two copies of the same order drift apart over time. On
+top of that, each level started its own `asyncio.run`, and level 2 installed an exception handler on
+the loop (BUG-007) without restoring it. In a long-lived process that changes global state for
+good.
 
-Ceo prolaz je u modulu `skener.pipeline`:
+## Decision
+
+The whole scan lives in the module `sitetriage.pipeline`:
 
 ```python
 async def scan(targets, config, *, level="auto", snapshot_dir=None, on_event=None) -> ScanResult
@@ -23,23 +26,24 @@ def recheck(snapshot_dir, config, *, on_event=None) -> ScanResult
 async def record(targets, config, *, out_dir, level="auto") -> int
 ```
 
-- `scan` je jedna async funkcija i radi u jednoj petlji. Pozivalac je pokreće sa `asyncio.run`
-  (CLI) ili u svojoj petlji (worker).
-- Pipeline ne štampa, ne čita argumente i ne izlazi iz procesa. Greške su `ConfigError` i
-  `InputError`, a šta se s njima radi odlučuje pozivalac.
-- Napredak ide kroz `on_event(Event)`: faza počela, domen završen, faza završena, uz brojač
-  `done`/`total`. Greška u toj funkciji se loguje i prolaz ide dalje.
-- Otkazan prolaz (`CancelledError`) izlazi napolje. Browser i HTTP klijent se zatvaraju u `finally`,
-  a snapshoti završenih domena ostaju na disku.
-- Nivo 2 postavlja svoj rukovalac izuzetaka samo dok traje, a zatim vraća prethodni.
-- `cli.py` ne uvozi `fetch.http`, `fetch.browser` ni `score`, što proverava
-  `tests/test_arhitektura.py`.
+- `scan` is a single async function and runs in a single loop. The caller starts it with
+  `asyncio.run` (CLI) or inside its own loop (worker).
+- The pipeline does not print, does not read arguments and does not exit the process. Errors are
+  `ConfigError` and `InputError`, and the caller decides what to do with them.
+- Progress goes through `on_event(Event)`: phase started, domain finished, phase finished, with a
+  `done`/`total` counter. An error inside that function is logged and the scan carries on.
+- A cancelled scan (`CancelledError`) propagates out. The browser and the HTTP client are closed in
+  `finally`, and the snapshots of finished domains stay on disk.
+- Level 2 installs its exception handler only while it runs, and then restores the previous one.
+- `cli.py` does not import `fetch.http`, `fetch.browser` or `score`, which
+  `tests/test_arhitektura.py` checks.
 
-## Posledice
+## Consequences
 
-- CLI i worker dele isti kod, pa isti ulaz daje isto rangiranje. Test pariteta poredi
-  `pipeline.recheck` sa putem kojim je `recheck` išao pre ove odluke.
-- `ScanResult` je osnova JSON izveštaja, pa JSON opisuje ono što pipeline stvarno vraća.
-- Snapshoti se i dalje pišu čim je domen gotov. Otkazivanje ne briše već urađen posao.
-- Fetcheri dobijaju povratni poziv `on_done` po domenu. To je jedina izmena u njihovom
-  interfejsu.
+- The CLI and the worker share the same code, so the same input gives the same ranking. A parity
+  test compares `pipeline.recheck` with the path `recheck` took before this decision.
+- `ScanResult` is the basis of the JSON report, so the JSON describes what the pipeline actually
+  returns.
+- Snapshots are still written as soon as a domain is done. Cancelling does not erase work already
+  done.
+- Fetchers get an `on_done` callback per domain. That is the only change to their interface.
