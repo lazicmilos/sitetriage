@@ -24,14 +24,20 @@ import sys
 from pathlib import Path
 
 MUTMUT = "mutmut==3.2.3"
+# mutmut 3.2.3 pins junit-xml==1.8, which exists only as a source package and does not build
+# with recent setuptools. 1.9 has the same API and ships a wheel, so the dependencies are
+# installed first and mutmut itself without its pins.
+MUTMUT_DEPS = ["junit-xml==1.9", "parso", "click", "setproctitle", "textual"]
 ROOT = Path(__file__).resolve().parent.parent
 COPY = Path("/tmp/mutation")
 
 
 def main() -> int:
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--user", MUTMUT], check=True)
+    pip = [sys.executable, "-m", "pip", "install", "-q", "--user"]
+    subprocess.run([*pip, *MUTMUT_DEPS], check=True)
+    subprocess.run([*pip, "--no-deps", MUTMUT], check=True)
     shutil.rmtree(COPY, ignore_errors=True)
-    shutil.copytree(ROOT, COPY, ignore=shutil.ignore_patterns(".git", "mutants", "rad", "out"))
+    shutil.copytree(ROOT, COPY, ignore=shutil.ignore_patterns(".git", "mutants", "work", "out"))
     mutmut = str(Path.home() / ".local" / "bin" / "mutmut")
     subprocess.run([mutmut, "run", "--max-children", "4"], cwd=COPY)
     return subprocess.run([mutmut, "results"], cwd=COPY).returncode

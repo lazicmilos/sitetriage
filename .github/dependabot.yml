@@ -16,6 +16,9 @@ updates:
       include: scope
     ignore:
       - dependency-name: playwright
+      # pytest 9 breaks mutmut 3.2.3 (see the comment on the dev extra in pyproject.toml).
+      - dependency-name: pytest
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
