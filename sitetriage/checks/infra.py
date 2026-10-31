@@ -26,10 +26,10 @@ UNCHECKED_KINDS = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
     category="infra",
     base_severity="medium",
     requires=["sitemap"],
-    description="Nema sitemap.xml, ili postoji ali je prazan.",
+    description="There is no sitemap.xml, or it exists but is empty.",
     threshold=(
-        "status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi i mapa veća od granice → unknown; "
-        "ima URL-ova → ok"
+        "status 404 or 410, or 200 with 0 URLs; other statuses and a sitemap larger than the limit "
+        "→ unknown; has URLs → ok"
     ),
 )
 def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
@@ -58,8 +58,8 @@ def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="low",
     requires=["robots"],
-    description="Nema robots.txt.",
-    threshold="status 404 ili 410; ostali statusi osim 200 → unknown",
+    description="There is no robots.txt.",
+    threshold="status 404 or 410; other statuses except 200 → unknown",
 )
 def robots_missing(snapshot: SiteSnapshot, ctx: Context):
     status = snapshot.robots.status
@@ -80,8 +80,8 @@ def robots_missing(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="high",
     requires=["soft404"],
-    description="Nepostojeća adresa vraća 200 umesto 404.",
-    threshold="obe sonde vraćaju konačni status 200 (§5.2); status van {200, 404, 410} → unknown",
+    description="A non-existent URL returns 200 instead of 404.",
+    threshold="both probes return a final status 200; a status outside {200, 404, 410} → unknown",
 )
 def soft404(snapshot: SiteSnapshot, ctx: Context):
     probes = snapshot.soft404.probes
@@ -117,9 +117,9 @@ def soft404(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="high",
     requires=["entry"],
-    description="Sertifikat je nevalidan ili istekao.",
+    description="The certificate is invalid or expired.",
     threshold=(
-        "TLS provera odbila sertifikat; nepotpun lanac (nema međusertifikata) → unknown"
+        "TLS verification rejected the certificate; incomplete chain (no intermediate certificate) → unknown"
     ),
 )
 def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
@@ -165,10 +165,11 @@ def _origin(url: str | None) -> str:
     category="infra",
     base_severity="medium",
     requires=["home", "host_variants"],
-    description="Sajt radi na https-u, ali se otvara i preko http-a, bez preusmerenja na https.",
+    description="The site works on https, but it also opens over http, without a redirect to https.",
     threshold=(
-        "https na konačnom hostu vraća 200 sa ispravnim sertifikatom, a http:// istog hosta vraća 200 bez "
-        "preusmerenja na https; TLS greška ili neposlat zahtev → unknown; https ne radi → ne primenjuje se"
+        "https on the final host returns 200 with a valid certificate, and http:// of the same host returns "
+        "200 without a redirect to https; TLS error or request not sent → unknown; https not working → "
+        "not applicable"
     ),
 )
 def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
@@ -199,10 +200,10 @@ def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
     category="infra",
     base_severity="medium",
     requires=["home", "host_variants"],
-    description="Isti sajt se otvara i sa www i bez www, a nijedna adresa ne preusmerava na drugu.",
+    description="The same site opens both with and without www, and neither URL redirects to the other.",
     threshold=(
-        "varijante vraćaju 200 na oba hosta (www i bez www); low ako canonical na svima upućuje na isto "
-        "poreklo; neproverena varijanta hosta koji nije viđen → unknown"
+        "the variants return 200 on both hosts (www and without www); low if the canonical on all of them "
+        "points to the same origin; an unchecked variant of a host that was not seen → unknown"
     ),
 )
 def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
@@ -246,12 +247,13 @@ def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
     base_severity="critical",
     requires=["entry"],
     description=(
-        "Sajt se ne otvara ni u drugom pokušaju: ime ne postoji u DNS-u ili nema adresu, ili server "
-        "ne prihvata vezu ni preko https ni preko http. Domen ide u listu „Ne rade”, a ne u rangiranje."
+        "The site does not open even on the second attempt: the name does not exist in DNS or has no "
+        "address, or the server accepts no connection over https or http. The domain goes to the "
+        "“Not working” list, not into the ranking."
     ),
     threshold=(
-        "oba pokušaja, u razmaku od bar http.second_attempt_after_s (60 s): EAI_NONAME ili EAI_NODATA, "
-        "ili TCP veza odbijena ili istekla i na https i na http; bilo kakav HTTP odgovor → ok"
+        "both attempts, at least http.second_attempt_after_s (60 s) apart: EAI_NONAME or EAI_NODATA, "
+        "or the TCP connection refused or timed out on both https and http; any HTTP response → ok"
     ),
 )
 def unreachable(snapshot: SiteSnapshot, ctx: Context):

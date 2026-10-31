@@ -20,10 +20,10 @@ EXPOSED_INDUSTRIES = {"healthcare", "institution"}
     category="a11y",
     base_severity="low",
     requires=["browser"],
-    description="Većina slika nema alt atribut (prazan alt se ne broji).",
+    description="Most images have no alt attribute (an empty alt does not count).",
     threshold=(
-        "≥ 5 slika i udeo bez alt atributa > 0,5; > 0,8 uz ≥ 15 slika → high; "
-        "healthcare/institution → bar medium"
+        "≥ 5 images and share without an alt attribute > 0.5; > 0.8 with ≥ 15 images → high; "
+        "healthcare/institution → at least medium"
     ),
 )
 def img_alt_missing(snapshot, ctx: Context):
