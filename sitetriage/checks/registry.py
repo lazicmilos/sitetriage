@@ -146,6 +146,8 @@ REQUIREMENTS: dict[str, Callable[[Any], bool]] = {
     "entry_response": lambda s: s.entry is not None and s.entry.status is not None,
     "home": _home_ok,
     "home_html": lambda s: bool(s.home and s.home.raw_html),
+    # Telo početne sečeno na `http.max_body_kb`: ono što je posle granice nije viđeno.
+    "home_complete": lambda s: not s.home.truncated,
     "robots": lambda s: s.robots.status is not None,
     "sitemap": lambda s: s.sitemap.status is not None,
     "soft404": lambda s: len(s.soft404.probes) == 2 and all(p.status is not None for p in s.soft404.probes),

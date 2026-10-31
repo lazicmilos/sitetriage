@@ -25,13 +25,19 @@ NEPROVERENA = frozenset({"tls", "tls_handshake", "budget", "dns_temporary"})
     base_severity="medium",
     requires=["sitemap"],
     description="Nema sitemap.xml, ili postoji ali je prazan.",
-    threshold="status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi → unknown; ima URL-ova → ok",
+    threshold=(
+        "status 404 ili 410, ili 200 sa 0 URL-ova; ostali statusi i mapa veća od granice → unknown; "
+        "ima URL-ova → ok"
+    ),
 )
 def sitemap_missing(snapshot: SiteSnapshot, ctx: Context):
     info = snapshot.sitemap
     # `status` je status prve mape; mrtva prva `Sitemap:` uz drugu koja radi nije „nema mape".
     if info.urls:
         return ok(sitemap_missing.spec)
+    # Bez adresa, a sečena: mapa postoji, samo je veća od granice, pa se ne zna da li je prazna.
+    if info.truncated:
+        return unknown(sitemap_missing.spec, "sitemap_too_large")
     if info.status != 200 and info.status not in NE_POSTOJI:
         return unknown(sitemap_missing.spec, "sitemap_status", status=info.status)
     return finding(

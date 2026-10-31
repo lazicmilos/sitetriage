@@ -158,6 +158,9 @@ class PageSnapshot:
     elapsed_ms: int | None = None
     headers: dict[str, str] = field(default_factory=dict)
     html_bytes: int = 0
+    # Telo duže od `http.max_body_kb`: pročitan je samo početak, pa je `html_bytes` donja granica,
+    # a provera koja čita ceo HTML ne zna šta je posle granice.
+    truncated: bool = False
     title: str | None = None
     meta_description: str | None = None
     canonical: str | None = None
