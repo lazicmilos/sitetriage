@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a new check, output, option or other improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing a check, note what the tool deliberately does not do: no port scans, no
+        logins, no vulnerability probing, no form submissions, nothing beyond the home page and a
+        sitemap sample, and nothing that `robots.txt` disallows. Checks also never touch the network
+        themselves; they read what was already fetched (see CONTRIBUTING.md).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do, and what is missing or hard today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: |
+        What you would like to happen. For a new check: what it measures, the proposed threshold
+        and severity, what counts as `unknown` or `not_applicable`, and the sentence a client would
+        read.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Why it matters
+      description: Sources, measurements or examples (anonymized) that show the problem is real and common.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this myself (see CONTRIBUTING.md).
