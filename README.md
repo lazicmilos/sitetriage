@@ -226,8 +226,9 @@ The output folder holds:
 | `report.json` | the whole run, for programs |
 | `snapshots/` | the raw data collected for each domain |
 
-`--format` chooses which of the first four are written (`html`, `csv`, `json`, default all three
-formats); snapshots are always written. `--lang en|sr` sets the language of the report and its
+`--format` chooses which of the first four are written (`html`, `csv`, `json` or several separated
+by commas, e.g. `--format html,json`; default all three formats). Case and spaces do not matter, and
+any other name is an error before anything runs. Snapshots are always written. `--lang en|sr` sets the language of the report and its
 sentences. Without it the tool uses `report.lang`: `en` by default, `sr` with the `rs` profile.
 `--csv-bom` writes the CSV files as UTF-8 with a BOM, for Excel.
 
@@ -292,7 +293,9 @@ difference in a second, without downloading two hundred sites again. Try thresho
 file that holds only what you change: `--config` overrides only what it sets.
 
 `scan` also takes `--level 1|2|auto`, `--max-level2 N` (the cap for level 2, default 60),
-`--snapshots DIR`, `--exclude FILE` and `--debug-domain DOMAIN` (DEBUG log for that domain only).
+`--snapshots DIR`, `--exclude FILE` and `--debug-domain DOMAIN` (DEBUG log for that domain only: every
+request with its status or error, time, redirect hops and whether the body was cut off, and on level
+2 the navigation, `load` and the measured requests and bytes).
 Run `sitetriage <command> --help` for the full list.
 
 ## How it works

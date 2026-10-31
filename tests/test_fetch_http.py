@@ -69,6 +69,41 @@ def test_full_run_assembles_the_snapshot():
     assert all(p.status == 404 for p in snapshot.soft404.probes)
 
 
+def test_every_request_has_a_debug_record_for_its_domain(caplog):
+    """`--debug-domain` filters by the `domain` field, so each request must carry it (BUG-11)."""
+    import logging
+
+    caplog.set_level(logging.DEBUG, logger="sitetriage")
+    with FakeSite() as site:
+        snapshot = scan(site)
+    records = [r for r in caplog.records if r.levelno == logging.DEBUG and r.name == "sitetriage.fetch"]
+    assert len(records) == snapshot.budget.requests_made, "one record per request"
+    assert {r.domain for r in records} == {site.base_url}
+    home = next(r.getMessage() for r in records if r.getMessage().startswith(f"GET {site.base_url}/ "))
+    assert "status 200" in home and " ms" in home and "hops" in home and "truncated" in home
+    probe = next(r.getMessage() for r in records if "/robots.txt" in r.getMessage())
+    assert "status 200" in probe
+
+
+def test_a_failed_request_logs_its_error_kind(caplog):
+    import logging
+
+    caplog.set_level(logging.DEBUG, logger="sitetriage")
+
+    class TimesOut(Fetcher):
+        async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
+            return Outcome(url=url, error_kind="timeout", error_detail="slow")
+
+    async def run():
+        async with TimesOut(load_config()) as fetcher:
+            budget = DomainBudget(5, 30, domain="nema.test")
+            return await fetcher.request("https://nema.test/", budget, retries=0)
+
+    asyncio.run(run())
+    [record] = [r for r in caplog.records if r.levelno == logging.DEBUG]
+    assert record.domain == "nema.test" and "error timeout" in record.getMessage()
+
+
 def test_home_page_redirecting_by_script_is_a_hop_like_an_http_redirect():
     """BUG-022: a 95 B stub that leads to /uskoro/ with JavaScript was scored as the home page."""
     stub = b"<html><head><script>location.replace('/uskoro/')</script></head><body></body></html>"

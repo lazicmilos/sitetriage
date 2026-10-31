@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+from sitetriage.inputs import InputError
 from sitetriage.models import BrowserSnapshot, SiteSnapshot, from_dict, to_jsonable
 
 SITE_NAME = "site.json"
@@ -89,8 +90,26 @@ def _refuse_foreign(folder: Path, domain: str) -> None:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    raw = gzip.decompress(path.read_bytes()) if path.suffix == ".gz" else path.read_bytes()
-    return json.loads(raw.decode("utf-8"))
+    raw = path.read_bytes()
+    if path.suffix == ".gz":
+        try:
+            raw = gzip.decompress(raw)
+        except (OSError, EOFError) as exc:  # BadGzipFile is an OSError; a cut-off file is EOFError
+            raise InputError(f"{path}: not valid gzip ({exc})") from exc
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except ValueError as exc:  # JSONDecodeError and UnicodeDecodeError
+        raise InputError(f"{path}: not valid JSON ({exc})") from exc
+    if not isinstance(data, dict):
+        raise InputError(f"{path}: not a snapshot (expected a JSON object, got {type(data).__name__})")
+    return data
+
+
+def _load(cls: Any, path: Path, data: dict[str, Any]) -> Any:
+    try:
+        return from_dict(cls, data)
+    except (TypeError, ValueError, KeyError) as exc:
+        raise InputError(f"{path}: not a snapshot ({exc})") from exc
 
 
 def _migrate_site(data: dict[str, Any]) -> dict[str, Any]:
@@ -108,14 +127,23 @@ def _find(folder: Path, name: str) -> Path | None:
 
 
 def read_all(directory: Path) -> Iterator[tuple[SiteSnapshot, BrowserSnapshot | None]]:
-    """Reads every subdirectory; gzipped and plain files work the same."""
-    for folder in sorted(Path(directory).iterdir()):
+    """Reads every subdirectory; gzipped and plain files work the same.
+
+    A folder that is missing or a snapshot that does not parse is an `InputError` naming the path,
+    not a skipped domain: a calibration run must not quietly lose one (BUG-10).
+    """
+    directory = Path(directory)
+    if not directory.exists():
+        raise InputError(f"{directory}: the snapshot folder does not exist")
+    if not directory.is_dir():
+        raise InputError(f"{directory}: is not a folder of snapshots")
+    for folder in sorted(directory.iterdir()):
         if not folder.is_dir():
             continue
         site_path = _find(folder, SITE_NAME)
         if site_path is None:
             continue
-        site = from_dict(SiteSnapshot, _migrate_site(_read_json(site_path)))
+        site = _load(SiteSnapshot, site_path, _migrate_site(_read_json(site_path)))
         browser_path = _find(folder, BROWSER_NAME)
-        browser = from_dict(BrowserSnapshot, _read_json(browser_path)) if browser_path else None
+        browser = _load(BrowserSnapshot, browser_path, _read_json(browser_path)) if browser_path else None
         yield site, browser
