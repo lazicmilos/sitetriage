@@ -11,7 +11,8 @@ from __future__ import annotations
 import gzip
 import threading
 import time
-from collections.abc import Callable
+import zlib
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -25,6 +26,36 @@ class Response:
     # Zaglavlja i prvi bajt odmah, ostatak tek posle `stall` sekundi — kao strim ili
     # video koji se nikad ne završi. `delay` je pre zaglavlja, ovo je posle njih.
     stall: float = 0.0
+    # Telo je već sažeto prema `content-encoding`, pa se šalje kakvo jeste (bomba od par kB).
+    encoded: bool = False
+    # Telo u delovima, bez Content-Length i do zatvaranja veze: strim koji ne prestaje ili kaplje.
+    chunks: Callable[[], Iterable[bytes]] | None = None
+
+
+def bomba(velicina: int, *, encoding: str = "gzip", prefix: bytes = b"") -> bytes:
+    """`prefix` pa razmaci do `velicina` bajtova, sažeto deo po deo: 64 MB postaje ~65 kB.
+
+    `gzip` je gzip omot, `deflate` zlib omot (kako ga šalje većina servera).
+    """
+    sazimac = zlib.compressobj(9, zlib.DEFLATED, 31 if encoding == "gzip" else 15)
+    delovi = [sazimac.compress(prefix)]
+    ostalo, blok = velicina - len(prefix), b" " * (1 << 20)
+    while ostalo > 0:
+        delovi.append(sazimac.compress(blok[: min(ostalo, len(blok))]))
+        ostalo -= len(blok)
+    return b"".join(delovi) + sazimac.flush()
+
+
+def beskonacno(deo: bytes = b"x" * 65536, *, pauza: float = 0.0) -> Callable[[], Iterable[bytes]]:
+    """Telo koje ne prestaje: brzo (`pauza=0`) ili kap po kap, taman ispod roka za čitanje."""
+
+    def delovi() -> Iterable[bytes]:
+        while True:
+            yield deo
+            if pauza:
+                time.sleep(pauza)
+
+    return delovi
 
 
 def html(title: str, *, body: str = "", head: str = "") -> bytes:
@@ -175,15 +206,25 @@ class FakeSite:
                         time.sleep(response.delay)
                     body = response.body
                     headers = dict(response.headers)
-                    if headers.get("content-encoding") == "gzip":
+                    if headers.get("content-encoding") == "gzip" and not response.encoded:
                         body = gzip.compress(body)
+                    if headers.get("content-encoding") == "deflate" and not response.encoded:
+                        body = zlib.compress(body)
                     self.send_response(response.status)
                     for key, value in headers.items():
                         self.send_header(key, value)
-                    self.send_header("Content-Length", str(len(body)))
+                    if response.chunks is not None:
+                        self.send_header("Connection", "close")
+                    else:
+                        self.send_header("Content-Length", str(len(body)))
                     if "content-type" not in {k.lower() for k in headers}:
                         self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.end_headers()
+                    if response.chunks is not None:
+                        for deo in response.chunks():
+                            self.wfile.write(deo)
+                            self.wfile.flush()
+                        return
                     if response.stall:
                         self.wfile.write(body[:1])
                         self.wfile.flush()

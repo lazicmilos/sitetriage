@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import gzip
+import tracemalloc
 
 import pytest
 
+from skener.config import get, load_config
 from skener.fetch import robots, sitemap
 from skener.fetch.page import STUB_MAX_TEXT, build, internal_links, redirect_stub
 
@@ -83,31 +85,87 @@ INDEX = f'<sitemapindex {NS}><sitemap><loc>https://d.rs/s1.xml</loc></sitemap></
 URLSET = f'<urlset {NS}><url><loc>https://d.rs/a</loc></url><url><loc>https://d.rs/b</loc></url></urlset>'.encode()
 
 
+# Granica iz skener.toml (`sitemap.max_kb`), ne iz koda.
+MAX = get(load_config(), "sitemap.max_kb") * 1024
+
+
+def parse(data: bytes | None, max_bytes: int = MAX):
+    return sitemap.parse(data, max_bytes=max_bytes)
+
+
 def test_prepoznaje_index_i_urlset():
-    assert sitemap.parse(INDEX) == ("index", ["https://d.rs/s1.xml"])
-    assert sitemap.parse(URLSET) == ("urlset", ["https://d.rs/a", "https://d.rs/b"])
+    assert parse(INDEX) == ("index", ["https://d.rs/s1.xml"])
+    assert parse(URLSET) == ("urlset", ["https://d.rs/a", "https://d.rs/b"])
 
 
 def test_podrzava_gzip():
-    assert sitemap.parse(gzip.compress(URLSET))[1] == ["https://d.rs/a", "https://d.rs/b"]
+    assert parse(gzip.compress(URLSET))[1] == ["https://d.rs/a", "https://d.rs/b"]
 
 
 def test_prazan_red_pre_xml_deklaracije_se_trpi():
     """WordPress dodatak koji ispiše prazan red pre `<?xml` ne briše mapu sajta (BUG-028)."""
-    assert sitemap.parse(b'\n<?xml version="1.0" encoding="UTF-8"?>' + INDEX)[0] == "index"
+    assert parse(b'\n<?xml version="1.0" encoding="UTF-8"?>' + INDEX)[0] == "index"
 
 
 @pytest.mark.parametrize("data", [None, b"", b"<html>404</html>", b"{ nije xml }", b"\x1f\x8b pokvaren gzip"])
 def test_smece_ne_ruši_parser(data):
-    kind, urls = sitemap.parse(data)
+    kind, urls = parse(data)
     assert kind == "unknown" and urls == []
 
 
 def test_prevelik_sitemap_se_odbija():
-    """Granica poverenja: sadržaj je sa tuđeg servera (§4.4)."""
+    """Granica poverenja: sadržaj je sa tuđeg servera (§4.4). Prevelika mapa nije „nije mapa"."""
     huge = b"<urlset>" + b"<url><loc>https://d.rs/a</loc></url>" * 400_000 + b"</urlset>"
-    assert len(huge) > sitemap.MAX_PARSE_BYTES
-    assert sitemap.parse(huge) == ("unknown", [])
+    assert len(huge) > MAX
+    assert parse(huge) == ("too_large", [])
+
+
+def _urlset_tacno(velicina: int) -> bytes:
+    """Ispravan urlset od tačno `velicina` bajtova: razmaci pre zatvarajućeg taga."""
+    pocetak, kraj = URLSET[: -len(b"</urlset>")], b"</urlset>"
+    return pocetak + b" " * (velicina - len(pocetak) - len(kraj)) + kraj
+
+
+@pytest.mark.parametrize("sazeto", [False, True], ids=["xml", "xml.gz"])
+@pytest.mark.parametrize(
+    "visak, kind",
+    [
+        pytest.param(0, "urlset", id="gv-tacno-granica"),
+        pytest.param(1, "too_large", id="gv-granica-plus-1"),
+    ],
+)
+def test_gv_granica_mape_vazi_i_posle_raspakivanja(sazeto, visak, kind):
+    granica = 4096
+    data = _urlset_tacno(granica + visak)
+    assert len(data) == granica + visak
+    assert parse(gzip.compress(data) if sazeto else data, max_bytes=granica)[0] == kind
+
+
+def test_pg_gzip_bomba_u_mapi_ne_raspakuje_se_do_kraja():
+    """`.xml.gz` od ~50 kB koji je raspakovan 50 MB: memorija prati granicu, ne raspakovanu veličinu."""
+    bomba = gzip.compress(b"<urlset>" + b" " * 50 * 1024 * 1024, compresslevel=9)
+    assert len(bomba) < 100 * 1024
+    granica = 1024 * 1024
+    tracemalloc.start()
+    try:
+        rezultat = parse(bomba, max_bytes=granica)
+        _, vrh = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert rezultat == ("too_large", [])
+    assert vrh < 4 * granica, f"vrh memorije {vrh} B za granicu od {granica} B"
+
+
+def test_gzip_od_vise_delova_se_cita_ceo():
+    """`cat a.gz b.gz` je ispravan gzip; `gzip.decompress` ga je čitao ceo, pa i dalje mora."""
+    pola = len(URLSET) // 2
+    data = gzip.compress(URLSET[:pola]) + gzip.compress(URLSET[pola:])
+    assert parse(data)[1] == ["https://d.rs/a", "https://d.rs/b"]
+
+
+def test_skracen_gzip_mape_nije_mapa():
+    """Gzip prekinut na pola (tuđ server zatvorio vezu) daje ono što je raspakovano, a to nije XML."""
+    assert parse(gzip.compress(URLSET * 50)[:40]) == ("unknown", [])
 
 
 def test_uzorkovanje_je_deterministicko_i_grupisano():
