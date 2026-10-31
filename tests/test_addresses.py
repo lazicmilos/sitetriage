@@ -62,7 +62,7 @@ def test_dozvola_mora_biti_host_i_port(unos):
 def test_dozvola_nije_lista():
     cfg = load_config()
     cfg["net"]["allowed_private"] = "localhost:8123"
-    with pytest.raises(ConfigError, match="lista"):
+    with pytest.raises(ConfigError, match="a list"):
         _validate(cfg)
 
 

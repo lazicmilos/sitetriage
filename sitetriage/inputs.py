@@ -1,8 +1,8 @@
-"""Ulaz koji daje korisnik: lista domena i drugi CSV-ovi iz Excel-a.
+"""Input the user provides: the domain list and other CSV files from Excel.
 
-Greška u ulazu je `InputError`, a ne `SystemExit`. Isti ulaz čitaju CLI i web worker,
-pa odluku o tome šta se radi sa greškom donosi pozivalac: CLI je ispisuje i izlazi, a
-worker je vraća korisniku. Upozorenja se vraćaju, a ne loguju, iz istog razloga.
+An input error is an `InputError`, not a `SystemExit`. The CLI and the web worker read the
+same input, so the caller decides what to do with the error: the CLI prints it and exits, the
+worker returns it to the user. Warnings are returned rather than logged for the same reason.
 """
 
 from __future__ import annotations
@@ -17,12 +17,12 @@ from sitetriage.models import INDUSTRIES, DomainInput
 
 
 class InputError(ValueError):
-    """Ulaz koji ne može da se obradi. Poruka navodi izvor i, kad postoji, broj reda."""
+    """Input that cannot be processed. The message names the source and, when known, the row number."""
 
 
 @dataclass
 class InputWarning:
-    """Ulaz je obrađen, ali uz izmenu koju korisnik treba da vidi."""
+    """The input was processed, but with a change the user should see."""
 
     message: str
     row: int | None = None
@@ -32,24 +32,24 @@ class InputWarning:
 @dataclass
 class CsvTable:
     fieldnames: list[str]
-    # (broj reda kako ga prikazuje Excel, vrednosti): po broju korisnik nađe red
+    # (row number as Excel shows it, values): the user finds the row by its number
     rows: list[tuple[int, dict[str, str]]]
     header_row: int = 1
     warnings: list[InputWarning] = field(default_factory=list)
 
 
 def read_excel_csv(data: bytes, source: str) -> CsvTable:
-    """CSV kakav pravi Excel na srpskom Windows-u.
+    """CSV as Excel writes it on Windows with Serbian regional settings.
 
-    Bez opcije „CSV UTF-8" Excel čuva u windows-1250, a srpska podešavanja Windows-a
-    kolone razdvajaju sa `;`, ne sa zarezom. Broj reda je broj zapisa, a ne linije u
-    fajlu: ćelija sa prelomom reda je u Excel-u jedan red, a u fajlu dve linije.
+    Without the "CSV UTF-8" option Excel saves in windows-1250, and the Serbian Windows settings
+    separate columns with `;`, not with a comma. The row number counts records, not lines in
+    the file: a cell with a line break is one row in Excel and two lines in the file.
     """
     warnings: list[InputWarning] = []
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
-        warnings.append(InputWarning(f"{source} nije u UTF-8, čitam ga kao windows-1250"))
+        warnings.append(InputWarning(f"{source} is not UTF-8, reading it as windows-1250"))
         text = data.decode("cp1250", errors="replace")
     header = next((line for line in text.splitlines() if line.strip()), "")
     delimiter = max(",;\t", key=header.count) if any(c in header for c in ",;\t") else ","
@@ -68,14 +68,15 @@ def read_excel_csv(data: bytes, source: str) -> CsvTable:
 
 
 def read_domain_list(data: bytes, source: str) -> tuple[list[DomainInput], list[InputWarning]]:
-    """Lista domena (§4.1): CSV sa zaglavljem `domain,industry,note`, ne gola lista.
+    """The domain list: a CSV with the header `domain,industry,note`, not a bare list.
 
-    Isti domen dva puta znači dva prolaza kroz tuđ sajt, pa važi prvo pojavljivanje.
+    The same domain twice would mean two passes through someone else's site, so the first
+    occurrence wins.
     """
     table = read_excel_csv(data, source)
     warnings = table.warnings
     if "domain" not in table.fieldnames:
-        raise InputError(f"{source}, red {table.header_row}: nedostaje kolona `domain` u zaglavlju (§4.1)")
+        raise InputError(f"{source}, row {table.header_row}: the header has no `domain` column")
 
     domains: list[DomainInput] = []
     seen: set[str] = set()
@@ -84,29 +85,29 @@ def read_domain_list(data: bytes, source: str) -> tuple[list[DomainInput], list[
         if not domain or domain.startswith("#"):
             continue
         if domain.lower() in seen:
-            warnings.append(InputWarning("domen se ponavlja u listi, preskačem ga", row_no, domain))
+            warnings.append(InputWarning("domain is repeated in the list, skipping it", row_no, domain))
             continue
         seen.add(domain.lower())
         industry = (row.get("industry") or "").strip().lower() or "other"
         if industry not in INDUSTRIES:
             warnings.append(
-                InputWarning(f"nepoznata delatnost {industry!r}, koristim `other`", row_no, domain)
+                InputWarning(f"unknown industry {industry!r}, using `other`", row_no, domain)
             )
             industry = "other"
         domains.append(DomainInput(domain=domain, industry=industry, note=(row.get("note") or "").strip()))
     if not domains:
-        raise InputError(f"{source}: nijedan domen nije učitan")
+        raise InputError(f"{source}: no domain was read")
     return domains, warnings
 
 
 # --------------------------------------------------------------------------- #
-# Izuzeti domeni: administrator koji napiše „ne skenirajte nas" poštuje se od sledećeg prolaza
+# Excluded domains: an administrator who writes "do not scan us" is respected from the next run
 # --------------------------------------------------------------------------- #
 def read_exclusions(data: bytes) -> list[str]:
-    """Jedan domen po redu; prazni redovi i ono posle `#` se preskaču."""
-    tekst = data.decode("utf-8-sig", errors="replace")
-    redovi = (red.split("#", 1)[0].strip() for red in tekst.splitlines())
-    return [red for red in redovi if red]
+    """One domain per line; empty lines and anything after `#` are skipped."""
+    text = data.decode("utf-8-sig", errors="replace")
+    lines = (line.split("#", 1)[0].strip() for line in text.splitlines())
+    return [line for line in lines if line]
 
 
 def _host(domain: str) -> str:
@@ -115,15 +116,17 @@ def _host(domain: str) -> str:
 
 
 def is_excluded(domain: str, exclusions: Iterable[str]) -> bool:
-    """Host je jednak unosu ili je njegov poddomen: unos `x.rs` izuzima i `www.x.rs` i `blog.x.rs`.
+    """The host equals the entry or is a subdomain of it: the entry `x.rs` excludes both
+    `www.x.rs` and `blog.x.rs`.
 
-    Bez „registrovanog domena": bez Public Suffix liste bi `firma.co.rs` postao `co.rs`, pa
-    bi jedan zahtev izuzeo sve firme sa `.co.rs`. Vodeće `www.` se skida i sa unosa, jer
-    administrator koji napiše `www.firma.rs` traži da se ne skenira firma.
+    No "registered domain": without the Public Suffix List `firma.co.rs` would become `co.rs`,
+    and one request would exclude every company under `.co.rs`. A leading `www.` is stripped
+    from the entry as well, because an administrator who writes `www.firma.rs` is asking that
+    the company not be scanned.
     """
     host = _host(domain)
     for entry in exclusions:
-        izuzet = _host(entry)
-        if izuzet and (host == izuzet or host.endswith("." + izuzet)):
+        excluded = _host(entry)
+        if excluded and (host == excluded or host.endswith("." + excluded)):
             return True
     return False

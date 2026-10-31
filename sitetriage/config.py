@@ -1,7 +1,8 @@
-"""Učitavanje pragova iz TOML-a (§11.2). Čita disk, ništa drugo ne radi.
+"""Loads thresholds from TOML. It reads the disk and does nothing else.
 
-`sitetriage.toml` iz repoa je podrazumevana konfiguracija. `--config` se **spaja
-preko** nje, pa parcijalna korisnička konfiguracija ne gubi ostale pragove.
+Every threshold, multiplier and constant lives in TOML, not in code. The default config,
+`sitetriage.toml`, ships inside the package. `--config` is **merged over** it, so a partial
+user configuration keeps all the other thresholds.
 """
 
 from __future__ import annotations
@@ -21,9 +22,10 @@ from sitetriage.models import CATEGORIES, INDUSTRIES
 
 CONFIG_NAME = "sitetriage.toml"
 
-# Ne menjaju rezultat, pa ne ulaze u otisak konfiguracije: ko skenira, koliko paralelno i
-# gde je browser. Dva prolaza sa istim otiskom imaju iste pragove, množioce i bodove.
-BEZ_UTICAJA_NA_REZULTAT = (
+# These do not change the result, so they stay out of the config digest: who scans, how much in
+# parallel and where the browser is. Two runs with the same digest have the same thresholds,
+# multipliers and points.
+NOT_IN_DIGEST = (
     "operator",
     "http.concurrency",
     "http.per_host_concurrency",
@@ -34,9 +36,9 @@ BEZ_UTICAJA_NA_REZULTAT = (
     "browser.executable_path",
 )
 
-# Srpska ćirilica i đ nemaju ASCII rastavljanje, pa se presipaju ručno; š, č, ć i ž
-# posle toga rastavlja NFKD. HTTP zaglavlje sme da nosi samo ASCII.
-_U_LATINICU = str.maketrans(
+# Serbian Cyrillic and đ have no ASCII decomposition, so they are transliterated by hand; NFKD
+# then decomposes š, č, ć and ž. An HTTP header may carry only ASCII.
+_TO_LATIN = str.maketrans(
     {
         **dict(zip("абвгдежзијклмнопрстћуфхцчш", "abvgdezzijklmnoprstcufhccs", strict=True)),
         **dict(zip("АБВГДЕЖЗИЈКЛМНОПРСТЋУФХЦЧШ", "ABVGDEZZIJKLMNOPRSTCUFHCCS", strict=True)),
@@ -59,17 +61,17 @@ ADR_012 = "docs/adr/ADR-012-english-public-interface.md"
 
 
 class ConfigError(Exception):
-    """Konfiguracija je korisnički ulaz — puca glasno i imenuje ključ."""
+    """The configuration is user input: it fails loudly and names the key."""
 
 
 def default_config_path() -> Path:
-    """Prvo radni direktorijum, pa koren repoa pored paketa."""
+    """The working directory first, then the repository root next to the package."""
     for candidate in (Path.cwd() / CONFIG_NAME, Path(__file__).resolve().parent.parent / CONFIG_NAME):
         if candidate.is_file():
             return candidate
     raise ConfigError(
-        f"{CONFIG_NAME} nije nađen ni u {Path.cwd()} ni pored paketa. "
-        f"Pokreni alat iz korena repoa ili prosledi --config PUTANJA."
+        f"{CONFIG_NAME} was found neither in {Path.cwd()} nor next to the package. "
+        f"Run the tool from the repository root or pass --config PATH."
     )
 
 
@@ -78,7 +80,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
     if path is not None:
         user_path = Path(path)
         if not user_path.is_file():
-            raise ConfigError(f"konfiguracija ne postoji: {user_path}")
+            raise ConfigError(f"configuration file does not exist: {user_path}")
         if user_path.resolve() != default_config_path().resolve():
             _merge(cfg, _read(user_path))
     _validate(cfg)
@@ -86,62 +88,66 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def get(cfg: dict[str, Any], dotted: str) -> Any:
-    """`get(cfg, "thresholds.perf.image_ratio")` — puca ako ključ ne postoji."""
+    """`get(cfg, "thresholds.perf.image_ratio")`; fails if the key does not exist."""
     node: Any = cfg
     for part in dotted.split("."):
         if not isinstance(node, dict) or part not in node:
-            raise ConfigError(f"nedostaje ključ u konfiguraciji: {dotted}")
+            raise ConfigError(f"missing configuration key: {dotted}")
         node = node[part]
     return node
 
 
-def _ascii(tekst: str) -> str:
-    """Ime koje operater upiše kako mu je prirodno → ono što HTTP zaglavlje sme da nosi.
+def _ascii(text: str) -> str:
+    """A name the operator writes however comes naturally → what an HTTP header may carry.
 
-    Srpska slova se presipaju, ostalo (crte, emodžiji) otpada, a razmaci i novi redovi
-    se sažimaju u jedan razmak — novi red bi u zahtevu započeo novo zaglavlje.
+    Serbian letters are transliterated, everything else (dashes, emoji) is dropped, and spaces
+    and newlines collapse into one space: a newline would start a new header in the request.
     """
-    rastavljeno = unicodedata.normalize("NFKD", tekst.translate(_U_LATINICU))
-    return " ".join(rastavljeno.encode("ascii", "ignore").decode("ascii").split())
+    decomposed = unicodedata.normalize("NFKD", text.translate(_TO_LATIN))
+    return " ".join(decomposed.encode("ascii", "ignore").decode("ascii").split())
 
 
 def user_agent(cfg: dict[str, Any]) -> str:
-    """User-Agent koji predstavlja operatera — onog ko pokreće skeniranje.
+    """The User-Agent that represents the operator, whoever runs the scan.
 
-    Administrator sajta u svom logu vidi ko ga skenira i kako da ga kontaktira. To je
-    operater koji je pokrenuo alat, ne autor alata; bez oba podatka nema
-    skeniranja. `SITETRIAGE_OPERATOR_NAME` i `SITETRIAGE_OPERATOR_CONTACT` imaju prednost nad
-    fajlom (Docker).
+    The site administrator sees in their log who is scanning them and how to reach them. That
+    is the operator who started the tool, not the author of the tool; without both values
+    there is no scanning. `SITETRIAGE_OPERATOR_NAME` and `SITETRIAGE_OPERATOR_CONTACT` take
+    precedence over the file (Docker).
     """
-    naziv = _ascii(os.environ.get(ENV_OPERATOR_NAME) or get(cfg, "operator.name") or "")
-    kontakt = _ascii(os.environ.get(ENV_OPERATOR_CONTACT) or get(cfg, "operator.contact") or "")
-    if not naziv or not kontakt:
+    name = _ascii(os.environ.get(ENV_OPERATOR_NAME) or get(cfg, "operator.name") or "")
+    contact = _ascii(os.environ.get(ENV_OPERATOR_CONTACT) or get(cfg, "operator.contact") or "")
+    if not name or not contact:
         raise ConfigError(
-            "[operator] name i contact nisu postavljeni. Administrator sajta mora da zna ko ga "
-            "skenira i kako da ga kontaktira: upiši ih u svoj --config fajl ili postavi "
-            f"{ENV_OPERATOR_NAME} i {ENV_OPERATOR_CONTACT}."
+            "[operator] name and contact are not set. The site administrator must know who is "
+            "scanning them and how to reach them: put them in your --config file or set "
+            f"{ENV_OPERATOR_NAME} and {ENV_OPERATOR_CONTACT}."
         )
-    return get(cfg, "http.user_agent").format(version=__version__, name=naziv, contact=kontakt)
+    return get(cfg, "http.user_agent").format(version=__version__, name=name, contact=contact)
 
 
 def digest(cfg: dict[str, Any]) -> str:
-    """sha256 kanonskog JSON-a konfiguracije koja utiče na rezultat.
+    """sha256 of the canonical JSON of the configuration that affects the result.
 
-    `diff` po njemu zna da li je razlika između dva prolaza od sajta ili od pragova.
+    `diff` uses it to tell whether a difference between two runs comes from the site or from
+    the thresholds.
     """
-    kopija = copy.deepcopy(cfg)
-    for dotted in BEZ_UTICAJA_NA_REZULTAT:
-        *put, kljuc = dotted.split(".")
-        sekcija = kopija
-        for deo in put:
-            sekcija = sekcija.get(deo, {})
-        sekcija.pop(kljuc, None)
-    kanonski = json.dumps(kopija, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha256(kanonski.encode("utf-8")).hexdigest()
+    clone = copy.deepcopy(cfg)
+    for dotted in NOT_IN_DIGEST:
+        *path, key = dotted.split(".")
+        section = clone
+        for part in path:
+            section = section.get(part, {})
+        section.pop(key, None)
+    canonical = json.dumps(clone, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def multiplier(cfg: dict[str, Any], industry: str, category: str) -> float:
-    """Množilac po delatnosti (§9.2); nepoznata delatnost pada na `other`."""
+    """Multiplier by industry; an unknown industry falls back to `other`.
+
+    A finding's weight is `severity_points[severity] × industry_multipliers[industry][category]`.
+    """
     table = cfg["industry_multipliers"]
     return float(table.get(industry, table["other"])[category])
 
@@ -151,7 +157,7 @@ def _read(path: Path) -> dict[str, Any]:
         with path.open("rb") as fh:
             return tomllib.load(fh)
     except tomllib.TOMLDecodeError as exc:
-        raise ConfigError(f"{path}: neispravan TOML — {exc}") from exc
+        raise ConfigError(f"{path}: invalid TOML: {exc}") from exc
 
 
 def _merge(base: dict[str, Any], over: dict[str, Any]) -> None:
@@ -162,8 +168,9 @@ def _merge(base: dict[str, Any], over: dict[str, Any]) -> None:
             base[key] = value
 
 
-# Nula mesta u semaforu ne pušta nikog: prolaz stoji zauvek, bez ijedne poruke (BUG-011).
-POZITIVNI_CELI = (
+# A semaphore with zero slots lets no one through: the run stalls forever, without a single
+# message (BUG-011).
+POSITIVE_INTS = (
     "http.concurrency",
     "http.domain_concurrency",
     "browser.concurrency",
@@ -184,7 +191,7 @@ def _validate(cfg: dict[str, Any]) -> None:
     _renamed(cfg)
     for severity in ("critical", "high", "medium", "low"):
         if severity not in cfg.get("severity_points", {}):
-            raise ConfigError(f"severity_points.{severity} nedostaje")
+            raise ConfigError(f"severity_points.{severity} is missing")
     table = cfg.get("industry_multipliers", {})
     # A table for an unknown industry is never used: a user calibration under an old (pre-3.0)
     # name like `restoran` would be lost without a word.
@@ -196,18 +203,18 @@ def _validate(cfg: dict[str, Any]) -> None:
             )
     for industry in INDUSTRIES:
         if industry not in table:
-            raise ConfigError(f"industry_multipliers.{industry} nedostaje")
+            raise ConfigError(f"industry_multipliers.{industry} is missing")
         for category in CATEGORIES:
             if category not in table[industry]:
-                raise ConfigError(f"industry_multipliers.{industry}.{category} nedostaje")
-    for dotted in POZITIVNI_CELI:
+                raise ConfigError(f"industry_multipliers.{industry}.{category} is missing")
+    for dotted in POSITIVE_INTS:
         value = get(cfg, dotted)
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise ConfigError(f"{dotted} mora biti ceo broj ≥ 1, a jeste {value!r}")
+            raise ConfigError(f"{dotted} must be an integer ≥ 1, got {value!r}")
     value = get(cfg, "browser.light_concurrency")
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ConfigError(f"browser.light_concurrency mora biti ceo broj ≥ 0, a jeste {value!r}")
-    # Brzina 0 deli sa nulom u rečenicama, a Chromium je čita kao „bez ograničenja".
+        raise ConfigError(f"browser.light_concurrency must be an integer ≥ 0, got {value!r}")
+    # A speed of 0 divides by zero in the sentences, and Chromium reads it as "no limit".
     for dotted in (
         "http.max_seconds_per_domain",
         "network_profile.download_mbps",
@@ -217,10 +224,10 @@ def _validate(cfg: dict[str, Any]) -> None:
     ):
         value = get(cfg, dotted)
         if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
-            raise ConfigError(f"{dotted} mora biti > 0, a jeste {value!r}")
+            raise ConfigError(f"{dotted} must be > 0, got {value!r}")
     allowed = get(cfg, "net.allowed_private")
     if not isinstance(allowed, list):
-        raise ConfigError(f"net.allowed_private mora biti lista \"host:port\" parova, a jeste {allowed!r}")
+        raise ConfigError(f"net.allowed_private must be a list of \"host:port\" pairs, got {allowed!r}")
     try:
         parse_allowed(allowed)
     except ValueError as exc:
