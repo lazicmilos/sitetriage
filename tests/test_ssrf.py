@@ -119,7 +119,7 @@ def test_ulaz_sa_ip_adresom_ne_salje_nijedan_zahtev():
         _, port = site.address
         snapshot = _skeniraj(f"127.0.0.1:{port}")
     assert site.requests == []
-    assert snapshot.entry.error_kind == "blocked" and "portom" in snapshot.entry.error_detail
+    assert snapshot.entry.error_kind == "blocked" and "with a port" in snapshot.entry.error_detail
 
 
 # --------------------------------------------------------------------------- #

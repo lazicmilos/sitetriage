@@ -1,10 +1,10 @@
-"""Ceo prolaz bez komandne linije: nivo 1 → eskalacija → izbor → nivo 2 → bodovanje.
+"""A whole run without the command line: level 1 → escalation → selection → level 2 → scoring.
 
-CLI i web worker zovu isti kod, pa se dve kopije redosleda ne mogu razići. Modul ne
-štampa, ne čita argumente i ne izlazi iz procesa: greške su `ConfigError` i
-`InputError`, a napredak ide kroz `on_event`. Ceo prolaz je jedna async funkcija i radi
-u jednoj petlji. Otkazan prolaz zatvara browser i HTTP klijent, a snapshoti domena koji
-su već završeni ostaju na disku.
+The CLI and the web worker call the same code, so two copies of the order cannot drift apart. The
+module does not print, read arguments or exit the process: errors are `ConfigError` and
+`InputError`, and progress goes through `on_event`. The whole run is one async function and runs
+in one event loop. A cancelled run closes the browser and the HTTP client, and the snapshots of
+domains that are already finished stay on disk.
 """
 
 from __future__ import annotations
@@ -47,10 +47,10 @@ def _now() -> str:
 
 
 class _Progress:
-    """Broji završene domene jedne faze i javlja pozivaocu.
+    """Counts the finished domains of one phase and reports them to the caller.
 
-    Greška u pozivaočevoj funkciji se loguje i prolaz ide dalje: traka napretka ne sme
-    da izgubi domen čiji je snapshot već na disku.
+    An error in the caller's function is logged and the run goes on: a progress bar must not
+    lose a domain whose snapshot is already on disk.
     """
 
     def __init__(self, on_event: OnEvent | None, phase: str, total: int) -> None:
@@ -72,8 +72,8 @@ class _Progress:
             return
         try:
             self.on_event(event)
-        except Exception:  # noqa: BLE001 — tuđa funkcija ne sme da obori prolaz
-            log.exception("on_event pukao na %s; prolaz ide dalje", event.kind)
+        except Exception:  # noqa: BLE001 — someone else's function must not bring down the run
+            log.exception("on_event failed on %s; the run goes on", event.kind)
 
 
 # --------------------------------------------------------------------------- #
@@ -88,21 +88,21 @@ async def scan(
     excluded: Sequence[str] = (),
     on_event: OnEvent | None = None,
 ) -> ScanResult:
-    """Pun prolaz nad listom domena. Snapshot svakog domena ide na disk čim je gotov.
+    """A full run over the domain list. Every domain's snapshot goes to disk as soon as it is done.
 
-    `excluded` su domeni čiji je administrator tražio da se ne skeniraju. Ne dobijaju
-    nijedan zahtev, a u rezultatu je samo njihov broj.
+    `excluded` are domains whose administrator asked not to be scanned. They get not a single
+    request, and the result holds only their count.
     """
     if level not in LEVELS:
-        raise ValueError(f"nivo mora biti jedan od {LEVELS}, a jeste {level!r}")
+        raise ValueError(f"level must be one of {LEVELS}, got {level!r}")
     targets = list(targets)
     if not targets:
-        raise InputError("lista domena je prazna")
-    user_agent(config)  # bez identiteta operatera nema nijednog zahteva
+        raise InputError("the domain list is empty")
+    user_agent(config)  # without an operator identity there is not a single request
     started_at, t0 = _now(), time.monotonic()
-    targets, izuzeto = _bez_izuzetih(targets, excluded)
+    targets, excluded_count = _without_excluded(targets, excluded)
 
-    log.info("nivo 1: %d domena", len(targets))
+    log.info("level 1: %d domains", len(targets))
     progress = _Progress(on_event, "level1", len(targets))
     sites = await scan_domains(
         targets,
@@ -116,7 +116,7 @@ async def scan(
     reasons, chosen, rest = _escalate(sites, config, level)
     browsers = await _level2(chosen, config, snapshot_dir, on_event)
     t2 = time.monotonic()
-    # Posle punog nivoa 2, da lagano merenje ne deli vezu sa merenjem vremena (BUG-006).
+    # After full level 2, so the light measurement does not share the link with time measurement (BUG-006).
     browsers |= await _level2(rest, config, snapshot_dir, on_event, light=True)
     t3 = time.monotonic()
 
@@ -130,30 +130,30 @@ async def scan(
         "level2_light": t3 - t2,
         "total": time.monotonic() - t0,
     }
-    return _result(reports, started_at, durations, config, browsers.values(), excluded=izuzeto)
+    return _result(reports, started_at, durations, config, browsers.values(), excluded=excluded_count)
 
 
-def _bez_izuzetih(targets: list[DomainInput], excluded: Sequence[str]) -> tuple[list[DomainInput], int]:
-    ostali = [t for t in targets if not is_excluded(t.domain, excluded)]
-    izuzeto = len(targets) - len(ostali)
-    if izuzeto:
-        log.info("izuzeto na zahtev administratora: %d domena", izuzeto)
-    return ostali, izuzeto
+def _without_excluded(targets: list[DomainInput], excluded: Sequence[str]) -> tuple[list[DomainInput], int]:
+    remaining = [t for t in targets if not is_excluded(t.domain, excluded)]
+    excluded_count = len(targets) - len(remaining)
+    if excluded_count:
+        log.info("excluded at the administrator's request: %d domains", excluded_count)
+    return remaining, excluded_count
 
 
 def _level1_status(site: SiteSnapshot) -> str:
-    """Za traku napretka: da li se početna otvorila. Konačan status daje tek bodovanje."""
+    """For the progress bar: whether the home page opened. Only scoring gives the final status."""
     return "ok" if site.home is not None and site.home.status == 200 else "failed"
 
 
 def _escalate(
     sites: Sequence[SiteSnapshot], config: dict, level: str
 ) -> tuple[dict[str, list[Reason]], list[SiteSnapshot], list[SiteSnapshot]]:
-    """Eskalacija (§6) i gornji limit; vraća razloge za izveštaj, izabrane domene i ostale.
+    """Escalation and its cap; returns the reasons for the report, the chosen domains and the rest.
 
-    Ostali su sajtovi sa početnom koja radi, a bez mesta na punom nivou 2. Brz i čist HTML ne
-    govori ništa o težini strane: na listi B dve strane od 4,8 i 4,9 MB nisu imale nijedan razlog za
-    eskalaciju, pa su stajale sa „0 nalaza" (BUG-020). Zato dobijaju lagano merenje.
+    The rest are sites with a working home page but without a place on full level 2. Fast, clean HTML
+    says nothing about page weight: on list B two pages of 4.8 and 4.9 MB had no reason to escalate,
+    so they stood at "0 findings" (BUG-020). That is why they get the light measurement.
     """
     if level == "1":
         return {}, [], []
@@ -171,13 +171,13 @@ def _escalate(
 
     chosen = select_for_level2(candidates, config)
     log.info(
-        "nivo 2: %d kandidata, %d prolazi, %d preko limita",
+        "level 2: %d candidates, %d pass, %d over the cap",
         len(candidates),
         len(chosen),
         len(candidates) - len(chosen),
     )
-    izabrani = {site.domain for site in chosen}
-    rest = [s for s in sites if _level1_status(s) == "ok" and s.domain not in izabrani]
+    chosen_domains = {site.domain for site in chosen}
+    rest = [s for s in sites if _level1_status(s) == "ok" and s.domain not in chosen_domains]
     return reasons, chosen, rest
 
 
@@ -188,7 +188,7 @@ async def _level2(
     on_event: OnEvent | None,
     light: bool = False,
 ) -> dict[str, BrowserSnapshot]:
-    if not chosen or not _playwright_installed("nivo 2 se preskače"):
+    if not chosen or not _playwright_installed("skipping level 2"):
         return {}
     progress = _Progress(on_event, "level2_light" if light else "level2", len(chosen))
     browsers = await capture_all(
@@ -202,12 +202,12 @@ async def _level2(
     return browsers
 
 
-def _playwright_installed(posledica: str) -> bool:
-    """Nivo 2 je opcion (`pip install 'sitetriage[browser]'`); bez njega nivo 1 i dalje radi."""
+def _playwright_installed(consequence: str) -> bool:
+    """Level 2 is optional (`pip install 'sitetriage[browser]'`); without it level 1 still works."""
     try:
         import playwright.async_api  # noqa: F401
     except ImportError:
-        log.error("Playwright nije instaliran; %s (pip install 'sitetriage[browser]')", posledica)
+        log.error("Playwright is not installed; %s (pip install 'sitetriage[browser]')", consequence)
         return False
     return True
 
@@ -227,7 +227,7 @@ def _result(
     for cause in ("budget", "unknown"):
         summary[f"partial_{cause}"] = sum(cause in r.partial_causes for r in reports)
     budget_share, unknown_share = partial_shares(reports)
-    po_imenu = sorted(reports, key=lambda r: r.domain)
+    by_name = sorted(reports, key=lambda r: r.domain)
     return ScanResult(
         started_at=started_at,
         finished_at=_now(),
@@ -238,36 +238,37 @@ def _result(
         budget_share=budget_share,
         unknown_share=unknown_share,
         ranked=rank(reports),
-        unreachable=[r for r in po_imenu if r.status == "unreachable"],
-        not_scanned=[r for r in po_imenu if r.status == "failed"],
+        unreachable=[r for r in by_name if r.status == "unreachable"],
+        not_scanned=[r for r in by_name if r.status == "failed"],
     )
 
 
 def _environment(browsers: Iterable[BrowserSnapshot]) -> dict[str, typing.Any]:
-    """Gde je prolaz rađen. Chromium i mrežni profil su iz snapshota, pa `recheck` navodi one iz
-    prolaza; `null` kad nivo 2 nije radio ili je snimak stariji od profila (Z-30)."""
+    """Where the run was done. Chromium and the network profile come from the snapshots, so `recheck`
+    names the ones from the run; `null` when level 2 did not run or the snapshot predates the network
+    profile (ADR-010)."""
     browsers = list(browsers)
     chromium = next((b.browser_version for b in browsers if b.browser_version), None)
-    profil = next((b.network_profile for b in browsers if b.network_profile), None)
-    veza = next((b.link_mbps for b in browsers if b.link_mbps is not None), None)
+    profile = next((b.network_profile for b in browsers if b.network_profile), None)
+    link_mbps = next((b.link_mbps for b in browsers if b.link_mbps is not None), None)
     return {
         "os": platform.platform(),
         "python": platform.python_version(),
         "chromium": chromium,
-        "network_profile": profil,
-        "link_mbps": veza,
+        "network_profile": profile,
+        "link_mbps": link_mbps,
     }
 
 
 # --------------------------------------------------------------------------- #
-# recheck — glavno oruđe pri kalibraciji (§11.1)
+# recheck — the main calibration tool
 # --------------------------------------------------------------------------- #
 def recheck(snapshot_dir: Path, config: dict, *, on_event: OnEvent | None = None) -> ScanResult:
-    """Ponovo boduje sačuvane snapshote, bez ijednog zahteva ka mreži."""
+    """Scores saved snapshots again, without a single network request."""
     started_at, t0 = _now(), time.monotonic()
     pairs = list(store.read_all(Path(snapshot_dir)))
     if not pairs:
-        raise InputError(f"{snapshot_dir}: nijedan snapshot nije pronađen")
+        raise InputError(f"{snapshot_dir}: no snapshot found")
 
     registry.load_all()
     progress = _Progress(on_event, "recheck", len(pairs))
@@ -284,7 +285,7 @@ def recheck(snapshot_dir: Path, config: dict, *, on_event: OnEvent | None = None
 
 
 # --------------------------------------------------------------------------- #
-# record — snima fixture-e (§12.2)
+# record — records fixtures
 # --------------------------------------------------------------------------- #
 async def record(
     targets: Sequence[DomainInput],
@@ -294,17 +295,17 @@ async def record(
     level: str = "auto",
     excluded: Sequence[str] = (),
 ) -> int:
-    """Snima gzipovane snapshote svih domena; vraća njihov broj. Nivo 2 ide za sve, bez eskalacije."""
-    user_agent(config)  # bez identiteta operatera nema nijednog zahteva
-    targets, _ = _bez_izuzetih(list(targets), excluded)
+    """Records gzipped snapshots of all domains and returns their count. Level 2 runs for all of them."""
+    user_agent(config)  # without an operator identity there is not a single request
+    targets, _ = _without_excluded(list(targets), excluded)
     sites = await scan_domains(targets, config)
     for site in sites:
-        # Bez sirovog HTML-a ostalih strana, inače repo naraste (§12.2).
+        # Without the raw HTML of the other pages, otherwise the repository grows.
         for page in site.pages[1:]:
             page.raw_html = None
         store.write_site(out_dir, site, compress=True)
 
-    if level != "1" and _playwright_installed("snimam samo nivo 1"):
+    if level != "1" and _playwright_installed("recording level 1 only"):
         for snapshot in (await capture_all(sites, config)).values():
             store.write_browser(out_dir, snapshot, compress=True)
     return len(sites)
