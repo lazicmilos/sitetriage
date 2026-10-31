@@ -234,15 +234,61 @@ def test_time_budget_must_be_positive(tmp_path, value, valid):
             load_config(override)
 
 
-def test_config_in_the_working_directory_takes_precedence(tmp_path, monkeypatch):
-    import shutil
+# --------------------------------------------------------------------------- #
+# BUG-04: a `sitetriage.toml` in the working directory is an ordinary user file. It is never read
+# implicitly, and passed with --config it is merged over the packaged defaults like any other file.
+# --------------------------------------------------------------------------- #
+OPERATOR_ONLY = '[operator]\nname = "Example Web Studio"\ncontact = "hello@studio.example"\n'
 
+
+def _packaged_defaults() -> Path:
+    from importlib.resources import files
+
+    return Path(str(files("sitetriage").joinpath("sitetriage.toml")))
+
+
+def _complete_copy_with_one_change() -> str:
+    text = _packaged_defaults().read_text(encoding="utf-8")
+    changed = text.replace("html_size_kb = 500", "html_size_kb = 1")
+    assert changed != text
+    return changed
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        pytest.param(OPERATOR_ONLY + "[thresholds.perf]\nhtml_size_kb = 1\n", id="partial"),
+        pytest.param(None, id="complete-copy"),
+    ],
+)
+@pytest.mark.parametrize(
+    "passed",
+    [pytest.param(False, id="ke-not-passed-is-not-read"), pytest.param(True, id="ke-passed-is-merged")],
+)
+def test_sitetriage_toml_in_the_working_directory_is_read_only_through_config(
+    tmp_path, monkeypatch, content, passed
+):
     from sitetriage.config import default_config_path
 
-    copy = tmp_path / "sitetriage.toml"
-    shutil.copy(default_config_path(), copy)
+    baseline = digest(load_config())
+    (tmp_path / "sitetriage.toml").write_text(content or _complete_copy_with_one_change(), encoding="utf-8")
     monkeypatch.chdir(tmp_path)
-    assert default_config_path() == copy
+    assert default_config_path() == _packaged_defaults()
+    cfg = load_config("sitetriage.toml" if passed else None)
+    # Merged over the defaults, so nothing the file leaves out goes missing.
+    assert get(cfg, "severity_points.critical") == 40
+    if passed:
+        assert get(cfg, "thresholds.perf.html_size_kb") == 1
+        assert digest(cfg) != baseline
+    else:
+        assert get(cfg, "thresholds.perf.html_size_kb") == 500
+        assert digest(cfg) == baseline
+
+
+def test_the_packaged_defaults_passed_as_config_change_nothing():
+    from sitetriage.config import default_config_path
+
+    assert digest(load_config(default_config_path())) == digest(load_config())
 
 
 def test_without_a_default_config_it_fails_and_says_what_to_do(monkeypatch):
@@ -317,3 +363,162 @@ def test_digest_changes_when_a_threshold_changes(key, value):
         section = section[part]
     section[last] = value
     assert digest(cfg) != before
+
+
+# --------------------------------------------------------------------------- #
+# BUG-06: every value is checked against the type of its packaged default, and values that would
+# crash a run or silently invert it are rejected with the key and the value.
+# --------------------------------------------------------------------------- #
+def _one_value(tmp_path: Path, section: str, line: str) -> tuple[Path, str]:
+    """A config file that sets one key, and the dotted name of that key."""
+    override = tmp_path / "mine.toml"
+    override.write_text(f"[{section}]\n{line}\n", encoding="utf-8")
+    return override, f"{section}.{line.split(' =')[0]}"
+
+
+@pytest.mark.parametrize(
+    "section, line, shown",
+    [
+        pytest.param("severity_points", 'high = "lots"', "'lots'", id="nv-points-text"),
+        pytest.param("severity_points", "high = true", "True", id="nv-points-boolean"),
+        pytest.param("severity_points", "high = -20", "-20", id="nv-points-negative"),
+        pytest.param("severity_points", "high = 0", "0", id="gv-points-0"),
+        pytest.param("http", "delay_ms = [500]", "[500]", id="nv-delay-one-number"),
+        pytest.param("http", "delay_ms = [-1000, -500]", "[-1000, -500]", id="nv-delay-negative"),
+        pytest.param("http", "delay_ms = [1000, 500]", "[1000, 500]", id="nv-delay-reversed"),
+        pytest.param("http", 'delay_ms = ["a", "b"]', "'a'", id="nv-delay-text"),
+        pytest.param("http", "delay_ms = 500", "500", id="nv-delay-not-a-list"),
+        pytest.param("http", "delay_ms = { min = 0 }", "{'min': 0}", id="nv-delay-table"),
+        pytest.param("http", "timeout_total_s = 0", "0", id="gv-total-timeout-0"),
+        pytest.param("http", "timeout_connect_s = 0", "0", id="gv-connect-timeout-0"),
+        pytest.param("http", "timeout_read_s = -1", "-1", id="nv-read-timeout-negative"),
+        pytest.param("browser", "timeout_s = 0", "0", id="gv-browser-timeout-0"),
+        pytest.param("browser", "drain_timeout_s = 0", "0", id="gv-drain-0"),
+        pytest.param("browser", "max_seconds_per_domain = 0", "0", id="gv-level2-budget-0"),
+        pytest.param("thresholds.perf", "image_ratio = -1", "-1", id="nv-ratio-negative"),
+        pytest.param("thresholds.perf", "image_ratio = 0", "0", id="gv-ratio-0"),
+        pytest.param("thresholds.perf", "image_ratio = nan", "nan", id="nv-nan"),
+        pytest.param("thresholds.i18n", "cyrillic_ratio = 1.5", "1.5", id="nv-share-above-1"),
+        pytest.param("sitemap", "sample_size = 0", "0", id="gv-sample-0"),
+        pytest.param("sitemap", "sample_size = 1", "1", id="gv-sample-home-page-only"),
+        pytest.param("sitemap", "sample_size = 2.5", "2.5", id="nv-sample-fraction"),
+        pytest.param("industry_multipliers.hotel", "perf = -5", "-5", id="nv-multiplier-negative"),
+        pytest.param("thresholds.qa", "console_errors = -1", "-1", id="nv-negative-count"),
+        pytest.param(
+            "thresholds.perf",
+            "page_weight_mb = { medium = 5.0, high = 4.0, critical = 7.0 }",
+            "'medium': 5.0",
+            id="nv-tiers-out-of-order",
+        ),
+        pytest.param(
+            "thresholds.perf", "load_ms = { medium = 6000, high = 6000 }", "'high': 6000", id="gv-tiers-equal"
+        ),
+        pytest.param("thresholds", "perf = 5", "5", id="nv-number-instead-of-a-table"),
+        pytest.param("operator", "name = 5", "5", id="nv-number-instead-of-text"),
+        pytest.param("browser", 'serial_load = "yes"', "'yes'", id="nv-text-instead-of-bool"),
+    ],
+)
+def test_invalid_value_fails_and_names_the_key_and_the_value(tmp_path, section, line, shown):
+    override, key = _one_value(tmp_path, section, line)
+    with pytest.raises(ConfigError) as error:
+        load_config(override)
+    assert key in str(error.value) and shown in str(error.value), str(error.value)
+
+
+@pytest.mark.parametrize(
+    "section, line, expected",
+    [
+        pytest.param("http", "delay_ms = [0, 0]", [0, 0], id="gv-delay-0"),
+        pytest.param("http", "delay_ms = [500, 500]", [500, 500], id="gv-delay-min-equals-max"),
+        pytest.param("http", "delay_ms = [0.5, 1.5]", [0.5, 1.5], id="ke-delay-fractions"),
+        pytest.param("http", "timeout_total_s = 2.5", 2.5, id="ke-fraction-of-a-second"),
+        pytest.param("http", "max_crawl_delay_s = 0", 0, id="gv-crawl-delay-cap-0"),
+        pytest.param("severity_points", "high = 1", 1, id="gv-points-1"),
+        pytest.param("thresholds.perf", "image_ratio = 3", 3, id="ke-integer-for-float"),
+        pytest.param("thresholds.i18n", "cyrillic_ratio = 1", 1, id="gv-share-1"),
+        pytest.param("sitemap", "sample_size = 2", 2, id="gv-sample-home-page-and-one"),
+        pytest.param("industry_multipliers.hotel", "perf = 0", 0, id="gv-multiplier-0"),
+        pytest.param(
+            "thresholds.perf",
+            "page_weight_mb = { medium = 1, high = 2.5, critical = 3 }",
+            {"medium": 1, "high": 2.5, "critical": 3},
+            id="ke-tiers-in-order",
+        ),
+    ],
+)
+def test_valid_value_is_accepted(tmp_path, section, line, expected):
+    override, key = _one_value(tmp_path, section, line)
+    assert get(load_config(override), key) == expected
+
+
+def test_packaged_defaults_and_profiles_pass_their_own_validation():
+    from sitetriage.config import available_profiles
+
+    for name in ["", *available_profiles()]:
+        load_config(profile=name)
+
+
+# --------------------------------------------------------------------------- #
+# BUG-09: a key or a section the defaults do not have would be merged and never read, so a typo
+# ran the defaults without a word. It fails and names the key, with the closest known one.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "toml, unknown, suggestion",
+    [
+        pytest.param(
+            "[thresholds.perf]\nhtml_size_kbb = 1",
+            "thresholds.perf.html_size_kbb",
+            "thresholds.perf.html_size_kb",
+            id="nv-mistyped-key",
+        ),
+        pytest.param("[treshold.perf]\nhtml_size_kb = 1", "treshold", "thresholds", id="nv-mistyped-section"),
+        pytest.param(
+            "[industry_multipliers.hotel]\nsco = 1.0",
+            "industry_multipliers.hotel.sco",
+            "industry_multipliers.hotel.seo",
+            id="nv-mistyped-category",
+        ),
+        pytest.param(
+            "[thresholds.perf]\nload_ms = { medium = 6000, high = 9000, critical = 12000 }",
+            "thresholds.perf.load_ms.critical",
+            None,
+            id="nv-tier-the-defaults-do-not-have",
+        ),
+        pytest.param("[http]\nzzz = 1", "http.zzz", None, id="nv-unknown-key-without-suggestion"),
+        pytest.param('colour = "red"', "colour", None, id="nv-unknown-top-level-key"),
+    ],
+)
+def test_unknown_key_fails_and_suggests_the_closest(tmp_path, toml, unknown, suggestion):
+    override = tmp_path / "mine.toml"
+    override.write_text(toml + "\n", encoding="utf-8")
+    with pytest.raises(ConfigError) as error:
+        load_config(override)
+    message = str(error.value)
+    assert f"{unknown}: unknown key in {override}" in message, message
+    if suggestion:
+        assert f"did you mean {suggestion}?" in message, message
+    else:
+        assert "did you mean" not in message, message
+
+
+def test_unknown_key_in_a_profile_fails_and_names_the_profile(tmp_path, monkeypatch):
+    typo = tmp_path / "typo.toml"
+    typo.write_text('[report]\nlnag = "sr"\n', encoding="utf-8")
+    monkeypatch.setattr("sitetriage.config.profile_path", lambda name: typo)
+    expected = r"report\.lnag: unknown key in profile 'typo'; did you mean report\.lang\?"
+    with pytest.raises(ConfigError, match=expected):
+        load_config(profile="typo")
+
+
+def test_renamed_section_wins_over_an_unknown_key(tmp_path):
+    """`[identitet]` is not a typo but a 3.0 rename: its message names the new keys."""
+    override = tmp_path / "old.toml"
+    override.write_text('[http]\nzzz = 1\n[identitet]\nnaziv = "Web studio Primer"\n', encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"\[identitet\] was renamed to \[operator\]"):
+        load_config(override)
+
+
+def test_known_top_level_profile_key_is_not_unknown(tmp_path):
+    override = tmp_path / "mine.toml"
+    override.write_text('profile = "rs"\n', encoding="utf-8")
+    assert load_config(override)["profile"] == "rs"

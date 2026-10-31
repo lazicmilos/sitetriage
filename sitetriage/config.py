@@ -12,8 +12,10 @@ top-level `profile = "NAME"` in the user config; the flag wins.
 from __future__ import annotations
 
 import copy
+import difflib
 import hashlib
 import json
+import math
 import os
 import tomllib
 import unicodedata
@@ -71,7 +73,11 @@ ADR_012 = "docs/adr/ADR-012-english-public-interface.md"
 
 
 class ConfigError(Exception):
-    """The configuration is user input: it fails loudly and names the key."""
+    """The configuration is user input: it fails loudly and names the key.
+
+    That includes a key the packaged defaults do not have (a typo would otherwise be merged and
+    never read) and a value of the wrong type or out of range.
+    """
 
 
 def _packaged_config_path() -> Path:
@@ -81,13 +87,18 @@ def _packaged_config_path() -> Path:
 
 
 def default_config_path() -> Path:
-    """A full `sitetriage.toml` in the working directory first, then the one in the package."""
+    """The defaults layer: always the `sitetriage.toml` in the package.
+
+    A `sitetriage.toml` in the working directory is never read implicitly: it is a user file like
+    any other and counts only when passed with `--config`, which merges it over these defaults
+    (BUG-04). In a repository clone or an editable install the package file is the repository's
+    `sitetriage/sitetriage.toml`, so calibrating the defaults there still works.
+    """
     packaged = _packaged_config_path()
-    for candidate in (Path.cwd() / CONFIG_NAME, packaged):
-        if candidate.is_file():
-            return candidate
+    if packaged.is_file():
+        return packaged
     raise ConfigError(
-        f"{CONFIG_NAME} was found neither in {Path.cwd()} nor in the package ({packaged.parent}). "
+        f"{CONFIG_NAME} was not found in the package ({packaged.parent}). "
         f"Reinstall SiteTriage; the default config ships with it, and --config is merged over it."
     )
 
@@ -115,15 +126,15 @@ def load_config(path: str | Path | None = None, *, profile: str | None = None) -
     `profile` is the `--profile` flag: when it is given (even empty, which means "no profile"), it
     wins over `profile` in the user config. The chosen name is stored under `profile`, `""` = none.
     """
-    defaults = default_config_path()
-    cfg = _read(defaults)
+    cfg = _read(default_config_path())
+    reference = copy.deepcopy(cfg)
     user: dict[str, Any] = {}
     if path is not None:
         user_path = Path(path)
         if not user_path.is_file():
             raise ConfigError(f"configuration file does not exist: {user_path}")
-        if user_path.resolve() != defaults.resolve():
-            user = _read(user_path)
+        user = _read(user_path)
+        _check_known(reference, user, str(user_path))
     name = profile if profile is not None else user.get("profile", cfg.get("profile", ""))
     if not isinstance(name, str):
         raise ConfigError(f"profile must be the name of a profile as a string, got {name!r}")
@@ -131,10 +142,11 @@ def load_config(path: str | Path | None = None, *, profile: str | None = None) -
         layer = _read(profile_path(name))
         if "profile" in layer:
             raise ConfigError(f"profile {name!r}: a profile cannot choose another profile")
+        _check_known(reference, layer, f"profile {name!r}")
         _merge(cfg, layer)
     _merge(cfg, user)
     cfg["profile"] = name
-    _validate(cfg)
+    _validate(cfg, reference)
     return cfg
 
 
@@ -230,6 +242,52 @@ POSITIVE_INTS = (
     "sitemap.max_kb",
 )
 
+# A speed or a timeout of 0 fails every request or divides by zero in the sentences, and Chromium
+# reads a speed of 0 as "no limit". Points of 0 or less and a ratio of 0 or less invert or empty
+# the ranking without a word (BUG-06).
+POSITIVE_NUMBERS = (
+    "http.timeout_connect_s",
+    "http.timeout_read_s",
+    "http.timeout_total_s",
+    "http.max_seconds_per_domain",
+    "browser.timeout_s",
+    "browser.drain_timeout_s",
+    "browser.max_seconds_per_domain",
+    "network_profile.download_mbps",
+    "network_profile.upload_mbps",
+    "network_profile.probe_max_s",
+    "network_profile.min_link_ratio",
+    "thresholds.perf.image_ratio",
+    *(f"severity_points.{severity}" for severity in ("critical", "high", "medium", "low")),
+)
+
+# Shares of something: above 1 a threshold can never be reached.
+SHARES = (
+    "thresholds.seo.canonical_share.high",
+    "thresholds.seo.canonical_share.critical",
+    "thresholds.i18n.cyrillic_ratio",
+    "thresholds.i18n.diacritic_ratio",
+    "thresholds.a11y.missing_ratio",
+    "thresholds.a11y.high_ratio",
+    "thresholds.soft404.text_similarity",
+)
+
+# Severity tiers of one measurement: a higher severity needs a strictly larger value.
+TIERS = (
+    "thresholds.seo.canonical_share",
+    "thresholds.perf.page_weight_mb",
+    "thresholds.perf.request_count",
+    "thresholds.perf.load_ms",
+)
+TIER_ORDER = ("medium", "high", "critical")
+
+# A quantity in a unit may be fractional (2.5 s) even where the default is a whole number; a count
+# (pages, files, points) may not.
+UNIT_SUFFIXES = ("_s", "_ms", "_kb", "_mb", "_mbps")
+
+# Checked by their own rule, with a message that says more than "must be a list".
+TYPED_ELSEWHERE = ("thresholds.i18n.content_languages", "net.allowed_private")
+
 
 def _renamed(cfg: dict[str, Any]) -> None:
     for old, (new, keys) in RENAMED_SECTIONS.items():
@@ -238,8 +296,129 @@ def _renamed(cfg: dict[str, Any]) -> None:
             raise ConfigError(f"[{old}] was renamed to [{new}] in SiteTriage 3.0 ({pairs}); see {ADR_012}")
 
 
-def _validate(cfg: dict[str, Any]) -> None:
+def _check_known(reference: dict[str, Any], layer: dict[str, Any], source: str, prefix: str = "") -> None:
+    """Every key of a user config or a profile exists in the packaged defaults (BUG-09).
+
+    A key the defaults do not have is merged and never read, so a typo would run the defaults
+    without a word. Two cases keep their own, more specific message from `_validate`: a section
+    renamed in 3.0 and a table for an unknown industry.
+    """
+    if not prefix:
+        _renamed(layer)
+    for key, value in layer.items():
+        dotted = f"{prefix}{key}"
+        if key not in reference:
+            if prefix == "industry_multipliers.":
+                continue
+            close = difflib.get_close_matches(key, list(reference), n=1)
+            if close:
+                hint = f"; did you mean {prefix}{close[0]}?"
+            else:
+                hint = f"; the known keys are in {_packaged_config_path()}"
+            raise ConfigError(f"{dotted}: unknown key in {source}{hint}")
+        if isinstance(value, dict) and isinstance(reference[key], dict):
+            _check_known(reference[key], value, source, f"{dotted}.")
+
+
+def _is_number(value: Any) -> bool:
+    # bool is a subclass of int, but `true` is never meant as 1.
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _fractional(dotted: str) -> bool:
+    return "seconds" in dotted or any(part.endswith(UNIT_SUFFIXES) for part in dotted.split("."))
+
+
+def _type_error(dotted: str, default: Any, value: Any) -> str | None:
+    """Why `value` cannot stand where the packaged default is `default`; None if it can."""
+    if isinstance(default, bool):
+        return None if isinstance(value, bool) else "true or false"
+    if isinstance(default, int | float):
+        whole = isinstance(default, int) and not _fractional(dotted)
+        if not _is_number(value) or (whole and not isinstance(value, int)):
+            return "an integer" if whole else "a number"
+        return None if math.isfinite(value) else "a finite number"
+    if isinstance(default, str):
+        return None if isinstance(value, str) else "a string"
+    if isinstance(default, list):
+        if not isinstance(value, list):
+            return "a list"
+        for item in value if default else ():
+            if (why := _type_error(dotted, default[0], item)) is not None:
+                return f"a list of items that are each {why}"
+        return None
+    return None if isinstance(value, dict) else "a table"
+
+
+def _leaves(reference: dict[str, Any], cfg: dict[str, Any], prefix: str = ""):
+    """(dotted key, packaged default, value) for every key the merged config shares with the defaults."""
+    for key, default in reference.items():
+        if key not in cfg:
+            continue
+        dotted, value = f"{prefix}{key}", cfg[key]
+        if isinstance(default, dict) and isinstance(value, dict):
+            yield from _leaves(default, value, f"{dotted}.")
+        else:
+            yield dotted, default, value
+
+
+def _check_types(reference: dict[str, Any], cfg: dict[str, Any]) -> None:
+    """Every value has the type of its packaged default: a run must not crash on it halfway (BUG-06)."""
+    for dotted, default, value in _leaves(reference, cfg):
+        if dotted in TYPED_ELSEWHERE:
+            continue
+        if (why := _type_error(dotted, default, value)) is not None:
+            raise ConfigError(f"{dotted} must be {why}, got {value!r}")
+
+
+def _check_not_negative(reference: dict[str, Any], cfg: dict[str, Any]) -> None:
+    """No count, size, time, ratio or multiplier in the config means anything below zero."""
+    for dotted, _default, value in _leaves(reference, cfg):
+        for item in value if isinstance(value, list) else [value]:
+            if _is_number(item) and item < 0:
+                raise ConfigError(f"{dotted} must be ≥ 0, got {value!r}")
+
+
+def _integer_at_least(cfg: dict[str, Any], dotted: str, minimum: int, why: str = "") -> None:
+    value = get(cfg, dotted)
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise ConfigError(f"{dotted} must be an integer ≥ {minimum}{why}, got {value!r}")
+
+
+def _check_ranges(cfg: dict[str, Any]) -> None:
+    for dotted in POSITIVE_INTS:
+        _integer_at_least(cfg, dotted, 1)
+    _integer_at_least(cfg, "browser.light_concurrency", 0)
+    # The home page is always the first page of the sample; without one more page every check
+    # that compares pages has nothing to compare.
+    _integer_at_least(cfg, "sitemap.sample_size", 2, " (the home page and at least one more page)")
+    for dotted in POSITIVE_NUMBERS:
+        value = get(cfg, dotted)
+        if not _is_number(value) or value <= 0:
+            raise ConfigError(f"{dotted} must be > 0, got {value!r}")
+    for dotted in SHARES:
+        value = get(cfg, dotted)
+        if not _is_number(value) or not 0 < value <= 1:
+            raise ConfigError(f"{dotted} must be a share > 0 and ≤ 1, got {value!r}")
+    for dotted in TIERS:
+        tiers = get(cfg, dotted)
+        values = [tiers[tier] for tier in TIER_ORDER if tier in tiers]
+        if any(low >= high for low, high in zip(values, values[1:], strict=False)):
+            order = " < ".join(tier for tier in TIER_ORDER if tier in tiers)
+            raise ConfigError(f"{dotted} must grow with severity ({order}), got {tiers!r}")
+    # A pause towards the same host, drawn between the two numbers (politeness, ADR-006).
+    delay = get(cfg, "http.delay_ms")
+    pair = isinstance(delay, list) and len(delay) == 2 and all(map(_is_number, delay))
+    if not pair or not 0 <= delay[0] <= delay[1]:
+        raise ConfigError(f"http.delay_ms must be two numbers [min, max] with 0 ≤ min ≤ max, got {delay!r}")
+
+
+def _validate(cfg: dict[str, Any], reference: dict[str, Any] | None = None) -> None:
+    """`reference` is the packaged defaults the types are checked against; read when not given."""
     _renamed(cfg)
+    if reference is None:
+        reference = _read(default_config_path())
+    _check_types(reference, cfg)
     for severity in ("critical", "high", "medium", "low"):
         if severity not in cfg.get("severity_points", {}):
             raise ConfigError(f"severity_points.{severity} is missing")
@@ -258,24 +437,7 @@ def _validate(cfg: dict[str, Any]) -> None:
         for category in CATEGORIES:
             if category not in table[industry]:
                 raise ConfigError(f"industry_multipliers.{industry}.{category} is missing")
-    for dotted in POSITIVE_INTS:
-        value = get(cfg, dotted)
-        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise ConfigError(f"{dotted} must be an integer ≥ 1, got {value!r}")
-    value = get(cfg, "browser.light_concurrency")
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ConfigError(f"browser.light_concurrency must be an integer ≥ 0, got {value!r}")
-    # A speed of 0 divides by zero in the sentences, and Chromium reads it as "no limit".
-    for dotted in (
-        "http.max_seconds_per_domain",
-        "network_profile.download_mbps",
-        "network_profile.upload_mbps",
-        "network_profile.probe_max_s",
-        "network_profile.min_link_ratio",
-    ):
-        value = get(cfg, dotted)
-        if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
-            raise ConfigError(f"{dotted} must be > 0, got {value!r}")
+    _check_ranges(cfg)
     languages = get(cfg, "thresholds.i18n.content_languages")
     if not isinstance(languages, list) or any(code not in CONTENT_LANGUAGES for code in languages):
         raise ConfigError(
@@ -292,3 +454,4 @@ def _validate(cfg: dict[str, Any]) -> None:
         parse_allowed(allowed)
     except ValueError as exc:
         raise ConfigError(f"net.allowed_private: {exc}") from None
+    _check_not_negative(reference, cfg)
