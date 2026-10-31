@@ -8,7 +8,7 @@ Autor:   Milos Lazic
 
 ## Kontekst
 
-HTML i CSV su za ljude. Web aplikacija, `skener diff`, CRM i kupac koda čitaju izlaz programom, i
+HTML i CSV su za ljude. Web aplikacija, `skener diff`, CRM i druge integracije čitaju izlaz programom, i
 njima treba oblik koji se ne menja tiho. U v1 takvog izlaza nije bilo, pa bi svaka izmena modela
 neprimetno pokvarila onoga ko čita.
 

@@ -414,7 +414,7 @@ STATUS      Ispravljen 05.10. (greška `http_status`, provere nivoa 2 `unknown`;
 - **O-17: rangiranje ne zna da li je sajt firma.** U prvih 10 na B jedno „ne” je udruženje, a ne
   firma, iako su svi njegovi nalazi tačni. Dva „možda” su firma koja posao dobija preko tendera, a
   ne preko sajta, i nov, uredan sajt kome je jedini jak argument brzina. Zaključak ručne provere:
-  izbor domena je posao kupca koji pravi listu, a ne alata.
+  izbor domena je posao operatera koji pravi listu, a ne alata.
 - **O-18: trajanje sa laganim nivoom 2 (Z-32).** Pun nivo 2 ostaje na 60 domena, pa na 200 domena
   lagani nivo 2 dobija oko 140 sajtova. Sa merenjem nad B i 3 konteksta procena je
   290 + 498 + 140 × 4,2 ≈ 1376 s, oko 23 min, a granica je 15. Odluka vlasnika: lagani nivo 2 bira

@@ -33,7 +33,7 @@ izvedena iz registra) i u `skener.toml`.
   `explain`, `diff`, `outcomes`), konfiguracija, izveštaji (HTML, CSV, JSON), ulazni CSV, poruke za
   klijenta na oba jezika.
 - **Obim — nije:** opterećenje tuđih sajtova (alat je namerno pristojan i nije predmet testa
-  opterećenja); bezbednost samog Chromium-a; pravna usklađenost načina na koji kupac koristi izveštaj;
+  opterećenja); bezbednost samog Chromium-a; pravna usklađenost načina na koji operater koristi izveštaj;
   web aplikacija.
 - **Pretpostavke:** testovi ne zavise od mreže, osim onih označenih sa `live`; pravi prolaz radi
   operater sa svoje veze.
@@ -132,7 +132,7 @@ u formatu iz skripte (BUG-xxx).
 ## 8. Upravljanje defektima
 
 Ozbiljnost: blocker (prolaz stane), critical (pogrešan rezultat za sve), major (lažan nalaz ili
-lažno negativan rezultat za klijenta), minor, trivial. Prioritet određuje uticaj na kupca.
+lažno negativan rezultat za klijenta), minor, trivial. Prioritet određuje uticaj na operatera.
 Životni ciklus: Novi → Ispravljen → Potvrdno testiran → Zatvoren.
 
 ## 9. Isporuke

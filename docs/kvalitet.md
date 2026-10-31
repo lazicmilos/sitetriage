@@ -19,7 +19,7 @@ kolona „Dokaz" ne može da se popuni, tvrdnja ide u „Rupe".
 **Rupe.** Pragovi težine, broja zahteva i vremena su kalibrisani nad 58 sajtova liste A (Z-50) i
 provereni na novoj listi B: u ručnoj proveri prvih 10 nijedan od 89 nalaza nije bio netačan
 ([IT-SKENER-003](izvestaj-testiranja-3.md)). Za druge delatnosti i tržišta raspodela može biti
-drugačija, pa kalibraciju treba ponavljati nad listama kupaca ([`kalibracija.md`](kalibracija.md)).
+drugačija, pa kalibraciju treba ponavljati nad listama operatera ([`kalibracija.md`](kalibracija.md)).
 Naslov, opis i canonical se čitaju iz sirovog HTML-a; koliko sajtova ih postavlja JavaScript-om tek
 se meri.
 Sa adrese van Srbije deo sajtova izgleda kao da ne radi, jer ih hosting odbija, pa lista „Ne rade"

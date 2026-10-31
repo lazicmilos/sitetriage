@@ -10,7 +10,7 @@ import os
 import pytest
 
 os.environ.setdefault("SKENER_NAZIV", "skener testovi")
-os.environ.setdefault("SKENER_KONTAKT", "miloslazic458@gmail.com")
+os.environ.setdefault("SKENER_KONTAKT", "test@example.invalid")
 
 
 @pytest.fixture(scope="session", autouse=True)
