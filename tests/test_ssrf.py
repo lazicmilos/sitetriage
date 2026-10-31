@@ -122,6 +122,15 @@ def test_input_with_ip_address_sends_no_request():
     assert snapshot.entry.error_kind == "blocked" and "with a port" in snapshot.entry.error_detail
 
 
+def test_nv_octal_ip_address_is_refused_with_a_reason():
+    """BUG-12: `0177.0.0.1` is 127.0.0.1 to a browser; the report said only `entry_missing`."""
+    snapshot = _scan("0177.0.0.1")
+    assert snapshot.entry.error_kind == "blocked" and "IP address" in snapshot.entry.error_detail
+    report = analyze(snapshot, load_config())
+    assert report.status == "failed" and report.reason.code == "entry_error"
+    assert "IP address" in report.reason.evidence["detail"]
+
+
 # --------------------------------------------------------------------------- #
 # The link probe before level 2 (ADR-018) goes through the same check as level 1
 # --------------------------------------------------------------------------- #
