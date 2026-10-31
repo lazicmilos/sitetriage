@@ -1,0 +1,10 @@
+# Profile `rs`: sites in Serbia (ADR-023). Merged over the package defaults (sitetriage.toml) and
+# under your own --config file. Turn it on with `--profile rs` or `profile = "rs"` in --config.
+#
+# It turns on Serbian content detection for `i18n.lang.mismatch`: content that is reliably Serbian
+# (Cyrillic share above thresholds.i18n.cyrillic_ratio, or č/ć/š/ž/đ above
+# thresholds.i18n.diacritic_ratio) with a `lang` of a language not written that way is a finding.
+# Without the profile the check is `not_applicable`.
+
+[thresholds.i18n]
+content_languages = ["sr"]

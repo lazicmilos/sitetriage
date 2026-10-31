@@ -1,50 +1,53 @@
+import os
+from pathlib import Path
+
 import pytest
 
-from skener import __version__
-from skener.config import ConfigError, _validate, digest, get, load_config, multiplier, user_agent
+from sitetriage import __version__
+from sitetriage.config import ConfigError, _validate, digest, get, load_config, multiplier, user_agent
 
 
-def test_ucitava_podrazumevanu_konfiguraciju():
+def test_loads_the_default_config():
     cfg = load_config()
     assert get(cfg, "thresholds.i18n.diacritic_ratio") == 0.005
     assert get(cfg, "severity_points.critical") == 40
 
 
-def test_korisnicka_konfiguracija_se_spaja_a_ne_zamenjuje(tmp_path):
-    override = tmp_path / "moj.toml"
+def test_user_config_is_merged_not_replaced(tmp_path):
+    override = tmp_path / "mine.toml"
     override.write_text("[thresholds.i18n]\nmin_text_length = 100\n", encoding="utf-8")
     cfg = load_config(override)
     assert get(cfg, "thresholds.i18n.min_text_length") == 100
-    # ostali pragovi iz iste sekcije prezivljavaju spajanje
+    # the other thresholds from the same section survive the merge
     assert get(cfg, "thresholds.i18n.diacritic_ratio") == 0.005
     assert get(cfg, "severity_points.critical") == 40
 
 
-def test_mnozioci_i_fallback_na_ostalo():
+def test_multipliers_and_fallback_to_other():
     cfg = load_config()
     assert multiplier(cfg, "hotel", "social") == 1.5
-    assert multiplier(cfg, "restoran", "perf") == 1.5
-    assert multiplier(cfg, "zdravstvo", "a11y") == 1.5
-    assert multiplier(cfg, "nepostojeca-delatnost", "seo") == 1.0
+    assert multiplier(cfg, "restaurant", "perf") == 1.5
+    assert multiplier(cfg, "healthcare", "a11y") == 1.5
+    assert multiplier(cfg, "nonexistent-industry", "seo") == 1.0
 
 
-def test_nepostojeci_kljuc_puca_i_imenuje_se():
+def test_missing_key_fails_and_is_named():
     cfg = load_config()
-    with pytest.raises(ConfigError, match="thresholds.perf.nema_me"):
-        get(cfg, "thresholds.perf.nema_me")
+    with pytest.raises(ConfigError, match="thresholds.perf.not_there"):
+        get(cfg, "thresholds.perf.not_there")
 
 
-def test_parcijalni_mnozilac_ne_razbija_tabelu(tmp_path):
-    """Spajanje je ono što čuva ostale kategorije kad korisnik prepiše jednu."""
-    override = tmp_path / "moj.toml"
+def test_partial_multiplier_does_not_break_the_table(tmp_path):
+    """Merging is what keeps the other categories when the user overrides one."""
+    override = tmp_path / "mine.toml"
     override.write_text("[industry_multipliers.hotel]\nseo = 9.9\n", encoding="utf-8")
     cfg = load_config(override)
     assert multiplier(cfg, "hotel", "seo") == 9.9
     assert multiplier(cfg, "hotel", "social") == 1.5
 
 
-def test_nepotpuna_tabela_mnozilaca_puca():
-    """Prava granica: neko obriše red u samom skener.toml tokom kalibracije."""
+def test_incomplete_multiplier_table_fails():
+    """A real boundary: someone deletes a row in the default config itself during calibration."""
     broken = {
         "severity_points": {"critical": 40, "high": 20, "medium": 8, "low": 3},
         "industry_multipliers": {"hotel": {"seo": 1.2}},
@@ -53,221 +56,264 @@ def test_nepotpuna_tabela_mnozilaca_puca():
         _validate(broken)
 
 
+def test_old_operator_section_fails_and_names_the_new_keys(tmp_path):
+    """3.0 renamed `[identitet]` to `[operator]` (ADR-012); merged and ignored, it would only
+    surface later as a missing identity, with no hint why."""
+    override = tmp_path / "old.toml"
+    override.write_text('[identitet]\nnaziv = "Web studio Primer"\n', encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"\[identitet\] was renamed to \[operator\].*naziv → name"):
+        load_config(override)
+
+
+def test_multipliers_for_an_old_industry_name_fail(tmp_path):
+    """`[industry_multipliers.restoran]` from before 3.0 would be merged and never used."""
+    override = tmp_path / "old.toml"
+    override.write_text("[industry_multipliers.restoran]\nperf = 2.0\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="industry_multipliers.restoran: unknown industry; known: hotel"):
+        load_config(override)
+
+
 # --------------------------------------------------------------------------- #
-# Identitet operatera: User-Agent predstavlja onog ko skenira, ne autora alata.
-# Alat pokreću različiti operateri, pa bi inače svako skenirao sa autorovim mejlom.
+# Operator identity: the User-Agent represents whoever scans, not the author of the tool.
+# Different operators run the tool, so otherwise everyone would scan with the author's email.
 # --------------------------------------------------------------------------- #
 @pytest.fixture
-def bez_okruzenja(monkeypatch):
-    monkeypatch.delenv("SKENER_NAZIV", raising=False)
-    monkeypatch.delenv("SKENER_KONTAKT", raising=False)
+def no_environment(monkeypatch):
+    monkeypatch.delenv("SITETRIAGE_OPERATOR_NAME", raising=False)
+    monkeypatch.delenv("SITETRIAGE_OPERATOR_CONTACT", raising=False)
 
 
-def test_podrazumevana_konfiguracija_nema_identitet(bez_okruzenja):
-    with pytest.raises(ConfigError, match="identitet"):
+def test_default_config_has_no_identity(no_environment):
+    with pytest.raises(ConfigError, match=r"\[operator\] name"):
         user_agent(load_config())
 
 
 @pytest.mark.parametrize(
-    "naziv, kontakt",
+    "name, contact",
     [
-        pytest.param("", "kontakt@primer.rs", id="nv-bez-naziva"),
-        pytest.param("Web studio Primer", "", id="nv-bez-kontakta"),
-        pytest.param("   ", "kontakt@primer.rs", id="nv-samo-razmaci"),
+        pytest.param("", "kontakt@primer.rs", id="nv-no-name"),
+        pytest.param("Web studio Primer", "", id="nv-no-contact"),
+        pytest.param("   ", "kontakt@primer.rs", id="nv-only-spaces"),
     ],
 )
-def test_nepotpun_identitet_puca(bez_okruzenja, naziv, kontakt):
+def test_incomplete_identity_fails(no_environment, name, contact):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": naziv, "kontakt": kontakt}
-    with pytest.raises(ConfigError, match="identitet"):
+    cfg["operator"] = {"name": name, "contact": contact}
+    with pytest.raises(ConfigError, match=r"\[operator\] name"):
         user_agent(cfg)
 
 
-def test_user_agent_nosi_operatera_a_ne_autora(bez_okruzenja):
+def test_user_agent_carries_the_operator_not_the_author(no_environment):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "Web studio Primer", "kontakt": "kontakt@primer.rs"}
-    # Tačno ono što je operater upisao, ništa više: ni autor alata ni podrazumevani kontakt.
+    cfg["operator"] = {"name": "Web studio Primer", "contact": "kontakt@primer.rs"}
+    # Exactly what the operator wrote, nothing more: neither the tool's author nor a default contact.
     assert user_agent(cfg) == f"SiteTriage/{__version__} (+kontakt@primer.rs; Web studio Primer)"
 
 
-def test_identitet_iz_okruzenja_ima_prednost(monkeypatch):
-    """Za Docker: `SKENER_NAZIV` i `SKENER_KONTAKT` se prosleđuju iz compose.yaml."""
-    monkeypatch.setenv("SKENER_NAZIV", "Iz okruženja")
-    monkeypatch.setenv("SKENER_KONTAKT", "env@primer.rs")
+def test_identity_from_the_environment_takes_precedence(monkeypatch):
+    """For Docker: compose.yaml passes `SITETRIAGE_OPERATOR_NAME` and `SITETRIAGE_OPERATOR_CONTACT`."""
+    monkeypatch.setenv("SITETRIAGE_OPERATOR_NAME", "Iz okruženja")
+    monkeypatch.setenv("SITETRIAGE_OPERATOR_CONTACT", "env@primer.rs")
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "Iz fajla", "kontakt": "fajl@primer.rs"}
+    cfg["operator"] = {"name": "Iz fajla", "contact": "fajl@primer.rs"}
     ua = user_agent(cfg)
     assert "Iz okruzenja" in ua and "env@primer.rs" in ua  # ASCII: ž → z
 
 
-# Pogađanje grešaka: operater upisuje ime kako mu je prirodno, a HTTP zaglavlje sme da
-# nosi samo ASCII. Ime sa „Š" ili ćirilicom inače obori svaki zahtev.
+# Error guessing: the operator writes the name however comes naturally, and an HTTP header may
+# carry only ASCII. A name with "Š" or in Cyrillic would otherwise break every request.
 @pytest.mark.parametrize(
-    "naziv, ocekivano",
+    "name, expected",
     [
-        pytest.param("Web studio Šumadija", "Web studio Sumadija", id="pg-latinica-dijakritici"),
-        pytest.param("Đorđe Čačić", "Djordje Cacic", id="pg-dj-i-c"),
-        pytest.param("Ђорђе Јовановић", "Djordje Jovanovic", id="pg-cirilica"),
-        pytest.param("Студио Љубљана", "Studio Ljubljana", id="pg-cirilica-lj"),
-        pytest.param("Studio — Primer", "Studio Primer", id="pg-crta-otpada"),
-        pytest.param("Studio 😀 Primer", "Studio Primer", id="pg-emodzi-otpada"),
+        pytest.param("Web studio Šumadija", "Web studio Sumadija", id="pg-latin-diacritics"),
+        pytest.param("Đorđe Čačić", "Djordje Cacic", id="pg-dj-and-c"),
+        pytest.param("Ђорђе Јовановић", "Djordje Jovanovic", id="pg-cyrillic"),
+        pytest.param("Студио Љубљана", "Studio Ljubljana", id="pg-cyrillic-lj"),
+        pytest.param("Studio — Primer", "Studio Primer", id="pg-dash-dropped"),
+        pytest.param("Studio 😀 Primer", "Studio Primer", id="pg-emoji-dropped"),
     ],
 )
-def test_identitet_se_presipa_u_ascii(bez_okruzenja, naziv, ocekivano):
+def test_identity_is_transliterated_to_ascii(no_environment, name, expected):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": naziv, "kontakt": "kontakt@primer.rs"}
+    cfg["operator"] = {"name": name, "contact": "kontakt@primer.rs"}
     ua = user_agent(cfg)
     assert ua.isascii(), ua
-    assert ocekivano in ua
+    assert expected in ua
 
 
-def test_identitet_ne_moze_da_ubaci_novo_zaglavlje(bez_okruzenja):
-    """Novi red u imenu bi u HTTP zahtevu započeo novo zaglavlje."""
+def test_identity_cannot_inject_a_new_header(no_environment):
+    """A newline in the name would start a new header in the HTTP request."""
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "Studio\r\nX-Napad: 1", "kontakt": "kontakt@primer.rs"}
+    cfg["operator"] = {"name": "Studio\r\nX-Napad: 1", "contact": "kontakt@primer.rs"}
     ua = user_agent(cfg)
     assert "\r" not in ua and "\n" not in ua
 
 
-def test_identitet_od_samih_ne_ascii_znakova_puca(bez_okruzenja):
+def test_identity_of_only_non_ascii_characters_fails(no_environment):
     cfg = load_config()
-    cfg["identitet"] = {"naziv": "😀😀", "kontakt": "kontakt@primer.rs"}
-    with pytest.raises(ConfigError, match="identitet"):
+    cfg["operator"] = {"name": "😀😀", "contact": "kontakt@primer.rs"}
+    with pytest.raises(ConfigError, match=r"\[operator\] name"):
         user_agent(cfg)
 
 
 # --------------------------------------------------------------------------- #
-# Granica 0 u konfiguraciji: semafor sa nula mesta ne pušta nikog — prolaz bi
-# stajao zauvek, bez ijedne poruke.
+# Boundary 0 in the config: a semaphore with zero slots lets no one through, and the run
+# would stall forever without a single message.
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
-    "kljuc",
+    "key",
     ["http.concurrency", "http.domain_concurrency", "browser.concurrency", "http.max_requests_per_domain"],
 )
 @pytest.mark.parametrize(
-    "vrednost, ispravna",
+    "value, valid",
     [
-        pytest.param(-1, False, id="nv-negativna"),
+        pytest.param(-1, False, id="nv-negative"),
         pytest.param(0, False, id="gv-0"),
         pytest.param(1, True, id="gv-1"),
     ],
 )
-def test_paralelizam_i_budzet_moraju_biti_pozitivni(tmp_path, kljuc, vrednost, ispravna):
-    sekcija, polje = kljuc.split(".")
-    override = tmp_path / "moj.toml"
-    override.write_text(f"[{sekcija}]\n{polje} = {vrednost}\n", encoding="utf-8")
-    if ispravna:
-        assert get(load_config(override), kljuc) == vrednost
+def test_concurrency_and_budget_must_be_positive(tmp_path, key, value, valid):
+    section, field = key.split(".")
+    override = tmp_path / "mine.toml"
+    override.write_text(f"[{section}]\n{field} = {value}\n", encoding="utf-8")
+    if valid:
+        assert get(load_config(override), key) == value
     else:
-        with pytest.raises(ConfigError, match=kljuc):
+        with pytest.raises(ConfigError, match=key):
             load_config(override)
 
 
 @pytest.mark.parametrize(
-    "vrednost, ispravna",
+    "value, valid",
     [
-        pytest.param("-1", False, id="nv-negativna"),
-        pytest.param("true", False, id="nv-logicka"),
-        pytest.param("0", True, id="gv-0-po-masini"),
+        pytest.param("-1", False, id="nv-negative"),
+        pytest.param("true", False, id="nv-boolean"),
+        pytest.param("0", True, id="gv-0-per-machine"),
         pytest.param("1", True, id="gv-1"),
     ],
 )
-def test_broj_konteksta_laganog_nivoa_2_je_ceo_broj_od_nule(tmp_path, vrednost, ispravna):
-    """0 znači „po mašini" (Z-32), pa za razliku od ostalog paralelizma nula ovde važi."""
-    override = tmp_path / "moj.toml"
-    override.write_text(f"[browser]\nlight_concurrency = {vrednost}\n", encoding="utf-8")
-    if ispravna:
-        assert get(load_config(override), "browser.light_concurrency") == int(vrednost)
+def test_light_level2_context_count_is_an_integer_from_zero(tmp_path, value, valid):
+    """0 means "chosen per machine" (ADR-019), so unlike the other concurrency settings zero is valid."""
+    override = tmp_path / "mine.toml"
+    override.write_text(f"[browser]\nlight_concurrency = {value}\n", encoding="utf-8")
+    if valid:
+        assert get(load_config(override), "browser.light_concurrency") == int(value)
     else:
         with pytest.raises(ConfigError, match="browser.light_concurrency"):
             load_config(override)
 
 
-def test_neispravan_toml_puca_i_imenuje_fajl(tmp_path):
-    override = tmp_path / "pokvaren.toml"
+def test_invalid_toml_fails_and_names_the_file(tmp_path):
+    override = tmp_path / "broken.toml"
     override.write_text("[http\nconcurrency = 8\n", encoding="utf-8")
-    with pytest.raises(ConfigError, match="pokvaren.toml"):
+    with pytest.raises(ConfigError, match="broken.toml"):
         load_config(override)
 
 
-def test_nepostojeci_config_fajl_puca(tmp_path):
-    with pytest.raises(ConfigError, match="ne postoji"):
-        load_config(tmp_path / "nema.toml")
+def test_missing_config_file_fails(tmp_path):
+    with pytest.raises(ConfigError, match="does not exist"):
+        load_config(tmp_path / "missing.toml")
 
 
 @pytest.mark.parametrize(
-    "vrednost, ispravna",
+    "value, valid",
     [
         pytest.param(0, False, id="gv-0"),
-        pytest.param(-5, False, id="nv-negativna"),
-        pytest.param(0.5, True, id="gv-malo-iznad-0"),
-        pytest.param(40, True, id="ke-podrazumevana"),
+        pytest.param(-5, False, id="nv-negative"),
+        pytest.param(0.5, True, id="gv-just-above-0"),
+        pytest.param(40, True, id="ke-default"),
     ],
 )
-def test_vremenski_budzet_mora_biti_pozitivan(tmp_path, vrednost, ispravna):
-    override = tmp_path / "moj.toml"
-    override.write_text(f"[http]\nmax_seconds_per_domain = {vrednost}\n", encoding="utf-8")
-    if ispravna:
-        assert get(load_config(override), "http.max_seconds_per_domain") == vrednost
+def test_time_budget_must_be_positive(tmp_path, value, valid):
+    override = tmp_path / "mine.toml"
+    override.write_text(f"[http]\nmax_seconds_per_domain = {value}\n", encoding="utf-8")
+    if valid:
+        assert get(load_config(override), "http.max_seconds_per_domain") == value
     else:
         with pytest.raises(ConfigError, match="max_seconds_per_domain"):
             load_config(override)
 
 
-def test_konfiguracija_iz_radnog_direktorijuma_ima_prednost(tmp_path, monkeypatch):
+def test_config_in_the_working_directory_takes_precedence(tmp_path, monkeypatch):
     import shutil
 
-    from skener.config import default_config_path
+    from sitetriage.config import default_config_path
 
-    kopija = tmp_path / "skener.toml"
-    shutil.copy(default_config_path(), kopija)
+    copy = tmp_path / "sitetriage.toml"
+    shutil.copy(default_config_path(), copy)
     monkeypatch.chdir(tmp_path)
-    assert default_config_path() == kopija
+    assert default_config_path() == copy
 
 
-def test_bez_podrazumevane_konfiguracije_puca_i_kaze_sta_da_se_uradi(monkeypatch):
-    monkeypatch.setattr("skener.config.CONFIG_NAME", "nepostojeci.toml")
-    with pytest.raises(ConfigError, match="--config"):
+def test_without_a_default_config_it_fails_and_says_what_to_do(monkeypatch):
+    monkeypatch.setattr("sitetriage.config.CONFIG_NAME", "nonexistent.toml")
+    with pytest.raises(ConfigError, match="Reinstall SiteTriage"):
         load_config()
 
 
-@pytest.mark.parametrize("sekcija", ["severity_points", "industry_multipliers"])
-def test_nedostaje_cela_sekcija(sekcija):
+def test_default_config_ships_inside_the_package(tmp_path, monkeypatch):
+    """A wheel from PyPI has no repository around it: the defaults must come from the package."""
+    from importlib.resources import files
+
+    from sitetriage.config import default_config_path
+
+    monkeypatch.chdir(tmp_path)
+    packaged = files("sitetriage").joinpath("sitetriage.toml")
+    assert packaged.is_file()
+    assert default_config_path() == Path(str(packaged))
+    assert get(load_config(), "http.max_body_kb") == 10240
+
+
+@pytest.mark.skipif("MUTANT_UNDER_TEST" in os.environ, reason="mutmut copies only part of the repository")
+def test_default_config_is_package_data_and_has_no_second_copy():
+    """Without package data the wheel would not contain the file; a second copy at the
+    repository root would drift from the one that is installed."""
+    import tomllib
+
+    root = Path(__file__).resolve().parent.parent
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "sitetriage.toml" in pyproject["tool"]["setuptools"]["package-data"]["sitetriage"]
+    assert "sitetriage/sitetriage.toml" in pyproject["tool"]["mutmut"]["also_copy"]
+    assert not (root / "sitetriage.toml").exists(), "the default config lives in sitetriage/ only"
+
+
+@pytest.mark.parametrize("section", ["severity_points", "industry_multipliers"])
+def test_a_whole_section_is_missing(section):
     cfg = load_config()
-    del cfg[sekcija]
-    with pytest.raises(ConfigError, match=sekcija):
+    del cfg[section]
+    with pytest.raises(ConfigError, match=section):
         _validate(cfg)
 
 
 # --------------------------------------------------------------------------- #
-# Otisak konfiguracije: `diff` po njemu zna da li je razlika od sajta ili od pragova
+# Config digest: `diff` uses it to tell whether a difference comes from the site or the thresholds
 # --------------------------------------------------------------------------- #
-def test_otisak_ne_zavisi_od_identiteta_i_paralelizma():
-    prva, druga = load_config(), load_config()
-    druga["identitet"] = {"naziv": "Drugi studio", "kontakt": "drugi@primer.rs"}
-    druga["http"]["concurrency"] = druga["http"]["domain_concurrency"] = 2
-    druga["browser"]["concurrency"] = 1
-    druga["browser"]["light_concurrency"] = 5
-    druga["browser"]["executable_path"] = "/usr/bin/chromium"
-    assert digest(prva) == digest(druga)
-    assert len(digest(prva)) == 64
+def test_digest_does_not_depend_on_identity_and_concurrency():
+    first, second = load_config(), load_config()
+    second["operator"] = {"name": "Drugi studio", "contact": "drugi@primer.rs"}
+    second["http"]["concurrency"] = second["http"]["domain_concurrency"] = 2
+    second["browser"]["concurrency"] = 1
+    second["browser"]["light_concurrency"] = 5
+    second["browser"]["executable_path"] = "/usr/bin/chromium"
+    assert digest(first) == digest(second)
+    assert len(digest(first)) == 64
 
 
 @pytest.mark.parametrize(
-    "kljuc, vrednost",
+    "key, value",
     [
-        pytest.param(("thresholds", "perf", "html_size_kb"), 501, id="prag"),
-        pytest.param(("severity_points", "critical"), 41, id="bodovi"),
-        pytest.param(("industry_multipliers", "hotel", "social"), 1.4, id="mnozilac"),
-        pytest.param(("escalation", "max_level2"), 59, id="limit-nivoa-2"),
+        pytest.param(("thresholds", "perf", "html_size_kb"), 501, id="threshold"),
+        pytest.param(("severity_points", "critical"), 41, id="points"),
+        pytest.param(("industry_multipliers", "hotel", "social"), 1.4, id="multiplier"),
+        pytest.param(("escalation", "max_level2"), 59, id="level2-limit"),
     ],
 )
-def test_otisak_se_menja_kad_se_promeni_prag(kljuc, vrednost):
+def test_digest_changes_when_a_threshold_changes(key, value):
     cfg = load_config()
-    pre = digest(cfg)
-    *put, poslednji = kljuc
-    sekcija = cfg
-    for deo in put:
-        sekcija = sekcija[deo]
-    sekcija[poslednji] = vrednost
-    assert digest(cfg) != pre
+    before = digest(cfg)
+    *path, last = key
+    section = cfg
+    for part in path:
+        section = section[part]
+    section[last] = value
+    assert digest(cfg) != before

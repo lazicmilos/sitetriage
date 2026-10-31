@@ -1,149 +1,150 @@
-"""Lista domena i CSV iz Excel-a (§4.1). Lista najčešće stiže iz Excel-a, a operater nije nužno programer."""
+"""The domain list and CSV from Excel. The list usually comes from Excel, and the operator is not
+necessarily a programmer."""
 
 from __future__ import annotations
 
 import pytest
 
-from skener.inputs import InputError, is_excluded, read_domain_list, read_excel_csv, read_exclusions
+from sitetriage.inputs import InputError, is_excluded, read_domain_list, read_excel_csv, read_exclusions
 
 
-def procitaj(sadrzaj: str | bytes):
-    data = sadrzaj.encode("utf-8") if isinstance(sadrzaj, str) else sadrzaj
+def read(content: str | bytes):
+    data = content.encode("utf-8") if isinstance(content, str) else content
     return read_domain_list(data, "d.csv")
 
 
-def test_cita_csv_sa_zaglavljem():
-    rows, _ = procitaj(
-        "domain,industry,note\ninstitucija.example,institucija,beleska\nrestoran-ugao.example,,\nklinika.example,NEPOSTOJECA,\n\n"
+def test_reads_csv_with_a_header():
+    rows, _ = read(
+        "domain,industry,note\ninstitucija.example,institution,beleska\nrestoran-ugao.example,,\nklinika.example,NEPOSTOJECA,\n\n"
     )
     assert [r.domain for r in rows] == ["institucija.example", "restoran-ugao.example", "klinika.example"]
-    assert rows[0].industry == "institucija" and rows[0].note == "beleska"
-    assert rows[1].industry == "ostalo", "prazna delatnost pada na `ostalo` (§4.1)"
-    assert rows[2].industry == "ostalo", "nepoznata delatnost pada na `ostalo`, ne ruši prolaz"
+    assert rows[0].industry == "institution" and rows[0].note == "beleska"
+    assert rows[1].industry == "other", "an empty industry falls back to `other`"
+    assert rows[2].industry == "other", "an unknown industry falls back to `other` and does not break the run"
 
 
-def test_csv_bez_kolone_domain_puca_razumljivo():
-    with pytest.raises(InputError, match="red 1: nedostaje kolona `domain`"):
-        procitaj("sajt,industry\na.rs,hotel\n")
+def test_csv_without_a_domain_column_fails_clearly():
+    with pytest.raises(InputError, match="row 1: the header has no `domain` column"):
+        read("sajt,industry\na.rs,hotel\n")
 
 
 @pytest.mark.parametrize(
-    "sadrzaj",
+    "content",
     [
-        pytest.param(b"", id="nv-prazan-fajl"),
-        pytest.param(b"domain,industry\n", id="nv-samo-zaglavlje"),
-        pytest.param(b"domain,industry\n\n  \n", id="nv-prazni-redovi"),
+        pytest.param(b"", id="nv-empty-file"),
+        pytest.param(b"domain,industry\n", id="nv-header-only"),
+        pytest.param(b"domain,industry\n\n  \n", id="nv-empty-rows"),
     ],
 )
-def test_csv_bez_domena_puca_razumljivo(sadrzaj):
+def test_csv_without_domains_fails_clearly(content):
     with pytest.raises(InputError):
-        procitaj(sadrzaj)
+        read(content)
 
 
 # --------------------------------------------------------------------------- #
-# Pogađanje grešaka: lista iz Excel-a na srpskom Windows-u
+# Error guessing: a list from Excel on Windows with Serbian regional settings
 # --------------------------------------------------------------------------- #
-def test_csv_iz_excela_sa_tackom_zarezom():
-    """Srpska podešavanja Windows-a: Excel „CSV" razdvaja kolone sa `;`."""
-    rows, _ = procitaj("domain;industry;note\ninstitucija.example;institucija;beleška\n")
+def test_csv_from_excel_with_semicolons():
+    """Serbian Windows settings: Excel "CSV" separates columns with `;`."""
+    rows, _ = read("domain;industry;note\ninstitucija.example;institution;beleška\n")
     assert [(r.domain, r.industry, r.note) for r in rows] == [
-        ("institucija.example", "institucija", "beleška")
+        ("institucija.example", "institution", "beleška")
     ]
 
 
-def test_csv_u_windows_1250():
-    """Excel bez „UTF-8" opcije čuva u windows-1250; ranije je ovo bio traceback."""
-    csv = "domain,industry,note\ninstitucija.example,institucija,čćžšđ\n"
-    rows, upozorenja = procitaj(csv.encode("cp1250"))
+def test_csv_in_windows_1250():
+    """Excel without the "UTF-8" option saves in windows-1250; this used to be a traceback."""
+    csv = "domain,industry,note\ninstitucija.example,institution,čćžšđ\n"
+    rows, warnings = read(csv.encode("cp1250"))
     assert rows[0].note == "čćžšđ"
-    assert "windows-1250" in upozorenja[0].message
+    assert "windows-1250" in warnings[0].message
 
 
-def test_csv_duplikati_se_skeniraju_jednom():
-    """Isti domen dva puta = dva puta tuđ sajt i dva reda u izveštaju sa istim snapshotom."""
-    rows, _ = procitaj(
-        "domain,industry\ninstitucija.example,institucija\nINSTITUCIJA.EXAMPLE,hotel\n"
-        "restoran-ugao.example,restoran\n"
+def test_csv_duplicates_are_scanned_once():
+    """The same domain twice = someone else's site twice and two report rows with the same snapshot."""
+    rows, _ = read(
+        "domain,industry\ninstitucija.example,institution\nINSTITUCIJA.EXAMPLE,hotel\n"
+        "restoran-ugao.example,restaurant\n"
     )
     assert [r.domain for r in rows] == ["institucija.example", "restoran-ugao.example"]
-    assert rows[0].industry == "institucija", "važi prvo pojavljivanje"
+    assert rows[0].industry == "institution", "the first occurrence wins"
 
 
-def test_csv_sa_bom_oznakom():
-    rows, _ = procitaj("domain,industry\ninstitucija.example,institucija\n".encode("utf-8-sig"))
+def test_csv_with_a_bom():
+    rows, _ = read("domain,industry\ninstitucija.example,institution\n".encode("utf-8-sig"))
     assert [r.domain for r in rows] == ["institucija.example"]
 
 
 # --------------------------------------------------------------------------- #
-# Broj reda: po njemu korisnik nađe red u Excel-u
+# Row number: the user finds the row in Excel by it
 # --------------------------------------------------------------------------- #
-def test_upozorenje_nosi_broj_reda_i_domen():
-    _, upozorenja = procitaj(
-        "domain,industry\ninstitucija.example,institucija\nrestoran-ugao.example,picerija\n"
+def test_warning_carries_the_row_number_and_the_domain():
+    _, warnings = read(
+        "domain,industry\ninstitucija.example,institution\nrestoran-ugao.example,picerija\n"
         "INSTITUCIJA.EXAMPLE,hotel\n"
     )
-    assert [(u.row, u.domain) for u in upozorenja] == [
+    assert [(w.row, w.domain) for w in warnings] == [
         (3, "restoran-ugao.example"),
         (4, "INSTITUCIJA.EXAMPLE"),
     ]
 
 
 @pytest.mark.parametrize(
-    ("sadrzaj", "redovi"),
+    ("content", "rows"),
     [
-        pytest.param(b"domain\na.rs\nb.rs\n", [2, 3], id="ke-obican"),
-        pytest.param(b"domain\na.rs\n\nb.rs\n", [2, 4], id="pg-prazan-red-se-broji"),
-        pytest.param(b'domain,note\na.rs,"prvi\ndrugi"\nb.rs,x\n', [2, 3], id="pg-prelom-u-celiji"),
+        pytest.param(b"domain\na.rs\nb.rs\n", [2, 3], id="ke-plain"),
+        pytest.param(b"domain\na.rs\n\nb.rs\n", [2, 4], id="pg-empty-row-counts"),
+        pytest.param(b'domain,note\na.rs,"prvi\ndrugi"\nb.rs,x\n', [2, 3], id="pg-line-break-in-cell"),
     ],
 )
-def test_broj_reda_je_red_u_excelu(sadrzaj, redovi):
-    """Prazan red Excel prikazuje; ćelija sa prelomom je u fajlu dve linije, a u Excel-u jedan red."""
-    assert [broj for broj, _ in read_excel_csv(sadrzaj, "d.csv").rows] == redovi
+def test_row_number_is_the_excel_row(content, rows):
+    """Excel shows an empty row; a cell with a line break is two lines in the file but one row in Excel."""
+    assert [number for number, _ in read_excel_csv(content, "d.csv").rows] == rows
 
 
-def test_zaglavlje_posle_praznog_reda():
-    tabela = read_excel_csv(b"\ndomain;industry\na.rs;hotel\n", "d.csv")
-    assert tabela.header_row == 2 and tabela.rows == [(3, {"domain": "a.rs", "industry": "hotel"})]
+def test_header_after_an_empty_row():
+    table = read_excel_csv(b"\ndomain;industry\na.rs;hotel\n", "d.csv")
+    assert table.header_row == 2 and table.rows == [(3, {"domain": "a.rs", "industry": "hotel"})]
 
 
 # --------------------------------------------------------------------------- #
-# Izuzeti domeni (opt-out)
+# Excluded domains (opt-out)
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
-    ("domen", "izuzet"),
+    ("domain", "excluded"),
     [
-        pytest.param("x.rs", True, id="ke-isti-host"),
+        pytest.param("x.rs", True, id="ke-same-host"),
         pytest.param("www.x.rs", True, id="ke-www"),
-        pytest.param("blog.x.rs", True, id="ke-poddomen"),
-        pytest.param("https://shop.x.rs/putanja", True, id="ke-pun-url"),
-        pytest.param("X.RS", True, id="pg-velika-slova"),
-        pytest.param("x.rs.", True, id="pg-tacka-na-kraju"),
-        pytest.param("nex.rs", False, id="gv-sufiks-bez-tacke"),
-        pytest.param("x.rs.zlo.com", False, id="pg-x.rs-na-pocetku-tudjeg-domena"),
-        pytest.param("y.rs", False, id="ke-drugi-domen"),
+        pytest.param("blog.x.rs", True, id="ke-subdomain"),
+        pytest.param("https://shop.x.rs/putanja", True, id="ke-full-url"),
+        pytest.param("X.RS", True, id="pg-upper-case"),
+        pytest.param("x.rs.", True, id="pg-trailing-dot"),
+        pytest.param("nex.rs", False, id="gv-suffix-without-dot"),
+        pytest.param("x.rs.zlo.com", False, id="pg-x.rs-at-the-start-of-a-foreign-domain"),
+        pytest.param("y.rs", False, id="ke-other-domain"),
     ],
 )
-def test_izuzece_vazi_za_poddomene(domen, izuzet):
-    assert is_excluded(domen, ["x.rs"]) is izuzet
+def test_exclusion_applies_to_subdomains(domain, excluded):
+    assert is_excluded(domain, ["x.rs"]) is excluded
 
 
-def test_co_rs_nije_izuzet_kad_je_izuzeta_firma_co_rs():
-    """Bez Public Suffix liste „registrovani domen" od `firma.co.rs` bi bio `co.rs`."""
-    izuzeti = ["firma.co.rs"]
-    assert is_excluded("firma.co.rs", izuzeti) and is_excluded("www.firma.co.rs", izuzeti)
-    assert not is_excluded("co.rs", izuzeti) and not is_excluded("druga.co.rs", izuzeti)
+def test_co_rs_is_not_excluded_when_firma_co_rs_is():
+    """Without the Public Suffix List the "registered domain" of `firma.co.rs` would be `co.rs`."""
+    exclusions = ["firma.co.rs"]
+    assert is_excluded("firma.co.rs", exclusions) and is_excluded("www.firma.co.rs", exclusions)
+    assert not is_excluded("co.rs", exclusions) and not is_excluded("druga.co.rs", exclusions)
 
 
-def test_www_u_unosu_izuzima_celu_firmu():
+def test_www_in_the_entry_excludes_the_whole_company():
     assert is_excluded("x.rs", ["www.x.rs"]) and is_excluded("blog.x.rs", ["https://www.x.rs/"])
 
 
-def test_fajl_sa_izuzetim_domenima():
-    data = "\ufeffx.rs\n\n# ko je tražio i kada\ny.rs  # posle tarabe je komentar\n   \n".encode()
+def test_exclusion_file():
+    data = "﻿x.rs\n\n# ko je tražio i kada\ny.rs  # posle tarabe je komentar\n   \n".encode()
     assert read_exclusions(data) == ["x.rs", "y.rs"]
     assert not is_excluded("x.rs", read_exclusions(b"# samo komentar\n"))
 
 
-def test_fajl_sa_izuzetim_domenima_u_windows_1250():
-    """pg-: Notepad na srpskom Windows-u čuva komentar u windows-1250, a domen se svejedno čita."""
+def test_exclusion_file_in_windows_1250():
+    """pg-: Notepad on Serbian Windows saves the comment in windows-1250, and the domain is read anyway."""
     assert read_exclusions("# tražio vlasnik iz Niša\nx.rs\n".encode("cp1250")) == ["x.rs"]

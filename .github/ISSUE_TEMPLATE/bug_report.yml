@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for the report. If a finding is wrong or a problem was missed, use
         **Wrong or missed finding** instead. For a security vulnerability, do not open an issue:
-        see [SECURITY.md](https://github.com/lazicmilos/skener/blob/main/SECURITY.md).
+        see [SECURITY.md](https://github.com/lazicmilos/sitetriage/blob/main/SECURITY.md).
 
         **Do not post private domains, lead lists or unredacted snapshots here.** Issues are public.
         Replace real domains with `example.com` or attach a minimal reproduction.
@@ -30,7 +30,7 @@ body:
       label: Steps to reproduce
       description: The exact command, and the input (an anonymized CSV row or a snapshot) if it matters.
       placeholder: |
-        1. docker compose run --rm skener skener scan /rad/list.csv --out /rad/out
+        1. docker compose run --rm sitetriage sitetriage scan /work/list.csv --out /work/out
         2. ...
     validations:
       required: true
@@ -38,8 +38,8 @@ body:
     id: version
     attributes:
       label: Version
-      description: Output of `skener --version`.
-      placeholder: skener 2.0.0
+      description: Output of `sitetriage --version`.
+      placeholder: sitetriage 3.0.0
     validations:
       required: true
   - type: dropdown
@@ -49,7 +49,7 @@ body:
       options:
         - Docker image from this repository
         - pip install, with Playwright's Chromium
-        - pip install, with a system Chromium or Chrome (SKENER_CHROMIUM)
+        - pip install, with a system Chromium or Chrome (SITETRIAGE_CHROMIUM)
         - As a library (pipeline API)
         - Other
     validations:
@@ -64,7 +64,7 @@ body:
     id: config
     attributes:
       label: Configuration changes
-      description: Anything you changed from the default `skener.toml` (your `--config` file, without the identity).
+      description: Anything you changed from the default `sitetriage.toml` (your `--config` file, without the identity).
       render: toml
   - type: textarea
     id: logs

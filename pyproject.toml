@@ -3,9 +3,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "skener"
+name = "sitetriage"
 dynamic = ["version"]
-description = "Skener sajtova — rangira domene po tome koji zaslužuju pun ručni audit"
+description = "Scan a list of domains politely and rank the sites that deserve a full manual audit"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Milos Lazic", email = "miloslazic458@gmail.com" }]
@@ -31,51 +31,56 @@ dependencies = [
 
 [project.optional-dependencies]
 browser = ["playwright>=1.44"]
-# Playwright je zakucan: paket traži tačno svoju reviziju Chromium-a, pa nadogradnja
-# bez `playwright install` obori sve browser testove (vidi `chromium_se_pokrece`).
-dev = ["pytest>=8", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18", "pre-commit>=3.5"]
+# Playwright is pinned: the package expects exactly its own Chromium revision, so an upgrade
+# without `playwright install` breaks every browser test (see `chromium_starts` in tests/conftest.py).
+# pytest stays below 9: mutmut 3.2.3 (scripts/mutation.py) reads `item._nodeid`, which pytest 9
+# removed, so mutation testing fails before testing a single mutant. Lift this together with a
+# mutmut upgrade, and compare the score against the previous run when you do.
+dev = ["pytest>=8,<9", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18", "pre-commit>=3.5"]
 
 [project.urls]
-Homepage = "https://github.com/lazicmilos/skener"
-Repository = "https://github.com/lazicmilos/skener"
-Issues = "https://github.com/lazicmilos/skener/issues"
-Changelog = "https://github.com/lazicmilos/skener/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/lazicmilos/sitetriage"
+Repository = "https://github.com/lazicmilos/sitetriage"
+Issues = "https://github.com/lazicmilos/sitetriage/issues"
+Changelog = "https://github.com/lazicmilos/sitetriage/blob/main/CHANGELOG.md"
 
 [project.scripts]
-skener = "skener.cli:main"
+sitetriage = "sitetriage.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["skener*"]
+include = ["sitetriage*"]
 
-# Šema JSON izveštaja ide uz paket: integracije i web aplikacija validiraju po njoj.
+# The JSON report schema, the default config and the profiles ship with the package: integrations
+# and the web app validate against the schema, and an installed `sitetriage` reads its defaults from
+# sitetriage/sitetriage.toml and its profiles from sitetriage/profiles/ (ADR-023).
 [tool.setuptools.package-data]
-skener = ["schema/*.json"]
+sitetriage = ["schema/*.json", "sitetriage.toml", "profiles/*.toml"]
 
 [tool.setuptools.dynamic]
-version = { attr = "skener.__version__" }
+version = { attr = "sitetriage.__version__" }
 
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-m 'not live' --strict-markers"
 markers = [
-    "live: pravi mrežni prolaz nad listom iz SKENER_LIVE_CSV; iskljucen po defaultu (pytest -m live)",
-    "browser: trazi instaliran Playwright/Chromium; preskace se ako ga nema",
+    "live: a real network run over the list in SITETRIAGE_LIVE_CSV; off by default (pytest -m live)",
+    "browser: needs Playwright and Chromium installed; skipped when Chromium does not start",
 ]
 
-# Mutaciono testiranje (docs/plan-testiranja.md): moduli sa logikom.
-# Nov modul pod skener/ je obuhvaćen sam, osim ako je u do_not_mutate. Zato čisti
-# moduli (poruke, diff, ishodi, klasifikacija adresa) ne idu u fetch/* ni report/*.
-# mutmut 3.2.3 pokreće ceo skup testova; izbor testova iz podešavanja ne čita.
-# Radi samo na Linux-u, pa kroz Docker:
-#   docker compose run --rm skener python scripts/mutacije.py
+# Mutation testing (docs/sr/plan-testiranja.md): the modules with logic.
+# A new module under sitetriage/ is included automatically unless it is in do_not_mutate. That
+# is why pure modules (messages, diff, outcomes, address classification) do not go into fetch/*
+# or report/*. mutmut 3.2.3 runs the whole test suite; it does not read a test selection from
+# the settings. It runs only on Linux, so through Docker:
+#   docker compose run --rm sitetriage python scripts/mutation.py
 [tool.mutmut]
-paths_to_mutate = ["skener/"]
+paths_to_mutate = ["sitetriage/"]
 do_not_mutate = [
-    "skener/__init__.py", "skener/cli.py", "skener/pipeline.py", "skener/models.py", "skener/store.py",
-    "skener/fetch/*", "skener/report/*",
+    "sitetriage/__init__.py", "sitetriage/cli.py", "sitetriage/pipeline.py", "sitetriage/models.py", "sitetriage/store.py",
+    "sitetriage/fetch/*", "sitetriage/report/*",
 ]
-also_copy = ["skener.toml", "skener/schema/"]
+also_copy = ["sitetriage/sitetriage.toml", "sitetriage/schema/", "sitetriage/profiles/"]
 
 [tool.ruff]
 line-length = 110

@@ -1,10 +1,10 @@
-"""Tabelarni test normalizacije (§12.3): tu se kriju najzabavniji bagovi."""
+"""Table-driven test of URL normalization: this is where the most entertaining bugs hide."""
 
 import pytest
 
-from skener.fetch.urls import collapse_ws, normalize, path_group, same_site
+from sitetriage.fetch.urls import collapse_ws, normalize, path_group, same_site
 
-# (ulaz, base, očekivano)
+# (input, base, expected)
 CASES = [
     ("http://Example.COM/", None, "http://example.com/"),
     ("https://d.rs", None, "https://d.rs/"),
@@ -50,22 +50,22 @@ def test_normalize_table(url, base, expected):
         "http://[::1]:8080/a/",
     ],
 )
-def test_normalize_je_idempotentan(url):
-    """Normalizovan URL koji se ponovo normalizuje mora ostati isti.
+def test_normalize_is_idempotent_on_any_url(url):
+    """A normalized URL that is normalized again must stay the same.
 
-    Inače je isti canonical „različit" zavisno od toga koliko puta je prošao
-    kroz `normalize`, a na tome stoji svaki `*.duplicate` nalaz.
+    Otherwise the same canonical is "different" depending on how many times it went
+    through `normalize`, and every `*.duplicate` finding stands on that.
     """
     once = normalize(url)
     assert normalize(once) == once
 
 
-def test_www_se_ne_uklanja():
-    """§4.5 tačka 7: www i non-www jesu različite adrese za Google."""
+def test_www_is_not_stripped():
+    """www and non-www are different URLs for Google."""
     assert normalize("https://www.d.rs/a") != normalize("https://d.rs/a")
 
 
-def test_normalize_je_idempotentna():
+def test_normalize_is_idempotent_on_expected_values():
     for _url, _base, expected in CASES:
         if expected is not None:
             assert normalize(expected) == expected
@@ -86,7 +86,7 @@ def test_path_group(url, expected):
     assert path_group(url) == expected
 
 
-def test_same_site_ignorise_www_za_uzorkovanje():
+def test_same_site_ignores_www_for_sampling():
     assert same_site("https://www.d.rs/a", "https://d.rs/b")
     assert not same_site("https://d.rs/a", "https://drugi.rs/b")
     assert not same_site("https://d.rs/a", None)
