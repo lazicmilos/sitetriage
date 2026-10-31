@@ -209,7 +209,7 @@ def test_budzet_zaustavlja_prolaz_a_ne_ruši_ga():
 
     assert trazeno <= 3, f"budžet probijen: {trazeno} zahteva"
     assert snapshot.budget.exhausted
-    assert "budžet" in snapshot.budget.aborted_reason
+    assert "budget" in snapshot.budget.aborted_reason
     # Ono što je prikupljeno ide dalje, ostalo je `unknown` — ne pad.
     assert snapshot.entry.status == 200
     rezultati = run_level(1, snapshot)

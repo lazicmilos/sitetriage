@@ -1,10 +1,10 @@
-"""Nivo 1: dohvatanje i sklapanje `SiteSnapshot` (§4, §8).
+"""Level 1: fetching and assembling the `SiteSnapshot`.
 
-Jedini sloj nivoa 1 koji dodiruje mrežu. Provere odavde ne uvoze ništa — dobijaju
-gotov snapshot (§2.1).
+The only level 1 layer that touches the network. Checks import nothing from here; they get
+a finished snapshot.
 
-Dva semafora (§8.1): globalni ograničava tebe, po-hostu štiti njih. Po-hostu je
-uvek 1 i to je granica između alata i napada.
+Two semaphores: the global one limits you, the per-host one protects them. The per-host one is
+always 1, and that is the line between a tool and an attack.
 """
 
 from __future__ import annotations
@@ -49,29 +49,29 @@ from sitetriage.models import (
 
 log = logging.getLogger("sitetriage.fetch")
 
-# Statusi na koje se odustaje od domena za ovaj prolaz (§8.3) — ne pokušava se ponovo.
-ODUSTANI_STATUSI = {429, 503}
+# Statuses on which the domain is given up for this run, without a retry.
+GIVE_UP_STATUSES = {429, 503}
 PROBE_SUFFIXES = ("", ".html")
-# DNS greška je greška imena, pa ni http na istom imenu ne pomaže.
+# A DNS error is an error of the name, so http on the same name does not help either.
 DNS = frozenset({"dns", "dns_nxdomain", "dns_nodata", "dns_temporary"})
-# `dns_nodata`: ime postoji, ali nema adresu. Na Windows-u je EAI_NODATA isto što i EAI_NONAME,
-# pa ide prvi i tamo ga NONAME prepiše; oba znače da sajt ne radi.
+# `dns_nodata`: the name exists but has no address. On Windows EAI_NODATA is the same as EAI_NONAME,
+# so it goes first and NONAME overwrites it there; both mean the site is unreachable.
 DNS_ERRNO = {
     socket.EAI_NODATA: "dns_nodata",
     socket.EAI_NONAME: "dns_nxdomain",
     socket.EAI_AGAIN: "dns_temporary",
 }
-# Sažimanja koja raspakujemo sami, deo po deo. Samo njih i najavljujemo serveru: br i zstd bi httpx
-# najavio čim se instalira njihov paket, a mi ih ne raspakujemo.
+# Encodings we decompress ourselves, chunk by chunk. Only these are announced to the server: httpx
+# would announce br and zstd as soon as their package is installed, and we do not decompress them.
 ACCEPT_ENCODING = "gzip, deflate"
-# Najviše ovoliko bajtova jedan poziv raspakivanja vrati odjednom. httpx raspakuje svaki primljeni
-# komad do kraja, a 64 kB gzip-a je i 64 MB.
-RASPAKOVANO_ODJEDNOM = 64 * 1024
+# One decompression call returns at most this many bytes at once. httpx decompresses every received
+# chunk completely, and 64 kB of gzip can be 64 MB.
+DECOMPRESSED_PER_STEP = 64 * 1024
 
 
 @dataclass
 class Outcome:
-    """Ishod jednog zahteva. Nikad izuzetak — orkestrator vidi samo objekte (§8.2)."""
+    """The outcome of one request. Never an exception: the orchestrator sees only objects."""
 
     url: str
     status: int | None = None
@@ -79,7 +79,7 @@ class Outcome:
     redirect_chain: list[str] = field(default_factory=list)
     headers: dict[str, str] = field(default_factory=dict)
     body: bytes | None = None
-    # Telo je bilo duže od `http.max_body_kb` (posle raspakivanja), pa je `body` samo njegov početak.
+    # The body was longer than `http.max_body_kb` (after decompression), so `body` is only its start.
     truncated: bool = False
     elapsed_ms: int = 0
     error_kind: str | None = None
@@ -91,90 +91,90 @@ class Outcome:
 
 
 class _Zlib:
-    """Jedno `Content-Encoding` sažimanje (gzip ili deflate), raspakovano u ograničenim delovima."""
+    """One `Content-Encoding` (gzip or deflate), decompressed in bounded chunks."""
 
     def __init__(self, encoding: str) -> None:
-        self._raspakivac = zlib.decompressobj(16 + zlib.MAX_WBITS if encoding == "gzip" else zlib.MAX_WBITS)
-        # deflate bez zlib zaglavlja (sirov) je čest; httpx ga prepozna po grešci na prvom delu.
-        self._sirov_deflate_moguc = encoding == "deflate"
+        self._decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS if encoding == "gzip" else zlib.MAX_WBITS)
+        # deflate without a zlib header (raw) is common; httpx recognizes it by the error on the first chunk.
+        self._raw_deflate_possible = encoding == "deflate"
 
     def decode(self, data: bytes) -> Iterator[bytes]:
         while True:
             try:
-                deo = self._raspakivac.decompress(data, RASPAKOVANO_ODJEDNOM)
+                chunk = self._decompressor.decompress(data, DECOMPRESSED_PER_STEP)
             except zlib.error as exc:
-                if not self._sirov_deflate_moguc:
+                if not self._raw_deflate_possible:
                     raise httpx.DecodingError(str(exc)) from exc
-                self._sirov_deflate_moguc = False
-                self._raspakivac = zlib.decompressobj(-zlib.MAX_WBITS)
+                self._raw_deflate_possible = False
+                self._decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
                 continue
-            self._sirov_deflate_moguc = False
-            if deo:
-                yield deo
-            data = self._raspakivac.unconsumed_tail
-            if not data and len(deo) < RASPAKOVANO_ODJEDNOM:
+            self._raw_deflate_possible = False
+            if chunk:
+                yield chunk
+            data = self._decompressor.unconsumed_tail
+            if not data and len(chunk) < DECOMPRESSED_PER_STEP:
                 return
 
     def flush(self) -> Iterator[bytes]:
-        if ostatak := self._raspakivac.flush():
-            yield ostatak
+        if rest := self._decompressor.flush():
+            yield rest
 
 
-class _Raspakivanje:
-    """`Content-Encoding` kao httpx, ali nijedan korak ne pravi više od `RASPAKOVANO_ODJEDNOM`.
+class _Decoder:
+    """`Content-Encoding` like httpx, but no step produces more than `DECOMPRESSED_PER_STEP`.
 
-    Nepoznato sažimanje se preskače, kao u httpx-u: telo ostaje kakvo je stiglo.
+    An unknown encoding is skipped, as in httpx: the body stays as it arrived.
     """
 
     def __init__(self, encodings: Iterable[str]) -> None:
-        # Poslednje primenjeno sažimanje se raspakuje prvo.
-        vrste = [e.strip().lower() for e in encodings]
-        self._faze = [_Zlib(e) for e in reversed(vrste) if e in ("gzip", "deflate")]
+        # The encoding applied last is decompressed first.
+        kinds = [e.strip().lower() for e in encodings]
+        self._stages = [_Zlib(e) for e in reversed(kinds) if e in ("gzip", "deflate")]
 
     def decode(self, data: bytes) -> Iterator[bytes]:
-        return self._kroz(data, 0)
+        return self._through(data, 0)
 
     def flush(self) -> Iterator[bytes]:
-        for i, faza in enumerate(self._faze):
-            for deo in faza.flush():
-                yield from self._kroz(deo, i + 1)
+        for i, stage in enumerate(self._stages):
+            for chunk in stage.flush():
+                yield from self._through(chunk, i + 1)
 
-    def _kroz(self, data: bytes, od: int) -> Iterator[bytes]:
-        if od == len(self._faze):
+    def _through(self, data: bytes, start: int) -> Iterator[bytes]:
+        if start == len(self._stages):
             if data:
                 yield data
             return
-        for deo in self._faze[od].decode(data):
-            yield from self._kroz(deo, od + 1)
+        for chunk in self._stages[start].decode(data):
+            yield from self._through(chunk, start + 1)
 
 
-async def _procitaj(response: httpx.Response, limit: int) -> tuple[bytes, bool]:
-    """(telo, sečeno): najviše `limit` raspakovanih bajtova. Ostatak se ne čita, veza se zatvara."""
-    raspakivanje = _Raspakivanje(response.headers.get_list("content-encoding", split_commas=True))
-    delovi: list[bytes] = []
-    primljeno = 0
+async def _read_body(response: httpx.Response, limit: int) -> tuple[bytes, bool]:
+    """(body, truncated): at most `limit` decompressed bytes. The rest is not read, the connection closes."""
+    decoder = _Decoder(response.headers.get_list("content-encoding", split_commas=True))
+    chunks: list[bytes] = []
+    received = 0
 
-    def dodaj(novi: Iterator[bytes]) -> bool:
-        nonlocal primljeno
-        for deo in novi:
-            if primljeno + len(deo) > limit:
-                delovi.append(deo[: limit - primljeno])
+    def add(new: Iterator[bytes]) -> bool:
+        nonlocal received
+        for chunk in new:
+            if received + len(chunk) > limit:
+                chunks.append(chunk[: limit - received])
                 return True
-            delovi.append(deo)
-            primljeno += len(deo)
+            chunks.append(chunk)
+            received += len(chunk)
         return False
 
-    async with contextlib.aclosing(response.aiter_raw()) as sirovo:
-        async for komad in sirovo:
-            if dodaj(raspakivanje.decode(komad)):
-                return b"".join(delovi), True
-    return b"".join(delovi), dodaj(raspakivanje.flush())
+    async with contextlib.aclosing(response.aiter_raw()) as raw:
+        async for piece in raw:
+            if add(decoder.decode(piece)):
+                return b"".join(chunks), True
+    return b"".join(chunks), add(decoder.flush())
 
 
 class DomainBudget:
-    """Tvrd budžet po domenu (§4.2): broj zahteva i sekundi iz `[http]` u sitetriage.toml.
+    """Hard per-domain budget: a number of requests and seconds from `[http]` in sitetriage.toml.
 
-    Kad se potroši, ono što je prikupljeno ide dalje, ostalo je `unknown`.
+    When it is used up, what was collected goes on, and the rest is `unknown`.
     """
 
     def __init__(self, max_requests: int, max_seconds: float) -> None:
@@ -188,10 +188,10 @@ class DomainBudget:
         if self.aborted_reason:
             return False
         if self.requests_made >= self.max_requests:
-            self.aborted_reason = f"potrošen budžet od {self.max_requests} zahteva"
+            self.aborted_reason = f"budget of {self.max_requests} requests exhausted"
             return False
         if time.monotonic() - self.started >= self.max_seconds:
-            self.aborted_reason = f"potrošen budžet od {self.max_seconds:g} s"
+            self.aborted_reason = f"budget of {self.max_seconds:g} s exhausted"
             return False
         self.requests_made += 1
         return True
@@ -209,8 +209,8 @@ class DomainBudget:
         )
 
 
-def _lanac(exc: BaseException) -> list[BaseException]:
-    """Izuzetak i svi njegovi uzroci: httpx umota pravu grešku u dva-tri svoja sloja."""
+def _cause_chain(exc: BaseException) -> list[BaseException]:
+    """The exception and all its causes: httpx wraps the real error in two or three layers of its own."""
     chain: list[BaseException] = []
     current: BaseException | None = exc
     while current is not None and current not in chain:
@@ -220,21 +220,21 @@ def _lanac(exc: BaseException) -> list[BaseException]:
 
 
 def _classify(exc: Exception) -> tuple[str, str]:
-    """Mrežni izuzetak → (vrsta, detalj). Vrsta odlučuje da li se ponavlja (§4.6)."""
-    for link in _lanac(exc):
+    """Network exception → (kind, detail). The kind decides whether the request is retried."""
+    for link in _cause_chain(exc):
         if isinstance(link, addresses.BlockedAddress):
             return "blocked", str(link)
         if isinstance(link, NoConnection):
             return "no_connection", str(link)
         if isinstance(link, socket.gaierror):
-            # Konstante iz `socket`, ne brojevi: brojevi se razlikuju između Linux-a i Windows-a.
+            # Constants from `socket`, not numbers: the numbers differ between Linux and Windows.
             return DNS_ERRNO.get(link.errno, "dns"), str(link)
         if isinstance(link, ssl.SSLCertVerificationError):
             return "tls", str(link)
         if isinstance(link, ssl.SSLError):
-            # Prekinuto rukovanje nije dokaz o sertifikatu (BUG-004): server ume da prekine
-            # vezu sa Python klijentom, a browseru pokaže ispravan sertifikat. Zato ide
-            # kroz običan pad na http, bez nalaza o sertifikatu.
+            # An interrupted handshake is no evidence about the certificate (BUG-004): a server may
+            # drop the connection with a Python client and show a browser a valid certificate. So it
+            # goes through the ordinary fallback to http, without a certificate finding.
             return "tls_handshake", str(link)
     if isinstance(exc, httpx.ConnectTimeout):
         return "connect_timeout", str(exc)
@@ -247,29 +247,30 @@ def _classify(exc: Exception) -> tuple[str, str]:
     return "connection", f"{type(exc).__name__}: {exc}"
 
 
-async def _razresi(host: str, port: int) -> list[tuple]:
-    """DNS kroz petlju; testovi ga zamenjuju lažnim, da proveru ne rade nad pravim imenom."""
+async def _resolve(host: str, port: int) -> list[tuple]:
+    """DNS through the event loop; tests replace it with a fake, so the check does not run on a real name."""
     return await asyncio.get_running_loop().getaddrinfo(
         host, port, type=socket.SOCK_STREAM, flags=socket.AI_ADDRCONFIG
     )
 
 
 class NoConnection(httpcore.ConnectError):
-    """TCP veza nije uspostavljena ni sa jednom adresom: odbijena, nedostupna ili istekla.
+    """No TCP connection was established with any address: refused, unreachable or timed out.
 
-    Nastaje samo u `_JavneAdrese.connect_tcp`, pre TLS-a i pre HTTP-a, pa je jedino ona dokaz da
-    server ne odgovara (Z-20). Prekid posle uspostavljene veze to nije: server je tu, samo ne
-    odgovara nama (BUG-004).
+    It is raised only in `_PublicAddresses.connect_tcp`, before TLS and before HTTP, so it alone is
+    evidence that the server does not answer (ADR-013). A drop after an established connection is
+    not: the server is there, it just does not answer us (BUG-004).
     """
 
 
-class _JavneAdrese(httpcore.AsyncNetworkBackend):
-    """Veza ide samo na adresu koja je prošla proveru (ADR-006).
+class _PublicAddresses(httpcore.AsyncNetworkBackend):
+    """A connection goes only to an address that passed the check (ADR-006).
 
-    Provera je posle DNS-a, na mestu gde se otvara TCP veza, i veza ide baš na proverenu
-    adresu. Tako je pokriveno svako preusmerenje, a DNS rebinding ne prolazi: ime koje se
-    između dva upita prebaci na privatnu adresu dobija vezu samo na onu proverenu. SNI i
-    `Host` i dalje nose ime domena, jer ih httpcore uzima iz zahteva, ne odavde.
+    The check runs after DNS, where the TCP connection is opened, and the connection goes to
+    exactly the checked address. That covers every redirect, and DNS rebinding does not get
+    through: a name that switches to a private address between two lookups gets a connection
+    only to the checked one. SNI and `Host` still carry the domain name, because httpcore takes
+    them from the request, not from here.
     """
 
     def __init__(self, inner: httpcore.AsyncNetworkBackend, allowed: addresses.Allowlist) -> None:
@@ -285,16 +286,16 @@ class _JavneAdrese(httpcore.AsyncNetworkBackend):
         socket_options: Iterable | None = None,
     ) -> httpcore.AsyncNetworkStream:
         try:
-            infos = await _razresi(host, port)
+            infos = await _resolve(host, port)
         except OSError as exc:
             raise httpcore.ConnectError(str(exc)) from exc
         ips = list(dict.fromkeys(info[4][0] for info in infos))
-        javne = [ip for ip in ips if addresses.may_connect(ip, host, port, self._allowed)]
-        if not javne:
-            raise addresses.BlockedAddress(f"adresa nije javna: {host} → {', '.join(ips) or '—'}")
-        greska: Exception | None = None
-        prihvacena = False
-        for ip in javne:
+        public = [ip for ip in ips if addresses.may_connect(ip, host, port, self._allowed)]
+        if not public:
+            raise addresses.BlockedAddress(f"address is not public: {host} → {', '.join(ips) or '—'}")
+        error: Exception | None = None
+        accepted = False
+        for ip in public:
             try:
                 return await self._inner.connect_tcp(
                     ip, port, timeout=timeout, local_address=local_address, socket_options=socket_options
@@ -302,16 +303,17 @@ class _JavneAdrese(httpcore.AsyncNetworkBackend):
             except httpcore.ConnectTimeout as exc:
                 raise NoConnection(f"{ip}:{port} connect timeout") from exc
             except httpcore.ConnectError as exc:
-                greska = exc
-                # Reset stiže tek posle prihvaćene veze, pa i kad ga vidi još `connect`, server je tu.
-                prihvacena = prihvacena or any(isinstance(e, ConnectionResetError) for e in _lanac(exc))
-        if prihvacena:
-            raise greska  # type: ignore[misc]
-        raise NoConnection(f"{', '.join(javne)}:{port} {greska}") from greska
+                error = exc
+                # A reset only arrives after an accepted connection, so even when `connect` still sees it,
+                # the server is there.
+                accepted = accepted or any(isinstance(e, ConnectionResetError) for e in _cause_chain(exc))
+        if accepted:
+            raise error  # type: ignore[misc]
+        raise NoConnection(f"{', '.join(public)}:{port} {error}") from error
 
 
 class Fetcher:
-    """Deli semafore i konekcije između svih domena u prolazu."""
+    """Shares the semaphores and connections between all domains in a run."""
 
     def __init__(self, config: dict) -> None:
         self.config = config
@@ -336,15 +338,15 @@ class Fetcher:
         transport = httpx.AsyncHTTPTransport(
             verify=verify, limits=httpx.Limits(max_connections=get(self.config, "http.concurrency") * 2)
         )
-        # httpx 0.28 nema javni parametar za mrežni backend. Ako se to polje preimenuje,
-        # zaštita ne sme tiho da nestane, pa alat tada odbija da radi.
+        # httpx 0.28 has no public parameter for the network backend. If this field is renamed,
+        # the protection must not disappear silently, so the tool then refuses to run.
         pool = transport._pool
         if not hasattr(pool, "_network_backend"):
-            raise RuntimeError("httpcore više nema _network_backend; SSRF zaštita ne može da se postavi")
-        pool._network_backend = _JavneAdrese(pool._network_backend, addresses.allowlist(self.config))
+            raise RuntimeError("httpcore no longer has _network_backend; SSRF protection cannot be installed")
+        pool._network_backend = _PublicAddresses(pool._network_backend, addresses.allowlist(self.config))
         return httpx.AsyncClient(
             transport=transport,
-            # Bez HTTP(S)_PROXY iz okruženja: proxy sam razrešava ime, pa bi zaobišao proveru.
+            # No HTTP(S)_PROXY from the environment: a proxy resolves the name itself, bypassing the check.
             trust_env=False,
             follow_redirects=True,
             headers={"User-Agent": user_agent(self.config), "Accept-Encoding": ACCEPT_ENCODING},
@@ -357,7 +359,7 @@ class Fetcher:
 
     def _pick_client(self, *, verify: bool) -> httpx.AsyncClient:
         if verify:
-            assert self._client is not None, "Fetcher se koristi van `async with`"
+            assert self._client is not None, "Fetcher used outside `async with`"
             return self._client
         if self._insecure is None:
             self._insecure = self._make_client(verify=False)
@@ -377,24 +379,25 @@ class Fetcher:
         if not budget.take():
             return Outcome(url=url, error_kind="budget", error_detail=budget.aborted_reason)
 
-        # Ključ je host bez vodećeg `www.`: `www.x.rs` i `x.rs` su isti server i dele red i pauzu (Z-26).
+        # The key is the host without a leading `www.`: `www.x.rs` and `x.rs` are the same server and share
+        # the queue and the delay (ADR-014).
         host = (host_of(url) or url).removeprefix("www.")
         lock = self._host_locks.setdefault(host, asyncio.Lock())
 
-        # Pauza se čeka pod ključem hosta ali van globalnog semafora, da spavanje
-        # ne drži slot koji drugi domen može da koristi.
+        # The delay is awaited under the host lock but outside the global semaphore, so that sleeping
+        # does not hold a slot another domain could use.
         async with lock:
             await self._wait_turn(host, crawl_delay)
             async with self._global:
-                # Meri se samo rad servera. Čekanje u redu i pauza pristojnosti su naše
-                # vreme — sa njima „početna odgovara > 1500 ms" pali svakome (§6).
+                # Only the server's work is measured. Waiting in the queue and the politeness delay are
+                # our time; with them the "home page answers in > 1500 ms" escalation fires for everyone.
                 started = time.monotonic()
                 outcome = await self._send(url, verify=verify, stop_at=stop_at)
                 outcome.elapsed_ms = int((time.monotonic() - started) * 1000)
             self._host_next_allowed[host] = time.monotonic() + random.uniform(*self._delay_range)
 
-        if outcome.status in ODUSTANI_STATUSI:
-            budget.abort(f"server vratio {outcome.status}, odustajem od domena za ovaj prolaz")
+        if outcome.status in GIVE_UP_STATUSES:
+            budget.abort(f"server returned {outcome.status}, giving up on the domain for this run")
             return outcome
         if retries > 0 and _should_retry(outcome):
             await asyncio.sleep(random.uniform(0.5, 1.5))
@@ -413,54 +416,55 @@ class Fetcher:
             await asyncio.sleep(wait)
 
     async def _send(self, url: str, *, verify: bool, stop_at: str | None = None) -> Outcome:
-        """`stop_at`: adresa koja je već preuzeta. Preusmerenje na nju se ne prati, a ishod je
-        odgovor koji na nju upućuje, bez tela (Z-26).
+        """`stop_at`: a URL that was already downloaded. A redirect to it is not followed, and the
+        outcome is the response that points to it, without a body (ADR-014).
 
-        Ceo zahtev, sa preusmerenjima i telom, ima rok `http.timeout_total_s`: telo koje kaplje
-        bajt po bajt nikad ne okine rok za čitanje, a držalo bi mesto domena do kraja prolaza.
+        The whole request, with redirects and body, has the deadline `http.timeout_total_s`: a body
+        that trickles in byte by byte never trips the read timeout, and would hold the domain's slot
+        until the end of the run.
         """
         client = self._pick_client(verify=verify)
-        rok = get(self.config, "http.timeout_total_s")
+        deadline = get(self.config, "http.timeout_total_s")
         try:
-            async with asyncio.timeout(rok):
-                return await self._preuzmi(client, url, stop_at)
+            async with asyncio.timeout(deadline):
+                return await self._download(client, url, stop_at)
         except TimeoutError:
-            detail = f"zahtev duži od {rok:g} s (http.timeout_total_s)"
+            detail = f"request longer than {deadline:g} s (http.timeout_total_s)"
             return Outcome(url=url, error_kind="timeout", error_detail=detail)
-        except Exception as exc:  # noqa: BLE001 — izuzetak nikad ne napušta domen (§8.2)
+        except Exception as exc:  # noqa: BLE001 — an exception never leaves the domain
             kind, detail = _classify(exc)
             return Outcome(url=url, error_kind=kind, error_detail=detail)
 
-    async def _preuzmi(self, client: httpx.AsyncClient, url: str, stop_at: str | None) -> Outcome:
-        """Preusmerenja se prate ručno: httpx bi telo svakog koraka pročitao i raspakovao do kraja.
+    async def _download(self, client: httpx.AsyncClient, url: str, stop_at: str | None) -> Outcome:
+        """Redirects are followed by hand: httpx would read and decompress the body of every hop in full.
 
-        Telo konačnog odgovora se čita do `http.max_body_kb` raspakovanih bajtova, a telo koraka
-        koji preusmerava se ne čita uopšte.
+        The body of the final response is read up to `http.max_body_kb` decompressed bytes, and the
+        body of a hop that redirects is not read at all.
         """
         limit = get(self.config, "http.max_body_kb") * 1024
         request = client.build_request("GET", url)
-        lanac: list[str] = []
+        chain: list[str] = []
         while True:
             response = await client.send(request, stream=True, follow_redirects=False)
             try:
-                lanac.append(str(response.url))
+                chain.append(str(response.url))
                 if response.next_request is None:
-                    body, truncated = await _procitaj(response, limit)
+                    body, truncated = await _read_body(response, limit)
                     return Outcome(
                         url=url,
                         status=response.status_code,
                         final_url=str(response.url),
-                        redirect_chain=lanac,
+                        redirect_chain=chain,
                         headers=dict(response.headers),
                         body=body,
                         truncated=truncated,
                     )
-                sledeca = str(response.next_request.url)
-                if stop_at is not None and normalize(sledeca) == normalize(stop_at):
-                    lanac.append(sledeca)
+                next_url = str(response.next_request.url)
+                if stop_at is not None and normalize(next_url) == normalize(stop_at):
+                    chain.append(next_url)
                     status = response.status_code
-                    return Outcome(url=url, status=status, final_url=sledeca, redirect_chain=lanac)
-                if len(lanac) > client.max_redirects:
+                    return Outcome(url=url, status=status, final_url=next_url, redirect_chain=chain)
+                if len(chain) > client.max_redirects:
                     raise httpx.TooManyRedirects("Exceeded maximum allowed redirects.")
                 request = response.next_request
             finally:
@@ -468,45 +472,46 @@ class Fetcher:
 
 
 async def measure_link(config: dict) -> float | None:
-    """Stvarna brzina veze u Mb/s, izmerena pre nivoa 2 (Z-33), ili `None` kad merenje ne uspe.
+    """The real link speed in Mb/s, measured before level 2 (ADR-018), or `None` when the measurement fails.
 
-    Preuzima se najviše `probe_max_s` sekundi, pa se spora veza meri, a ne čeka. U vreme ulazi i
-    uspostavljanje veze, pa je broj malo manji od stvarnog: greška ide na stranu opreza.
+    At most `probe_max_s` seconds are downloaded, so a slow link is measured, not waited for. The time
+    includes setting up the connection, so the number is a little lower than the real one: the error
+    errs on the side of caution.
     """
     url, max_s = get(config, "network_profile.probe_url"), get(config, "network_profile.probe_max_s")
-    primljeno, started = 0, time.monotonic()
+    received, started = 0, time.monotonic()
     try:
         async with asyncio.timeout(max_s), httpx.AsyncClient(
             trust_env=False, headers={"User-Agent": user_agent(config)}, timeout=None
         ) as client, client.stream("GET", url) as response:
             response.raise_for_status()
-            async for deo in response.aiter_raw():
-                primljeno += len(deo)
+            async for chunk in response.aiter_raw():
+                received += len(chunk)
     except TimeoutError:
-        pass  # rok je istekao usred preuzimanja: meri se ono što je stiglo
-    except Exception as exc:  # noqa: BLE001 — bez merenja je vreme `unknown`, a prolaz ide dalje
-        log.warning("stvarna veza nije izmerena (%s): %s", url, exc)
+        pass  # the deadline passed mid-download: what arrived is measured
+    except Exception as exc:  # noqa: BLE001 — without a measurement the load time is `unknown`, the run goes on
+        log.warning("real link not measured (%s): %s", url, exc)
         return None
-    if not primljeno:
-        log.warning("stvarna veza nije izmerena (%s): za %g s nije stigao nijedan bajt", url, max_s)
+    if not received:
+        log.warning("real link not measured (%s): no byte arrived in %g s", url, max_s)
         return None
-    return round(primljeno * 8 / (time.monotonic() - started) / 1_000_000, 1)
+    return round(received * 8 / (time.monotonic() - started) / 1_000_000, 1)
 
 
 def _should_retry(outcome: Outcome) -> bool:
-    """4xx je odgovor, ne greška — bez ponovnog pokušaja (§4.6). Privremena greška DNS-a (EAI_AGAIN)
-    se ponavlja, a ime koje ne postoji ne."""
-    ponovi = {"no_connection", "connect_timeout", "read_timeout", "timeout", "connection", "dns_temporary"}
-    if outcome.error_kind in ponovi:
+    """4xx is an answer, not an error, so it is not retried. A temporary DNS error (EAI_AGAIN) is
+    retried, a name that does not exist is not."""
+    retried = {"no_connection", "connect_timeout", "read_timeout", "timeout", "connection", "dns_temporary"}
+    if outcome.error_kind in retried:
         return True
     return outcome.status is not None and 500 <= outcome.status < 600
 
 
 # --------------------------------------------------------------------------- #
-# Prolaz nad jednim domenom
+# A run over one domain
 # --------------------------------------------------------------------------- #
 async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
-    """Sklapa `SiteSnapshot`. Izuzetak nikad ne napušta ovu funkciju (§8.2)."""
+    """Assembles the `SiteSnapshot`. An exception never leaves this function."""
     cfg = fetcher.config
     domain = target.domain
     budget = DomainBudget(
@@ -522,7 +527,7 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
     )
     problem = addresses.input_problem(domain, addresses.allowlist(cfg))
     if problem:
-        # Nijedan zahtev: IP adresa, port ili korisničko ime zaobilaze ime koje se proverava.
+        # Not a single request: an IP address, a port or a user name bypass the name that is checked.
         url = entry_candidates(domain)[0]
         snapshot.entry = Entry(requested_url=url, error_kind="blocked", error_detail=problem)
         snapshot.budget = budget.snapshot()
@@ -531,34 +536,34 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
     entry_outcome, tls_error = await _fetch_entry(fetcher, domain, budget, snapshot)
     snapshot.entry = _entry_from(entry_outcome, tls_error)
     verify = tls_error is None
-    # Sajt koji ne prihvata vezu ni na https ni na http ne dobija ni robots.txt ni mapu sajta.
+    # A site that accepts a connection on neither https nor http gets neither robots.txt nor a sitemap.
     if entry_outcome.error_kind in DNS | {"blocked"} or snapshot.entry_unreachable():
         snapshot.budget = budget.snapshot()
         return snapshot
 
     home = _home(entry_outcome)
-    if (cilj := page_builder.redirect_stub(home)) and entry_outcome.status == 200:
-        sledeci = await fetcher.request(cilj, budget, verify=verify)
-        if sledeci.ok and sledeci.status == 200:
-            # Strana koja samo preusmerava skriptom ili meta refresh-om je skok, kao HTTP
-            # preusmerenje: ocenjuje se strana na koju vodi (BUG-022).
+    if (target_url := page_builder.redirect_stub(home)) and entry_outcome.status == 200:
+        followed = await fetcher.request(target_url, budget, verify=verify)
+        if followed.ok and followed.status == 200:
+            # A page that only redirects with a script or meta refresh is a hop, like an HTTP
+            # redirect: the page it leads to is scored (BUG-022).
             entry_outcome = replace(
-                sledeci,
+                followed,
                 url=entry_outcome.url,
-                redirect_chain=entry_outcome.redirect_chain + sledeci.redirect_chain,
-                elapsed_ms=entry_outcome.elapsed_ms + sledeci.elapsed_ms,
+                redirect_chain=entry_outcome.redirect_chain + followed.redirect_chain,
+                elapsed_ms=entry_outcome.elapsed_ms + followed.elapsed_ms,
             )
             snapshot.entry = _entry_from(entry_outcome, tls_error)
             home = _home(entry_outcome)
     snapshot.pages.append(home)
     base_url = home.final_url or home.url
-    # Sve dalje adrese idu sa *konačnog* porekla: ako je domen preusmerio na www
-    # ili na https, robots i sitemap žive tamo, ne na traženoj adresi.
+    # All further URLs use the *final* origin: if the domain redirected to www
+    # or to https, robots and the sitemap live there, not at the requested URL.
     origin = _origin_of(base_url)
 
     rules = await _fetch_robots(fetcher, origin, budget, snapshot, verify=verify)
     crawl_delay = rules.crawl_delay
-    # Pre mape sajta: tri zahteva za dva nalaza, a velika mapa ume da pojede ceo budžet.
+    # Before the sitemap: three requests for two findings, and a large sitemap can eat the whole budget.
     snapshot.host_variants = await _fetch_variants(fetcher, home, budget, crawl_delay)
     candidates = await _collect_sitemap(
         fetcher, origin, budget, snapshot, rules, verify=verify, crawl_delay=crawl_delay
@@ -567,22 +572,22 @@ async def fetch_site(fetcher: Fetcher, target: DomainInput) -> SiteSnapshot:
     snapshot.home_links = links[: page_builder.LINKS_KEPT]
     snapshot.sample_source = "sitemap" if candidates else "links" if links else "none"
 
-    # Alat koji prijavljuje da robots.txt nedostaje, a ignoriše ga kad postoji,
-    # je nekonzistentan na način koji se primeti (§4.3).
+    # A tool that reports a missing robots.txt but ignores it when it exists
+    # is inconsistent in a way people notice.
     def allowed(urls: list[str]) -> list[str]:
         return [url for url in urls if robots_parser.allows(rules, url)]
 
     size = get(cfg, "sitemap.sample_size")
     sample = sitemap_parser.sample(base_url, allowed(candidates), size)
     if len(sample) < size:
-        # Mapa sajta ne navodi dovoljno adresa: uzorak se dopunjava vezama sa početne (Z-21).
-        dopuna = [url for url in allowed(links) if url not in sample]
-        sample += sitemap_parser.sample(base_url, dopuna, size - len(sample) + 1)[1:]
+        # The sitemap lists too few URLs: the sample is topped up with links from the home page (ADR-015).
+        top_up = [url for url in allowed(links) if url not in sample]
+        sample += sitemap_parser.sample(base_url, top_up, size - len(sample) + 1)[1:]
 
-    # Sonde idu pre uzorka: dva zahteva za `high` nalaz. Posle uzorka ih velika mapa
-    # sajta (Yoast indeks sa 9 mapa) ostavi bez budžeta.
-    # Idu na poreklo, ne na putanju početne: `/index.php/<token>` na PHP-u vraća 200
-    # preko PATH_INFO-a i daje lažni `infra.soft404` (§5.2).
+    # The probes go before the sample: two requests for a `high` finding. After the sample a large
+    # sitemap (a Yoast index with 9 sitemaps) leaves them without budget (BUG-001).
+    # They go to the origin, not the home page path: `/index.php/<token>` on PHP returns 200
+    # through PATH_INFO and gives a false `infra.soft404`.
     await _probe_soft404(
         fetcher, domain, origin, budget, snapshot, verify=verify, crawl_delay=crawl_delay
     )
@@ -612,11 +617,11 @@ def _origin_of(url: str) -> str:
 
 
 def entry_candidates(domain: str) -> list[str]:
-    """Adrese kojima se pokušava ulaz, redom.
+    """The URLs tried for the entry request, in order.
 
-    Domen sme da bude i pun origin (`http://localhost:8123`) — korisno za staging
-    sa portom, i jedini način da se fetcher testira protiv lokalnog servera. Port i
-    privatna adresa traže izričitu dozvolu u `[net] allowed_private` (ADR-006).
+    The domain may also be a full origin (`http://localhost:8123`), useful for staging
+    with a port, and the only way to test the fetcher against a local server. A port and a
+    private address need explicit permission in `[net] allowed_private` (ADR-006).
     """
     if "://" in domain:
         return [domain if domain.endswith("/") else f"{domain}/"]
@@ -626,29 +631,30 @@ def entry_candidates(domain: str) -> list[str]:
 async def _fetch_entry(
     fetcher: Fetcher, domain: str, budget: DomainBudget, snapshot: SiteSnapshot
 ) -> tuple[Outcome, str | None]:
-    """https pa http; nevalidan sertifikat je nalaz, ne razlog da domen ispadne (§4.6).
+    """https, then http; an invalid certificate is a finding, not a reason to drop the domain.
 
-    Vraća i TLS grešku (`None` = sertifikat prošao): ponovni dohvat bez provere
-    uspe bez greške, pa bi razlog iz dokaza inače nestao.
+    Also returns the TLS error (`None` = the certificate passed): the retry without verification
+    succeeds without an error, so the reason would otherwise vanish from the evidence.
     """
     candidates = entry_candidates(domain)
     outcome = await fetcher.request(candidates[0], budget)
 
     if outcome.error_kind == "tls":
-        # Istekao sertifikat je vredan nalaz za prodaju i najgori mogući razlog
-        # da ti ceo domen ispadne iz izveštaja — zato se dohvat ponavlja bez provere.
+        # An expired certificate is a valuable finding for a sale and the worst possible reason
+        # for the whole domain to drop out of the report, so the fetch is retried without verification.
         snapshot.errors.append(SnapshotError("entry", "tls", outcome.error_detail or ""))
         retry = await fetcher.request(candidates[0], budget, verify=False)
-        return (retry if retry.ok else outcome), outcome.error_detail or "nepoznata TLS greška"
+        return (retry if retry.ok else outcome), outcome.error_detail or "unknown TLS error"
 
     if not outcome.ok and outcome.error_kind not in DNS | {"budget", "blocked"} and len(candidates) > 1:
         snapshot.errors.append(SnapshotError("entry", outcome.error_kind or "?", outcome.error_detail or ""))
         fallback = await fetcher.request(candidates[1], budget)
         if fallback.ok:
             return fallback, None
-        # I greška http-a, jer „ne radi" traži da ni https ni http nisu dobili vezu (Z-20).
-        greska = SnapshotError("entry", fallback.error_kind or "?", fallback.error_detail or "")
-        snapshot.errors.append(greska)
+        # The http error too, because "unreachable" requires that neither https nor http got a
+        # connection (ADR-013).
+        error = SnapshotError("entry", fallback.error_kind or "?", fallback.error_detail or "")
+        snapshot.errors.append(error)
     return outcome, None
 
 
@@ -686,25 +692,26 @@ async def _fetch_robots(
 
 
 def variant_urls(final_url: str) -> list[str]:
-    """Preostale tri adrese konačnog porekla: http/https × www/bez www (Z-26).
+    """The other three URLs of the final origin: http/https × www/without www (ADR-014).
 
-    Ulaz sa portom ili IP adresom ih nema: tamo ni `www` ni druga šema ne daju isti sajt.
+    An entry with a port or an IP address has none: there neither `www` nor the other scheme gives the
+    same site.
     """
     url = httpx.URL(final_url)
     if url.port is not None or not url.host or addresses.is_ip(url.host):
         return []
-    bez = url.host.removeprefix("www.")
-    sve = [f"{sema}://{host}/" for sema in ("https", "http") for host in (bez, f"www.{bez}")]
-    return [adresa for adresa in sve if adresa != f"{url.scheme}://{url.host}/"]
+    bare = url.host.removeprefix("www.")
+    every = [f"{scheme}://{host}/" for scheme in ("https", "http") for host in (bare, f"www.{bare}")]
+    return [variant for variant in every if variant != f"{url.scheme}://{url.host}/"]
 
 
 async def _fetch_variants(
     fetcher: Fetcher, home: PageSnapshot, budget: DomainBudget, crawl_delay: float | None
 ) -> list[HostVariant] | None:
-    """Sa proverom sertifikata i bez ponovnog pokušaja: TLS greška varijante je podatak o njoj.
+    """With certificate verification and without a retry: a variant's TLS error is data about it.
 
-    Varijanta koja preusmerava na početnu dobija njen status i canonical, a početna se ne traži
-    ponovo: na sporom hostingu to je bilo 3 × nekoliko sekundi budžeta (prolaz D).
+    A variant that redirects to the home page gets its status and canonical, and the home page is not
+    requested again: on slow hosting that cost 3 × several seconds of budget (run D on list A).
     """
     final_url = home.final_url or home.url
     urls = variant_urls(final_url)
@@ -717,10 +724,10 @@ async def _fetch_variants(
         if outcome.final_url and normalize(outcome.final_url) == normalize(final_url):
             status, canonical = home.status, home.canonical_normalized
         elif outcome.status == 200 and outcome.body:
-            strana = page_builder.build(
+            variant_page = page_builder.build(
                 url, final_url=outcome.final_url, status=200, headers=outcome.headers, body=outcome.body
             )
-            canonical = strana.canonical_normalized
+            canonical = variant_page.canonical_normalized
         variants.append(
             HostVariant(
                 url=url,
@@ -745,18 +752,19 @@ async def _collect_sitemap(
     verify: bool,
     crawl_delay: float | None,
 ) -> list[str]:
-    """Rekurzija kroz `sitemapindex` sa ograničenjima iz §4.4."""
+    """Recursion through `sitemapindex`, within the `[sitemap]` limits."""
     cfg = fetcher.config
     max_depth = get(cfg, "sitemap.max_depth")
     max_files = get(cfg, "sitemap.max_files")
     max_urls = get(cfg, "sitemap.max_urls")
     max_bytes = get(cfg, "sitemap.max_kb") * 1024
 
-    # `Sitemap:` iz robots.txt ima prednost nad pogađanjem (§4.3). Kad robots.txt navodi i mape
-    # drugih domena (jedan robots.txt za ceo lanac sajtova), one bi potrošile `max_files` pre
-    # podmapa ovog sajta. Tuđa mapa se čita samo kad je jedina navedena (mapa na CDN-u).
-    svoje = [url for url in rules.sitemaps if same_site(url, origin)]
-    start = svoje or list(rules.sitemaps) or [f"{origin}/sitemap.xml"]
+    # A `Sitemap:` from robots.txt wins over guessing. When robots.txt also lists sitemaps of
+    # other domains (one robots.txt for a whole chain of sites), they would use up `max_files` before
+    # this site's nested sitemaps (BUG-027). A foreign sitemap is read only when it is the only one
+    # listed (a sitemap on a CDN).
+    own = [url for url in rules.sitemaps if same_site(url, origin)]
+    start = own or list(rules.sitemaps) or [f"{origin}/sitemap.xml"]
     info = SitemapInfo(url=start[0])
     queue: list[tuple[str, int]] = [(url, 0) for url in start]
     seen: set[str] = set()
@@ -781,16 +789,16 @@ async def _collect_sitemap(
         if not outcome.ok or outcome.status != 200:
             continue
 
-        # Sečeno telo je deo mape: ne zna se šta je posle granice, isto kao za preveliku mapu.
+        # A truncated body is part of a sitemap: what follows the limit is unknown, as for a too large one.
         if outcome.truncated:
             kind, locations = "too_large", []
         else:
             kind, locations = sitemap_parser.parse(outcome.body, max_bytes=max_bytes)
         info.depth_reached = max(info.depth_reached, depth)
         if kind == "too_large":
-            # Mapa postoji, samo nije pročitana: to nije „nema mape", i spisak adresa nije potpun.
+            # The sitemap exists but was not read: that is not "no sitemap", and the URL list is incomplete.
             info.truncated = True
-            info.error = f"{canonical}: veća od granice (sitemap.max_kb, http.max_body_kb)"
+            info.error = f"{canonical}: larger than the limit (sitemap.max_kb, http.max_body_kb)"
         elif kind == "index":
             info.nested_count += len(locations)
             queue.extend((loc, depth + 1) for loc in locations)
@@ -833,7 +841,7 @@ async def _fetch_sample(
 
 
 def probe_urls(domain: str, origin: str) -> list[str]:
-    """Determinističke sonde po §5.2 — `sha1(domain)[:16]`, da testovi budu ponovljivi."""
+    """Deterministic soft-404 probes, `sha1(domain)[:16]`, so tests are repeatable."""
     token = hashlib.sha1(domain.encode()).hexdigest()[:16]
     base = origin.rstrip("/")
     return [f"{base}/{token}{suffix}" for suffix in PROBE_SUFFIXES]
@@ -874,7 +882,7 @@ async def _probe_soft404(
 
 
 # --------------------------------------------------------------------------- #
-# Prolaz nad listom domena
+# A run over the domain list
 # --------------------------------------------------------------------------- #
 async def scan_domains(
     targets: Iterable[DomainInput],
@@ -882,16 +890,16 @@ async def scan_domains(
     snapshot_dir: Path | None = None,
     on_done: Callable[[SiteSnapshot], None] | None = None,
 ) -> list[SiteSnapshot]:
-    """Snapshot ide na disk čim je domen gotov — ako proces pukne na 190., imaš 189 (§8.2).
+    """A snapshot goes to disk as soon as its domain is done: if the process dies on the 190th, you have 189.
 
-    `on_done` se zove za svaki završen domen, posle upisa na disk. Domen koji posle prvog
-    pokušaja izgleda kao da ne radi ide na kraj reda i dobija drugi pokušaj, sa novim
-    budžetom, najranije `http.second_attempt_after_s` posle prvog (Z-20).
+    `on_done` is called for every finished domain, after the write to disk. A domain that looks
+    unreachable after the first attempt goes to the end of the queue and gets a second attempt, with
+    a new budget, no earlier than `http.second_attempt_after_s` after the first (ADR-013).
     """
     targets = list(targets)
     results: list[SiteSnapshot] = []
-    # Budžet od 25 s je za rad na domenu, ne za čekanje u redu iza ostalih 199:
-    # `DomainBudget` nastaje u `fetch_site`, pa domen ulazi tamo tek kad dobije red.
+    # The time budget is for work on the domain, not for waiting in the queue behind the other 199:
+    # `DomainBudget` is created in `fetch_site`, so a domain enters it only when its turn comes.
     in_flight = asyncio.Semaphore(get(config, "http.domain_concurrency"))
     second_after = get(config, "http.second_attempt_after_s")
 
@@ -899,11 +907,11 @@ async def scan_domains(
 
         async def attempt(target: DomainInput) -> SiteSnapshot:
             async with in_flight:
-                log.info("nivo 1 počinje", extra={"domain": target.domain})
+                log.info("level 1 starts", extra={"domain": target.domain})
                 try:
                     return await fetch_site(fetcher, target)
-                except Exception as exc:  # noqa: BLE001 — granica domena
-                    log.error("nivo 1 pukao: %s", exc, extra={"domain": target.domain})
+                except Exception as exc:  # noqa: BLE001 — domain boundary
+                    log.error("level 1 crashed: %s", exc, extra={"domain": target.domain})
                     return SiteSnapshot(
                         domain=target.domain,
                         industry=target.industry,
@@ -913,10 +921,10 @@ async def scan_domains(
 
         async def one(target: DomainInput) -> SiteSnapshot:
             snapshot = await attempt(target)
-            if razlog := snapshot.entry_unreachable():
-                domen = {"domain": target.domain}
-                log.info("ne radi (%s); drugi pokušaj za %g s", razlog, second_after, extra=domen)
-                # Čeka van semafora: mesto u redu za to vreme dobija drugi domen.
+            if cause := snapshot.entry_unreachable():
+                domain = {"domain": target.domain}
+                log.info("unreachable (%s); second attempt in %g s", cause, second_after, extra=domain)
+                # Waits outside the semaphore: meanwhile another domain gets the slot.
                 await asyncio.sleep(second_after)
                 first = snapshot.entry_attempts
                 snapshot = await attempt(target)
@@ -924,7 +932,7 @@ async def scan_domains(
             if snapshot_dir is not None:
                 store.write_site(snapshot_dir, snapshot)
             log.info(
-                "nivo 1 gotov: %d stranica, %d zahteva",
+                "level 1 done: %d pages, %d requests",
                 len(snapshot.pages),
                 snapshot.budget.requests_made,
                 extra={"domain": target.domain},
@@ -933,12 +941,12 @@ async def scan_domains(
                 on_done(snapshot)
             return snapshot
 
-        # Goli `gather` bi jednim izuzetkom oborio ceo prolaz — tačno greška iz §8.2.
+        # A bare `gather` would let one exception bring down the whole run.
         gathered = await asyncio.gather(*(one(t) for t in targets), return_exceptions=True)
 
     for target, item in zip(targets, gathered, strict=True):
         if isinstance(item, BaseException):
-            log.error("domen izgubljen: %r", item, extra={"domain": target.domain})
+            log.error("domain lost: %r", item, extra={"domain": target.domain})
             results.append(SiteSnapshot(domain=target.domain, industry=target.industry))
         else:
             results.append(item)

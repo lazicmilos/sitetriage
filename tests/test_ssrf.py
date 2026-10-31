@@ -65,11 +65,11 @@ def test_ime_koje_se_razresava_u_privatnu_adresu_se_odbija(monkeypatch):
         razreseno.append(host)
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", port))]
 
-    monkeypatch.setattr(http, "_razresi", lazni_dns)
+    monkeypatch.setattr(http, "_resolve", lazni_dns)
     snapshot = _skeniraj("privatno.test")
     assert razreseno and set(razreseno) == {"privatno.test"}
     assert snapshot.entry.error_kind == "blocked"
-    assert snapshot.entry.error_detail == "adresa nije javna: privatno.test → 10.0.0.5"
+    assert snapshot.entry.error_detail == "address is not public: privatno.test → 10.0.0.5"
     assert snapshot.pages == [], "posle blokade nema ni robots.txt ni mape sajta"
 
 
@@ -101,7 +101,7 @@ def test_ime_bez_dns_zapisa_ostaje_dns_greska(monkeypatch):
     async def nema_zapisa(host, port):
         raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
 
-    monkeypatch.setattr(http, "_razresi", nema_zapisa)
+    monkeypatch.setattr(http, "_resolve", nema_zapisa)
     assert _skeniraj("nepostoji.test").entry.error_kind == "dns_nxdomain"
 
 

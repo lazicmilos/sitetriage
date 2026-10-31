@@ -245,9 +245,9 @@ def test_pg_sitemap_gz_bomba_nije_nalaz_da_mape_nema():
 # Raspakivanje deo po deo: isto što i httpx, ali bez komada većeg od granice koraka
 # --------------------------------------------------------------------------- #
 def _raspakuj(encodings: list[str], data: bytes) -> bytes:
-    from sitetriage.fetch.http import _Raspakivanje
+    from sitetriage.fetch.http import _Decoder
 
-    r = _Raspakivanje(encodings)
+    r = _Decoder(encodings)
     return b"".join([*r.decode(data[:7]), *r.decode(data[7:]), *r.flush()])
 
 
@@ -277,11 +277,11 @@ def zlib_sazmi(data: bytes, wbits: int) -> bytes:
 
 
 def test_raspakivanje_ne_vraca_komad_veci_od_koraka():
-    from sitetriage.fetch.http import RASPAKOVANO_ODJEDNOM, _Raspakivanje
+    from sitetriage.fetch.http import DECOMPRESSED_PER_STEP, _Decoder
 
-    delovi = list(_Raspakivanje(["gzip"]).decode(bomba(8 * 1024 * KB)))
+    delovi = list(_Decoder(["gzip"]).decode(bomba(8 * 1024 * KB)))
     assert sum(map(len, delovi)) == 8 * 1024 * KB
-    assert max(map(len, delovi)) <= RASPAKOVANO_ODJEDNOM
+    assert max(map(len, delovi)) <= DECOMPRESSED_PER_STEP
 
 
 def test_pg_pokvaren_gzip_je_greska_veze_kao_pre():

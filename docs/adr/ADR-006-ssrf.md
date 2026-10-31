@@ -24,7 +24,7 @@ adresa je čista funkcija u `skener/addresses.py`, koju pokriva i mutaciono test
 **Ulaz.** Domen sa IP adresom, portom ili korisničkim imenom ne dobija nijedan zahtev, osim kad
 je `host:port` izričito dozvoljen. Takav domen je `failed` sa razlogom.
 
-**Nivo 1.** `httpx` dobija sopstveni mrežni backend (`_JavneAdrese` u `fetch/http.py`). On
+**Nivo 1.** `httpx` dobija sopstveni mrežni backend (`_PublicAddresses` u `fetch/http.py`). On
 razrešava ime, proverava svaku adresu i otvara TCP vezu baš na proverenu adresu. SNI i `Host`
 i dalje nose ime domena. Provera je na mestu gde se otvara veza, pa pokriva i svako
 preusmerenje, a DNS rebinding ne prolazi. Blokiran domen je `failed` sa razlogom „adresa nije

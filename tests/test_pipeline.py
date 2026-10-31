@@ -181,7 +181,7 @@ def test_izuzet_domen_ne_dobija_nijedan_zahtev(monkeypatch):
     async def nema_zapisa(host, port):
         raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
 
-    monkeypatch.setattr(http, "_razresi", nema_zapisa)
+    monkeypatch.setattr(http, "_resolve", nema_zapisa)
     with FakeSite() as izuzet:
         targets = [DomainInput(izuzet.base_url), DomainInput("drugi.test")]
         rezultat = asyncio.run(
