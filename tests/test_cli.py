@@ -525,6 +525,22 @@ def test_recheck_without_snapshots_fails_clearly(tmp_path):
         cli.main(["recheck", str(tmp_path), "--out", str(tmp_path / "out")])
 
 
+@pytest.mark.parametrize("kind", ["nv-missing", "nv-a-file", "pg-corrupt-json"])
+def test_bad_recheck_input_is_a_message_not_a_traceback(tmp_path, kind):
+    """BUG-10: the message names the path, and main() exits through SystemExit(message), i.e. 1."""
+    target = tmp_path / "snapshots"
+    if kind == "nv-a-file":
+        target.write_text("domain,industry\n", encoding="utf-8")
+    elif kind == "pg-corrupt-json":
+        (target / "a.example").mkdir(parents=True)
+        (target / "a.example" / "site.json").write_text("{", encoding="utf-8")
+        target = target / "a.example" / "site.json"
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["recheck", str(tmp_path / "snapshots"), "--out", str(tmp_path / "out")])
+    assert isinstance(raised.value.code, str) and str(target) in raised.value.code
+    assert "\n" not in raised.value.code
+
+
 def test_explain_without_arguments_fails(capsys):
     with pytest.raises(SystemExit):
         cli.main(["explain"])
@@ -565,6 +581,29 @@ def test_debug_domain_lets_through_only_that_domain():
     cli.setup_logging(None)
 
 
+@pytest.mark.parametrize("debug", [True, False], ids=["st-with-debug-domain", "st-without"])
+def test_debug_domain_logs_requests_of_that_domain_only(tmp_path, capsys, debug):
+    """BUG-11: the flag existed, but nothing in the package logged at DEBUG."""
+    config = tmp_path / "fast.toml"
+    config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
+    with FakeSite() as a, FakeSite() as b:
+        domains = tmp_path / "domains.csv"
+        domains.write_text(f"domain,industry\n{a.base_url},hotel\n{b.base_url},hotel\n", encoding="utf-8")
+        arguments = ["--level", "1", "--config", str(config), "--format", "json"]
+        if debug:
+            arguments += ["--debug-domain", a.base_url]
+        assert cli.main(["scan", str(domains), "--out", str(tmp_path / "out"), *arguments]) == 0
+    cli.setup_logging(None)
+    lines = [json.loads(line) for line in capsys.readouterr().err.splitlines() if line.startswith("{")]
+    debug_lines = [line for line in lines if line["level"] == "DEBUG"]
+    if not debug:
+        assert lines and not debug_lines
+        return
+    assert {line["domain"] for line in debug_lines} == {a.base_url}
+    assert any(line["message"].startswith(f"GET {a.base_url}/ ") for line in debug_lines)
+    assert any(line["domain"] == b.base_url for line in lines), "INFO for other domains still passes"
+
+
 @pytest.mark.skipif(not hasattr(__import__("time"), "tzset"), reason="tzset exists only on Unix")
 def test_log_time_is_really_utc(monkeypatch):
     """Error guessing (time zone): the trailing "Z" claims UTC, so the time must be UTC."""
@@ -595,3 +634,45 @@ def test_partial_sitetriage_toml_in_the_working_directory_works_with_config(tmp_
     out = tmp_path / "out"
     for arguments in ([], ["--config", "sitetriage.toml"]):
         assert cli.main(["recheck", str(fixtures), "--out", str(out), "--format", "json", *arguments]) == 0
+
+
+# --------------------------------------------------------------------------- #
+# --format (BUG-07): an unknown format is an argparse error, not an empty folder and exit 0
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("html", ["html"]),
+        ("csv,json", ["csv", "json"]),
+        (" HTML ", ["html"]),
+        ("Html, CSV ,json", ["html", "csv", "json"]),
+        ("json,json", ["json"]),
+    ],
+    ids=["ke-one", "ke-several", "ke-spaces-and-case", "ke-mixed", "ke-repeated"],
+)
+def test_format_accepts_a_subset_of_the_three(text, expected):
+    assert cli._formats(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["pdf", "", " ", ",", "html,pdf", "html,,csv", "xml, json"],
+    ids=["nv-unknown", "nv-empty", "nv-blank", "nv-only-comma", "nv-one-unknown", "nv-empty-item", "nv-xml"],
+)
+@pytest.mark.parametrize("command", ["scan", "recheck"])
+def test_unknown_format_is_an_argument_error(tmp_path, capsys, command, text):
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit) as raised:
+        cli.main([command, str(tmp_path / "x"), "--out", str(out), "--format", text])
+    assert raised.value.code == 2
+    err = capsys.readouterr().err
+    assert "--format" in err and "html, csv, json" in err
+    assert not out.exists()
+
+
+def test_format_writes_only_what_was_asked_for(tmp_path):
+    from pathlib import Path
+
+    fixtures = Path(__file__).parent / "fixtures"
+    assert cli.main(["recheck", str(fixtures), "--out", str(tmp_path), "--format", " JSON , csv"]) == 0
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["findings.csv", "report.json", "summary.csv"]
