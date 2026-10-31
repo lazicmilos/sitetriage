@@ -134,7 +134,7 @@ def rank(reports: Iterable[DomainReport]) -> list[DomainReport]:
     """§9.4: sajt sa jednom katastrofom je bolji lead od sajta sa deset sitnica.
 
     Primarni ključ je najteži pojedinačni nalaz; zbir samo razrešava izjednačenje.
-    Rangiranje po zbiru bi Ariju stavilo iznad Mense, a Institucija ima najskuplji SEO
+    Rangiranje po zbiru bi hotel stavilo iznad institucije, a institucija ima najskuplji SEO
     problem koji postoji. Rangiraju se samo sajtovi koji rade (Z-20): onaj koji se ne
     otvara ide u „Ne rade", a onaj koji alat nije pregledao u „Nije skenirano".
     """

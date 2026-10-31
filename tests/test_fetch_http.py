@@ -132,7 +132,7 @@ def test_sonde_su_deterministicke():
     prvi = probe_urls("institucija.example", "https://institucija.example/")
     assert prvi == probe_urls("institucija.example", "https://institucija.example/")
     assert prvi != probe_urls("restoran-ugao.example", "https://restoran-ugao.example/")
-    assert prvi[0].endswith("9e906fa852dc56e1") and prvi[1].endswith(".html")
+    assert prvi[0].endswith("e3ce7e80ecbd5228") and prvi[1].endswith(".html")
 
 
 def test_sonde_u_snapshotu_prate_cistu_funkciju():

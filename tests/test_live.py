@@ -1,45 +1,78 @@
 """Kalibracioni testovi nad pravim sajtovima (§12.1).
 
-Isključeni po defaultu: `pytest -m live`. Traže mrežu i padaju kad nekom od osam
-sajtova istekne sertifikat ili kad ga vlasnik popravi — nijedno nije greška u
+Isključeni po defaultu: `pytest -m live`. Traže mrežu i listu domena, a padaju kad
+nekom sajtu istekne sertifikat ili kad ga vlasnik popravi — nijedno nije greška u
 alatu, pa nemaju šta da traže u CI-ju.
 
-Ovo je i jedini test koji zaista proverava da su domeni iz §12.4 u opisanom
-stanju. Fixture-i to ne rade: oni su ručno napisani (vidi `make_fixtures.py`).
+Repozitorijum ne imenuje nijedan pravi sajt. Listu daješ ti, kroz promenljivu
+okruženja `SKENER_LIVE_CSV` koja pokazuje na CSV u formatu `domains.example.csv`:
+
+    SKENER_LIVE_CSV=moji-domeni.csv pytest -m live
+
+Opciona kolona `ocekivano` navodi `check_id`-eve razdvojene razmakom koje alat mora
+da nađe na nivou 1; vrednost `cist` označava kontrolni čist sajt (U4 iz §1.2). Bez
+promenljive se testovi preskaču.
+
+Ovo je jedini test koji proverava da su pravi sajtovi u stanju koje očekuješ.
+Fixture-i to ne rade: oni su ručno napisani, nad izmišljenim domenima (vidi
+`make_fixtures.py`).
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+from pathlib import Path
 
 import pytest
-from test_ispitni_skup import OCEKIVANO
 
 from skener.checks import registry
 from skener.config import load_config
+from skener.inputs import read_domain_list, read_excel_csv
 from skener.models import DomainInput
-from skener.score import analyze, escalation_reasons
+from skener.score import analyze
 
 pytestmark = pytest.mark.live
 
-# Nalazi iz §12.4 koje je vlasnik sajta u međuvremenu popravio. Svaki red je
-# proveren ručno nad snimkom — vidi docs/kalibracija.md. Fixture-i i dalje
-# opisuju stanje iz specifikacije, jer proveravaju lanac, ne sajt.
-POPRAVLJENO = {
-    "institucija.example": {"seo.canonical.duplicate", "infra.soft404"},  # 2026-09-24
-}
+CIST = "cist"
+
+
+def _lista() -> tuple[list[DomainInput], dict[str, set[str]]]:
+    """Domeni i očekivani nalazi iz `SKENER_LIVE_CSV`; prazno kad promenljiva nije zadata."""
+    putanja = os.environ.get("SKENER_LIVE_CSV")
+    if not putanja:
+        return [], {}
+    data = Path(putanja).read_bytes()
+    domeni, _ = read_domain_list(data, putanja)
+    ocekivano = {
+        (row.get("domain") or "").strip(): set((row.get("ocekivano") or "").split())
+        for _, row in read_excel_csv(data, putanja).rows
+    }
+    return domeni, {d.domain: ocekivano.get(d.domain, set()) for d in domeni}
+
+
+DOMENI, OCEKIVANO = _lista()
 
 
 @pytest.fixture(scope="module")
 def prolaz():
-    """Jedan pravi prolaz nivoa 1 nad ispitnim skupom."""
+    """Jedan pravi prolaz nivoa 1 nad listom iz `SKENER_LIVE_CSV`."""
+    if not DOMENI:
+        pytest.skip("SKENER_LIVE_CSV nije zadat: nema liste pravih domena")
     from skener.fetch.http import scan_domains
 
     config = load_config()
     registry.load_all()
-    targets = [DomainInput(domain=d, industry=i) for d, (i, _) in OCEKIVANO.items()]
-    sites = asyncio.run(scan_domains(targets, config))
+    sites = asyncio.run(scan_domains(DOMENI, config))
     return config, {site.domain: site for site in sites}
+
+
+def _izvestaj(domain, prolaz):
+    config, sites = prolaz
+    site = sites[domain]
+    if site.home is None or site.home.status != 200:
+        pytest.skip(f"{domain} nije dostupan: {site.entry.error_kind if site.entry else 'nepoznato'}")
+    return analyze(site, config)
 
 
 def test_nijedan_domen_ne_ruši_prolaz(prolaz):
@@ -48,46 +81,26 @@ def test_nijedan_domen_ne_ruši_prolaz(prolaz):
     assert set(sites) == set(OCEKIVANO)
 
 
-@pytest.mark.parametrize("domain", sorted(OCEKIVANO))
+@pytest.mark.parametrize("domain", sorted(d for d, o in OCEKIVANO.items() if o - {CIST}))
 def test_nalazi_nivoa_1_nad_pravim_sajtom(domain, prolaz):
-    config, sites = prolaz
-    site = sites[domain]
-    if site.home is None or site.home.status != 200:
-        pytest.skip(f"{domain} nije dostupan: {site.entry.error_kind if site.entry else 'nepoznato'}")
-
-    report = analyze(site, config)
-    found = {f.check_id for f in report.findings}
+    found = {f.check_id for f in _izvestaj(domain, prolaz).findings}
     expected_level1 = {
         check_id
-        for check_id in OCEKIVANO[domain][1]
+        for check_id in OCEKIVANO[domain] - {CIST}
         if registry.REGISTRY[check_id].level == 1
-    } - POPRAVLJENO.get(domain, set())
+    }
     missing = expected_level1 - found
     assert not missing, (
-        f"{domain}: specifikacija očekuje {sorted(missing)}, a alat ih ne nalazi. "
+        f"{domain}: lista očekuje {sorted(missing)}, a alat ih ne nalazi. "
         f"Ili je sajt popravljen, ili prag treba kalibrisati. Pronađeno: {sorted(found)}"
     )
 
 
-def test_klinika_ostaje_cista_i_na_pravom_sajtu(prolaz):
+@pytest.mark.parametrize("domain", sorted(d for d, o in OCEKIVANO.items() if CIST in o))
+def test_kontrolni_sajt_ostaje_cist(domain, prolaz):
     """U4 iz §1.2 — ograničenje, ne poželjna osobina."""
-    config, sites = prolaz
-    site = sites["klinika.example"]
-    if site.home is None or site.home.status != 200:
-        pytest.skip("klinika.example nije dostupna")
-    report = analyze(site, config)
+    report = _izvestaj(domain, prolaz)
     assert len(report.findings) <= 2, f"lažni pozitivi: {[f.check_id for f in report.findings]}"
-
-
-def test_b2b_firma_stize_na_nivo_2_bez_nalaza_nivoa_1(prolaz):
-    config, sites = prolaz
-    site = sites["b2b-firma.example"]
-    if site.home is None or site.home.status != 200:
-        pytest.skip("b2b-firma.example nije dostupan")
-    ctx = registry.Context(domain=site.domain, industry=site.industry, config=config)
-    assert escalation_reasons(site, registry.run(1, site, ctx), config), (
-        "sajt čiji je jedini problem na nivou 2 mora da stigne do nivoa 2"
-    )
 
 
 def test_prolaz_je_unutar_budzeta(prolaz):

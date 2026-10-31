@@ -1,25 +1,21 @@
 """Generator ispitnog skupa iz §12.4.
 
-**Ovi snapshoti su ručno napisani, nisu snimljeni sa pravih sajtova.** Mreža ka
-spolja nije bila dostupna kad su pravljeni, pa opisuju ono što §12.4 tvrdi da je
-na svakom od osam domena — ne ono što je tamo danas.
+**Ovi snapshoti su ručno napisani, nisu snimljeni sa pravih sajtova.** Domeni su
+izmišljeni, pod rezervisanim TLD-om `.example` (RFC 2606): opisuju stanje koje §12.4
+zadaje za osam tipičnih sajtova, a ne nijedan stvaran sajt.
 
-Time i dalje rade posao koji im je namenjen: proveravaju da lanac
-snapshot → provere → bodovanje → rangiranje daje očekivane `check_id`-eve. Ono
-što **ne** proveravaju je da su ti domeni zaista takvi.
+Time rade posao koji im je namenjen: proveravaju da lanac
+snapshot → provere → bodovanje → rangiranje daje očekivane `check_id`-eve. Da li
+alat isto vidi prave sajtove, proverava `pytest -m live` nad tvojom listom domena
+(vidi `tests/test_live.py`).
 
-Kad budeš imao mrežu, prepiši ih pravim snimcima:
-
-    skener record domains.example.csv --out tests/fixtures/
-
-pa pogledaj `git diff` — razlika pokazuje šta se na sajtovima promenilo, a to je
-samo po sebi korisna informacija za prodaju (§12.2).
-
-Pokretanje: `python tests/make_fixtures.py`
+Pokretanje: `python tests/make_fixtures.py`. Gzip se piše bez vremena u zaglavlju,
+pa ponovno pokretanje bez izmena ne menja nijedan bajt.
 """
 
 from __future__ import annotations
 
+import gzip
 from pathlib import Path
 
 from skener import store
@@ -219,17 +215,17 @@ def institucija() -> tuple[SiteSnapshot, BrowserSnapshot]:
         for p in putanje
     ]
     site = sajt("institucija.example", "institucija", pages=pages, soft404_status=200)
-    # Težina ispod praga: Mensin problem je SEO, ne performanse.
+    # Težina ispod praga: problem institucije je SEO, ne performanse.
     return site, browser("institucija.example", total_bytes=1_200_000, request_count=45, h1=0)
 
 
-def aria() -> tuple[SiteSnapshot, BrowserSnapshot]:
+def hotel_planina() -> tuple[SiteSnapshot, BrowserSnapshot]:
     """Nema canonical ni og:title, nema sitemap ni robots, lang=zxx."""
     origin = "https://hotel-planina.example"
     pages = [
         stranica(
             f"{origin}/",
-            title="Aria Club planina",
+            title="Hotel Planina",
             canonical=None,
             og=OpenGraph(title=None, description="Smeštaj na planini", image="/hero.jpg"),
             lang="zxx",
@@ -254,7 +250,7 @@ def restoran_centar() -> tuple[SiteSnapshot, BrowserSnapshot]:
     """Nema canonical; početna prenosi skoro 15 MB."""
     origin = "https://restoran-centar.example"
     pages = [
-        stranica(f"{origin}/", title="Restoran MB", canonical=None),
+        stranica(f"{origin}/", title="Restoran Centar", canonical=None),
         stranica(f"{origin}/meni", title="Meni", canonical=f"{origin}/meni"),
         stranica(f"{origin}/kontakt", title="Kontakt", canonical=f"{origin}/kontakt"),
     ]
@@ -284,7 +280,7 @@ def prodavnica() -> tuple[SiteSnapshot, BrowserSnapshot]:
     """Teška prodavnica sa mnogo zahteva i bez h1."""
     origin = "https://prodavnica.example"
     pages = [
-        stranica(f"{origin}/", title="Domaće iz Srbije", h1=0),
+        stranica(f"{origin}/", title="Prodavnica", h1=0),
         stranica(f"{origin}/proizvodi", title="Proizvodi", canonical=f"{origin}/proizvodi"),
         stranica(f"{origin}/dostava", title="Dostava", canonical=f"{origin}/dostava"),
     ]
@@ -304,7 +300,7 @@ def ordinacija() -> tuple[SiteSnapshot, BrowserSnapshot]:
     """Srpski sadržaj označen kao engleski; 28 od 30 slika bez alt atributa."""
     origin = "https://ordinacija.example"
     pages = [
-        stranica(f"{origin}/", title="Ordinacija Denta", lang="en-US"),
+        stranica(f"{origin}/", title="Ordinacija", lang="en-US"),
         stranica(f"{origin}/usluge", title="Usluge", canonical=f"{origin}/usluge", lang="en-US"),
         stranica(f"{origin}/cenovnik", title="Cenovnik", canonical=f"{origin}/cenovnik", lang="en-US"),
     ]
@@ -318,7 +314,7 @@ def b2b_firma() -> tuple[SiteSnapshot, BrowserSnapshot]:
     """Čist SEO, spora stranica — jedini domen koji proverava peti uslov eskalacije."""
     origin = "https://b2b-firma.example"
     pages = [
-        stranica(f"{origin}/", title="B2B_FIRMA"),
+        stranica(f"{origin}/", title="B2B firma"),
         stranica(f"{origin}/projekti", title="Projekti", canonical=f"{origin}/projekti"),
         stranica(f"{origin}/publikacije", title="Publikacije", canonical=f"{origin}/publikacije"),
     ]
@@ -342,7 +338,7 @@ def klinika() -> tuple[SiteSnapshot, None]:
 
 DOMENI = {
     "institucija.example": institucija,
-    "hotel-planina.example": aria,
+    "hotel-planina.example": hotel_planina,
     "restoran-centar.example": restoran_centar,
     "restoran-ugao.example": restoran_ugao,
     "prodavnica.example": prodavnica,
@@ -352,13 +348,18 @@ DOMENI = {
 }
 
 
+def _bez_vremena(path: Path) -> None:
+    """`gzip.compress` upisuje trenutno vreme; bez njega isti ulaz daje iste bajtove."""
+    path.write_bytes(gzip.compress(gzip.decompress(path.read_bytes()), mtime=0))
+
+
 def main() -> None:
     FIXTURES.mkdir(parents=True, exist_ok=True)
     for domain, build in DOMENI.items():
         site, browser_snapshot = build()
-        store.write_site(FIXTURES, site, compress=True)
+        _bez_vremena(store.write_site(FIXTURES, site, compress=True))
         if browser_snapshot is not None:
-            store.write_browser(FIXTURES, browser_snapshot, compress=True)
+            _bez_vremena(store.write_browser(FIXTURES, browser_snapshot, compress=True))
         print(f"{domain}: {len(site.pages)} stranica, nivo 2 {'da' if browser_snapshot else 'ne'}")
 
 
