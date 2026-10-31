@@ -87,8 +87,10 @@ allowed_private = ["staging.example:8123"]
 
 In the browser (level 2) the protection cannot see the target of a redirect or a WebSocket, so a web
 application in production also needs an egress filter at the network level
-([ADR-006](docs/adr/ADR-006-ssrf.md)). Level 1 does not read `HTTP(S)_PROXY` from the environment,
-because a proxy would bypass the check.
+([ADR-006](docs/adr/ADR-006-ssrf.md)). Level 1 and the link probe before level 2 (`probe_url`) do
+not read `HTTP(S)_PROXY` from the environment, because a proxy would bypass the check. A `probe_url`
+on a private address is not opened either, unless `allowed_private` lists it: the link is then not
+measured, and load time is `unknown`.
 
 ## Quick start
 

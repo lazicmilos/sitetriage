@@ -38,7 +38,9 @@ it.
 field `_pool._network_backend`. If a new version renames it, the tool refuses to run
 (`RuntimeError`) instead of silently losing the protection. The client does not read
 `HTTP(S)_PROXY` from the environment, because a proxy resolves the name itself and would bypass the
-check.
+check. The link probe before level 2 (`network_profile.probe_url`, ADR-018) is a request too, so it
+uses the same transport (`public_transport` in `fetch/http.py`), the same allowlist and no proxy. A
+refused probe sends no request: the link is not measured and load time is `unknown`.
 
 **Level 2.** `context.route("**/*")` resolves the name for every browser request and lets it through
 only if all of its addresses are allowed, because Chromium picks which one to use on its own.
