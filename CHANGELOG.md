@@ -17,6 +17,11 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
   service and image are `sitetriage`, and the logger names in JSON log lines are `sitetriage`,
   `sitetriage.fetch` and `sitetriage.browser`.
 - The default config file is `sitetriage.toml` instead of `skener.toml`, with comments in English.
+- The default config ships inside the package as `sitetriage/sitetriage.toml`, so a wheel installed
+  from PyPI finds its defaults; before, they were found only in the working directory or at the
+  repository root. There is no `sitetriage.toml` at the repository root any more: change defaults
+  in `sitetriage/sitetriage.toml`, or keep your changes in a `--config` file that is merged over
+  them. A complete `sitetriage.toml` in the working directory still replaces the defaults.
 - `[identitet]` with `naziv`, `kontakt` and `izuzeti` is now `[operator]` with `name`, `contact` and
   `exclude_file`. A config that still has `[identitet]` fails and names the new keys. The
   `http.user_agent` placeholders are `{version}`, `{contact}` and `{name}`.
