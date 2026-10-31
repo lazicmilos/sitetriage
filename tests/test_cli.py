@@ -548,3 +548,18 @@ def test_log_time_is_really_utc(monkeypatch):
     finally:
         monkeypatch.delenv("TZ")
         time.tzset()
+
+
+def test_partial_sitetriage_toml_in_the_working_directory_works_with_config(tmp_path, monkeypatch):
+    """BUG-04: an `[operator]`-only `sitetriage.toml` failed with `severity_points.critical is
+    missing`, because it replaced the defaults instead of being merged over them."""
+    from pathlib import Path
+
+    (tmp_path / "sitetriage.toml").write_text(
+        '[operator]\nname = "Example Web Studio"\ncontact = "hello@studio.example"\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(tmp_path)
+    fixtures = Path(__file__).parent / "fixtures"
+    out = tmp_path / "out"
+    for arguments in ([], ["--config", "sitetriage.toml"]):
+        assert cli.main(["recheck", str(fixtures), "--out", str(out), "--format", "json", *arguments]) == 0

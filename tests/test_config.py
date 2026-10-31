@@ -234,15 +234,61 @@ def test_time_budget_must_be_positive(tmp_path, value, valid):
             load_config(override)
 
 
-def test_config_in_the_working_directory_takes_precedence(tmp_path, monkeypatch):
-    import shutil
+# --------------------------------------------------------------------------- #
+# BUG-04: a `sitetriage.toml` in the working directory is an ordinary user file. It is never read
+# implicitly, and passed with --config it is merged over the packaged defaults like any other file.
+# --------------------------------------------------------------------------- #
+OPERATOR_ONLY = '[operator]\nname = "Example Web Studio"\ncontact = "hello@studio.example"\n'
 
+
+def _packaged_defaults() -> Path:
+    from importlib.resources import files
+
+    return Path(str(files("sitetriage").joinpath("sitetriage.toml")))
+
+
+def _complete_copy_with_one_change() -> str:
+    text = _packaged_defaults().read_text(encoding="utf-8")
+    changed = text.replace("html_size_kb = 500", "html_size_kb = 1")
+    assert changed != text
+    return changed
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        pytest.param(OPERATOR_ONLY + "[thresholds.perf]\nhtml_size_kb = 1\n", id="partial"),
+        pytest.param(None, id="complete-copy"),
+    ],
+)
+@pytest.mark.parametrize(
+    "passed",
+    [pytest.param(False, id="ke-not-passed-is-not-read"), pytest.param(True, id="ke-passed-is-merged")],
+)
+def test_sitetriage_toml_in_the_working_directory_is_read_only_through_config(
+    tmp_path, monkeypatch, content, passed
+):
     from sitetriage.config import default_config_path
 
-    copy = tmp_path / "sitetriage.toml"
-    shutil.copy(default_config_path(), copy)
+    baseline = digest(load_config())
+    (tmp_path / "sitetriage.toml").write_text(content or _complete_copy_with_one_change(), encoding="utf-8")
     monkeypatch.chdir(tmp_path)
-    assert default_config_path() == copy
+    assert default_config_path() == _packaged_defaults()
+    cfg = load_config("sitetriage.toml" if passed else None)
+    # Merged over the defaults, so nothing the file leaves out goes missing.
+    assert get(cfg, "severity_points.critical") == 40
+    if passed:
+        assert get(cfg, "thresholds.perf.html_size_kb") == 1
+        assert digest(cfg) != baseline
+    else:
+        assert get(cfg, "thresholds.perf.html_size_kb") == 500
+        assert digest(cfg) == baseline
+
+
+def test_the_packaged_defaults_passed_as_config_change_nothing():
+    from sitetriage.config import default_config_path
+
+    assert digest(load_config(default_config_path())) == digest(load_config())
 
 
 def test_without_a_default_config_it_fails_and_says_what_to_do(monkeypatch):
