@@ -3,10 +3,10 @@
 Za svaki domen se traži da je **očekivani skup podskup pronađenog**, a za
 `klinika.example` dodatno da je pronađeni skup mali.
 
-Pošteno upozorenje: snapshoti u `tests/fixtures/` su **ručno napisani**, ne
-snimljeni sa pravih sajtova (vidi `tests/make_fixtures.py`). Ovi testovi zato
-tvrde da lanac provera radi kako treba nad opisanim stanjem — ne da su ti domeni
-danas u tom stanju. Za ovo drugo treba `skener record` sa mrežom.
+Pošteno upozorenje: snapshoti u `tests/fixtures/` su **ručno napisani**, nad
+izmišljenim domenima pod `.example` (vidi `tests/make_fixtures.py`). Ovi testovi
+zato tvrde da lanac provera radi kako treba nad opisanim stanjem — ne da je ijedan
+pravi sajt u tom stanju. Za ovo drugo služi `pytest -m live` (vidi `tests/test_live.py`).
 """
 
 from __future__ import annotations
@@ -117,12 +117,12 @@ def test_svaki_nalaz_ima_dokaz_i_recenicu(domain, izvestaji):
 def test_institucija_ide_na_nivo_2_i_nema_ijedan_i18n_nalaz(izvestaji):
     """`lang=sr` je ispravan — alat koji tu nešto prijavi laže klijentu."""
     report = izvestaji["institucija.example"]
-    assert report.level2_ran, "Mensin sadržaj se crta iz JS-a, mora na nivo 2"
+    assert report.level2_ran, "sadržaj institucije se crta iz JS-a, mora na nivo 2"
     assert report.escalation_reasons
     assert not any(c.startswith("i18n.") for c in ids(report))
 
 
-def test_aria_pada_u_invalid_a_ne_u_mismatch(izvestaji):
+def test_hotel_planina_pada_u_invalid_a_ne_u_mismatch(izvestaji):
     nalazi = ids(izvestaji["hotel-planina.example"])
     assert "i18n.lang.invalid" in nalazi
     assert "i18n.lang.mismatch" not in nalazi, "lang=zxx nije pogrešan jezik, nego nikakav"
@@ -157,7 +157,7 @@ def test_ordinacija_dokaz_razlikuje_stanja_alt_atributa(izvestaji):
 
 
 def test_b2b_firma_nema_nijedan_seo_nalaz_a_ipak_stize_na_nivo_2(izvestaji):
-    """Najvredniji test posle protetice (§12.4).
+    """Najvredniji test posle klinike (§12.4).
 
     Sajt bez nalaza nivoa 1 mora da stigne na nivo 2 preko petog uslova
     eskalacije — inače bi ga alat proglasio čistim.

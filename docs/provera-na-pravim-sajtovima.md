@@ -39,7 +39,7 @@ Svaki pad u `live.txt` je jedno od tri, i treba reći koje:
 
 | Uzrok | Primer | Šta se radi |
 |---|---|---|
-| sajt se promenio | Institucija popravila canonical | beleška u `kalibracija.md`; fixture se osvežava |
+| sajt se promenio | institucija.example popravila canonical | beleška u `kalibracija.md`; fixture se osvežava |
 | prag je loš | `lang.mismatch` ne pali na očigledno srpskom sajtu | izmena u `skener.toml`, proveri sa `recheck` |
 | bag | provera kaže `ok`, a ručno vidiš problem | test koji pada + popravka, kao B1–B4 |
 
