@@ -21,7 +21,7 @@ def _og_count(snapshot: SiteSnapshot) -> int:
     level=1,
     category="social",
     base_severity="high",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Početna nema og:title.",
     threshold="nedostaje <meta property=og:title>",
 )
@@ -44,7 +44,7 @@ def og_title_missing(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="social",
     base_severity="medium",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Početna nema og:description.",
     threshold="nedostaje <meta property=og:description>",
 )
@@ -67,7 +67,7 @@ def og_description_missing(snapshot: SiteSnapshot, ctx: Context):
     level=1,
     category="social",
     base_severity="medium",
-    requires=["home"],
+    requires=["home", "home_complete"],
     description="Početna nema og:image.",
     threshold="nedostaje <meta property=og:image>",
 )

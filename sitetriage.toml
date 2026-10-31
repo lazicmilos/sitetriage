@@ -23,7 +23,11 @@ domain_concurrency = 16         # domains in progress at once; a domain's budget
 delay_ms = [500, 1000]          # pause with jitter towards the same host (§8.3)
 timeout_connect_s = 5
 timeout_read_s = 10
-timeout_total_s = 20
+timeout_total_s = 20            # the whole request, redirects and body included; a body that trickles
+                                # byte by byte never trips the read timeout
+max_body_kb = 10240             # body after decompression; the rest is not read (65 kB of gzip can
+                                # be 64 MB). 20 × thresholds.perf.html_size_kb, so a normal site stays
+                                # whole; a cut home page is `unknown` for checks that read the full HTML
 max_requests_per_domain = 19    # hard budget (§4.2): home page 1 + robots 1 + host variants 3 +
                                 # probes 2 + sitemaps 4 + sample 7 = 18, and the budget is 19 (Z-26)
 max_seconds_per_domain = 40     # hard budget (§4.2); 25 s was not enough for slow shared
@@ -45,6 +49,7 @@ max_depth = 3
 max_files = 4                   # 16 = home page 1 + robots 1 + probes 2 + sitemaps 4 + sample 7 (+1 spare);
                                 # for a sample of 7 pages, 4 sitemaps are enough
 max_urls = 5000
+max_kb = 10240                  # sitemap after decompressing `.xml.gz`; larger is `unknown`, not "no sitemap"
 sample_size = 8                 # home page + 7 (§4.4)
 
 [escalation]

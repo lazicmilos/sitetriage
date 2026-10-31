@@ -13,7 +13,7 @@ the changelog.
 | [ADR-009](ADR-009-katalog-poruka.md) | Sentences are built at display time, from a catalog | Accepted | 2026-09-25 | Z-12 (inferred) |
 | [ADR-010](ADR-010-mrezni-profil.md) | Level 2 measures under a fixed network profile, without site isolation | Accepted | 2026-09-27 | Z-30 |
 | [ADR-011](ADR-011-json-sema.md) | `report.json` is a contract with a schema and a version | Accepted | 2026-09-30 | Z-13 |
-| ADR-012 | English public interface | In progress | | |
+| [ADR-012](ADR-012-english-public-interface.md) | English public interface: package, config, environment and report schema 3.0 | Accepted | 2026-10-31 | supersedes parts of ADR-011 |
 | [ADR-013](ADR-013-unreachable-after-second-attempt.md) | A site is "unreachable" only when that is certain, and only after a second attempt | Accepted | 2026-09-27 | Z-20, O-5, O-8, O-14 |
 | [ADR-014](ADR-014-host-canonicalization.md) | Host canonicalization is two ordinary checks, paid for with a 19-request budget | Accepted | 2026-09-26 | Z-26, O-12, R-2 |
 | [ADR-015](ADR-015-not-applicable-and-partial-causes.md) | `not_applicable` as a fourth result state, and `partial` split by cause | Accepted | 2026-09-27 | Z-21, Z-22, O-7 |

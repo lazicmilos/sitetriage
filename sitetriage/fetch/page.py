@@ -41,8 +41,12 @@ def build(
     elapsed_ms: int | None = None,
     redirect_hops: int = 0,
     keep_raw_html: bool = False,
+    truncated: bool = False,
 ) -> PageSnapshot:
-    """`keep_raw_html` je tačno za početnu stranu — inače snapshot naraste (§3.2)."""
+    """`keep_raw_html` je tačno za početnu stranu — inače snapshot naraste (§3.2).
+
+    `truncated`: telo je sečeno na `http.max_body_kb`, pa je `html_bytes` donja granica veličine.
+    """
     headers = {k.lower(): v for k, v in (headers or {}).items()}
     page = PageSnapshot(
         url=url,
@@ -52,6 +56,7 @@ def build(
         elapsed_ms=elapsed_ms,
         headers={k: v for k, v in headers.items() if k in RELEVANT_HEADERS},
         html_bytes=len(body or b""),
+        truncated=truncated,
     )
     if not body:
         return page
