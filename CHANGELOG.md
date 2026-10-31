@@ -1,11 +1,12 @@
-# Izmene
+# Changelog
 
-Ovde su izmene koje primeti onaj ko koristi alat ili čita njegov izlaz. Verzije prate semver:
-izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) podiže prvi broj.
+This file lists the changes that someone who uses the tool or reads its output will notice. Versions
+follow semver: a change that breaks compatibility (a domain status, a `check_id`, the shape of a
+finding, the JSON) raises the major version.
 
-## Neobjavljeno
+## Unreleased
 
-Projekat je otvoren pod imenom SiteTriage, uz licencu MIT.
+The project is open-sourced under the name SiteTriage, under the MIT license.
 
 ### Breaking changes (3.0)
 
@@ -40,262 +41,289 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
 - The HTML report is titled `SiteTriage — izveštaj` / `SiteTriage — report`.
 - A domain with no usable name is stored under `snapshots/unknown-domain/` instead of
   `snapshots/nepoznat-domen/`.
+- The User-Agent starts with `SiteTriage/` instead of `MlazicSiteScanner/`, on level 1 and at the
+  end of the browser UA on level 2. If you filter logs or make exceptions by the old name, change
+  them.
 
-### Izmene koje lome kompatibilnost
+### Changed
 
-- User-Agent počinje sa `SiteTriage/` umesto `MlazicSiteScanner/`, na nivou 1 i na kraju UA
-  browsera na nivou 2. Ko filtrira logove ili pravi izuzetke po starom imenu, mora da ih promeni.
+- In the report, the text that comes with each site is a "suggested text", not a "draft email": it
+  can serve for a message, a call or a contact form. The text itself is the same.
+- The documentation is in English. The Serbian test reports, calibration log, test plan and quality
+  review are kept unchanged under `docs/sr/`; the real-site verification procedure and the manual
+  check form are now `docs/real-site-verification.md` and `docs/manual-check-form.md`.
 
-### Promenjeno
+### Fixed
 
-- Tekst uz svaki sajt je u izveštaju „predlog teksta”, a ne „nacrt mejla”: može da posluži za
-  poruku, poziv ili kontakt formu. Sam tekst je isti.
-
-### Ispravljeno
-
-- Kad robots.txt navodi i mape sajta drugih domena (jedan robots.txt za ceo lanac sajtova),
-  čitaju se samo mape ovog sajta. Tuđe su trošile ograničenje od 4 fajla pre podmapa ovog sajta,
-  pa je sajt sa ispravnom mapom dobijao nalaz `infra.sitemap.missing`, a skener je slao zahteve
-  domenima kojih nema na spisku. Tuđa mapa se i dalje čita kad je jedina navedena (BUG-027).
-- Mapa sajta sa praznim redom pre `<?xml` (čest kvar WordPress dodataka) više se ne odbacuje kao
-  neispravan XML, pa sajt sa takvom mapom ne dobija `infra.sitemap.missing` (BUG-028).
-- Duplirani naslov, opis i canonical broje stranicu jednom i kad do nje vode dve adrese iz uzorka
-  (npr. jezička adresa koja preusmerava na početnu). Broj stranica u rečenici je bio veći od
-  stvarnog (BUG-029).
-- Prevelike slike broje istu sliku jednom i kad se na strani ponavlja (klonirani slajdovi u
-  slajderu), sa najvećim procenjenim viškom. Broj slika i višak u kB bili su preveliki, a višak
-  ponekad veći od cele strane: na jednom sajtu 7.011 kB umesto 2.923 kB. Na pravom prolazu od 249
-  domena 5 od 91 nalaza `perf.img.oversized` više ne prelazi prag (BUG-030).
-- Telo odgovora se čita najviše do `http.max_body_kb` (10 MB) posle raspakivanja, `.xml.gz` mapa do
-  `sitemap.max_kb`, a ceo zahtev traje najviše `http.timeout_total_s`: gzip bomba, beskonačno ili
-  sporo telo ne troše memoriju niti zaustavljaju prolaz. Sečena početna je `unknown` za provere HTML-a.
+- When robots.txt also lists sitemaps of other domains (one robots.txt for a whole chain of sites),
+  only this site's sitemaps are read. The others used up the limit of 4 files before this site's
+  sub-sitemaps, so a site with a correct sitemap got the finding `infra.sitemap.missing`, and the
+  scanner sent requests to domains that were not on the list. A foreign sitemap is still read when
+  it is the only one listed (BUG-027).
+- A sitemap with a blank line before `<?xml` (a common fault of WordPress plugins) is no longer
+  rejected as invalid XML, so a site with such a sitemap does not get `infra.sitemap.missing`
+  (BUG-028).
+- Duplicate title, description and canonical count a page once even when two sampled addresses lead
+  to it (for example, a language address that redirects to the home page). The page count in the
+  sentence was higher than the real one (BUG-029).
+- Oversized images count the same image once even when it repeats on the page (cloned slides in a
+  slider), with the largest estimated waste. The image count and the waste in kB were too high, and
+  the waste was sometimes larger than the whole page: on one site 7,011 kB instead of 2,923 kB. On a
+  real run over 249 domains, 5 of 91 `perf.img.oversized` findings no longer cross the threshold
+  (BUG-030).
+- A response body is read only up to `http.max_body_kb` (10 MB) after decompression, a `.xml.gz`
+  sitemap up to `sitemap.max_kb`, and a whole request takes at most `http.timeout_total_s`: a gzip
+  bomb, an endless body or a slow body no longer eats memory or stalls the run. A truncated home
+  page is `unknown` for the HTML checks.
 
 ## 2.0.0 — 2026-10-06
 
-Izlazni kriterijumi v2 iz [plana testiranja](docs/plan-testiranja.md) su ispunjeni
-([IT-SKENER-003](docs/izvestaj-testiranja-3.md)). Komande `skener diff` i `skener outcomes` (F4)
-nisu u ovom izdanju.
+The v2 exit criteria from the [test plan](docs/sr/plan-testiranja.md) are met
+([IT-SKENER-003](docs/sr/izvestaj-testiranja-3.md)). The commands `skener diff` and
+`skener outcomes` are not in this release.
 
-### Izmene koje lome kompatibilnost
+Package, module and setting names in this section are the 2.x names (`skener`, `[identitet]`); see
+[ADR-012](docs/adr/ADR-012-english-public-interface.md) for the 3.0 names. Quoted log and report
+texts are given in Serbian, as the tool printed them, with an English gloss.
 
-Svaka takva izmena upisuje se ovde u istom commit-u u kom je urađena.
+### Breaking changes
 
-- Razlog za `unknown` i razlog eskalacije više nisu rečenice nego `Reason(code, evidence)`, u
-  modelu i u JSON-u (`unknowns[].reason`, `escalation_reasons[]`). Rečenicu pravi
-  `skener.messages.reason(razlog, lang)`, pa su razlozi u izveštaju na engleskom sada na
-  engleskom.
-- `Finding` više nema `message_client` ni `message_tech`. Rečenicu pravi
-  `skener.messages.render(finding, lang)` pri prikazu, a nalaz dobija `variant`
-  ([ADR-009](docs/adr/ADR-009-katalog-poruka.md)). Kolona `message_client` u `findings.csv` ostaje.
-- Dokaz nalaza je samo podatak. Nestali su složeni oblici `uz_video`, `preuzimanja`,
-  `greske_tekst`, `kopije`, `stranice`, `naslovi` i `od_slika`. `uzorak` je kod (`sitemap`,
-  `links`, `none`), nedostajuće kodiranje je `null` umesto „nema", a `lanac` preusmerenja je
-  lista URL-ova umesto teksta sa strelicama.
-- Privatne i posebne adrese se više ne otvaraju (SSRF, [ADR-006](docs/adr/ADR-006-ssrf.md)).
-  Domen sa IP adresom, portom ili korisničkim imenom je `failed` bez ijednog zahteva, osim kad je
-  `host:port` naveden u `[net] allowed_private`. Nivo 1 više ne čita `HTTP(S)_PROXY`.
-- `CheckSpec` više nema šablone `message_template` i `tech_template`, a `check()` ne prima
-  `message` ni `tech`. Modul `skener.checks.srpski` je prešao u `skener.messages.sr`.
-- `infra.dns.unresolved` je obrisan. Sajt koji se ne otvori ni u drugom pokušaju dobija nalaz
-  `infra.unreachable` i status `unreachable`, i ide u listu „Ne rade" umesto u rangiranje. Izuzet
-  domen ima nov status `excluded`.
-  `rank()` rangira samo `scanned` i `partial`, a ostali domeni imaju `rank` 0. JSON ima liste
-  `unreachable` i `not_scanned`, a izveštaj domena polje `reason` (zašto je `failed`).
-- Provera ima i četvrto stanje, `not_applicable`, sa obaveznim razlogom. Izveštaj domena ima listu
-  `not_applicable` u istom obliku kao `unknowns`, ali ona ne čini domen `partial`.
-- Vrsta greške `dns` u snapshotu je podeljena na `dns_nxdomain`, `dns_nodata` (ime postoji, ali
-  nema adresu), `dns_temporary` i `dns` (ostale DNS greške). TCP veza koja nije uspostavljena je `no_connection`.
-- `CheckSpec` više nema `optional`, `check()` ga ne prima, a `Context` nema `host_canonicalization`.
-  Nijedna provera ih nije koristila; kanonizacija hosta je sada obična provera.
-- `thresholds.perf.mobile_speed_mbps` je obrisan. Brzina je sada `network_profile.download_mbps`, i
-  ista vrednost ide u merenje i u rečenice. Stari ključ u sopstvenom TOML-u se tiho ignoriše.
-- `perf.load.time` traži snimak sa mrežnim profilom. Snimak nivoa 2 napravljen pre njega meren je na
-  stvarnoj vezi, pa je vreme `unknown` (`requires.network_profile`). Isto važi i za snimak bez
-  izmerene stvarne veze (`requires.link`, Z-33). JSON `environment` ima obavezna polja
-  `network_profile` i `link_mbps` (`null` kad nivo 2 nije radio).
+Every such change is recorded here in the same commit in which it is made.
 
-### Dodato
+- The reason for `unknown` and the reason for escalation are no longer sentences but
+  `Reason(code, evidence)`, in the model and in the JSON (`unknowns[].reason`,
+  `escalation_reasons[]`). The sentence is built by `skener.messages.reason(razlog, lang)`, so
+  reasons in an English report are now in English.
+- `Finding` no longer has `message_client` or `message_tech`. The sentence is built by
+  `skener.messages.render(finding, lang)` at display time, and the finding gets `variant`
+  ([ADR-009](docs/adr/ADR-009-katalog-poruka.md)). The `message_client` column in `findings.csv`
+  stays.
+- Finding evidence is data only. The composite forms `uz_video`, `preuzimanja`, `greske_tekst`,
+  `kopije`, `stranice`, `naslovi` and `od_slika` are gone. `uzorak` is a code (`sitemap`, `links`,
+  `none`), a missing encoding is `null` instead of "nema" ("none"), and the redirect `lanac`
+  (chain) is a list of URLs instead of text with arrows.
+- Private and special addresses are no longer opened (SSRF, [ADR-006](docs/adr/ADR-006-ssrf.md)).
+  A domain with an IP address, a port or a user name is `failed` without a single request, unless
+  its `host:port` is listed in `[net] allowed_private`. Level 1 no longer reads `HTTP(S)_PROXY`.
+- `CheckSpec` no longer has the templates `message_template` and `tech_template`, and `check()`
+  does not accept `message` or `tech`. The module `skener.checks.srpski` moved to
+  `skener.messages.sr`.
+- `infra.dns.unresolved` is removed. A site that does not open even on the second attempt gets the
+  finding `infra.unreachable` and the status `unreachable`, and goes to the "Not working" list
+  instead of the ranking. An excluded domain has the new status `excluded`.
+  `rank()` ranks only `scanned` and `partial`, and other domains have `rank` 0. The JSON has the
+  lists `unreachable` and `not_scanned`, and the domain report has the field `reason` (why it is
+  `failed`).
+- A check has a fourth state, `not_applicable`, with a mandatory reason. The domain report has a
+  `not_applicable` list in the same shape as `unknowns`, but it does not make the domain `partial`.
+- The `dns` error kind in the snapshot is split into `dns_nxdomain`, `dns_nodata` (the name exists
+  but has no address), `dns_temporary` and `dns` (other DNS errors). A TCP connection that was not
+  established is `no_connection`.
+- `CheckSpec` no longer has `optional`, `check()` does not accept it, and `Context` has no
+  `host_canonicalization`. No check used them; host canonicalization is now an ordinary check.
+- `thresholds.perf.mobile_speed_mbps` is removed. The speed is now
+  `network_profile.download_mbps`, and the same value goes into the measurement and into the
+  sentences. The old key in your own TOML is silently ignored.
+- `perf.load.time` requires a snapshot taken with the network profile. A level-2 snapshot made
+  before it was measured on the real connection, so its time is `unknown`
+  (`requires.network_profile`). The same goes for a snapshot without a measured real link
+  (`requires.link`, [ADR-018](docs/adr/ADR-018-load-time-validity.md)). The JSON `environment` has
+  the required fields `network_profile` and `link_mbps` (`null` when level 2 did not run).
 
-- Nivo 2 beleži naslov, opis i canonical stranice posle JavaScript-a (`dom.title`,
-  `dom.meta_description`, `dom.canonical`). Nivo 1 ih čita iz sirovog HTML-a, a Google izvršava
-  JavaScript, pa bi kod sajta koji ih postavlja skriptom `seo.*.missing` bio lažan. Provere ih još ne
-  koriste: prvo se meri koliko je takvih sajtova.
-- Mrežni profil nivoa 2. Svaka stranica se meri na simuliranoj vezi iz `[network_profile]`
-  (4,8 Mb/s dolazno, 1,5 Mb/s odlazno, 150 ms kašnjenja), pa isti sajt daje isto vreme na svakoj
-  mašini. Profil je u snimku nivoa 2 (`network_profile`) i u `environment` JSON izveštaja, a
-  rečenica za `perf.load.time` ga navodi. Chromium se pokreće bez izolacije sajtova, da profil važi
-  i za iframe sa drugog sajta ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)).
-- Merenje stvarne veze pre nivoa 2. Alat jednom po prolazu preuzima probni fajl
-  (`network_profile.probe_url`, najviše `probe_max_s` sekundi), a izmerena brzina ide u snimak
-  (`link_mbps`) i u `environment` JSON izveštaja. Kad je veza sporija od `min_link_ratio` × profil,
-  `perf.load.time` je `unknown` (`link_slow`), jer profil može samo da uspori, a vreme bi bilo
-  precenjeno. Snimak bez izmerene veze daje `unknown` (`requires.link`), uz jedno upozorenje u logu (Z-33).
-- Snimak nivoa 2 beleži trajanje nivoa 2 za domen (`elapsed_ms`), bez čekanja u redu za
-  učitavanje, isto vreme koje ograničava `browser.max_seconds_per_domain`. Skripta
-  `scripts/raspodela.py` iz snimaka ispisuje raspodelu težine, broja zahteva i vremena do `load`,
-  trajanja nivoa 2 i canonical nalaze, za kalibraciju pragova (Z-50).
-- Prekidač `browser.serial_load` (podrazumevano `true`). Sa `false` se sajtovi na nivou 2 učitavaju
-  uporedo, a ne jedan po jedan. Pod mrežnim profilom svaki kontekst ima svoju simuliranu vezu, pa se
-  eksperimentom proverava da li je serijsko učitavanje iz BUG-006 i dalje potrebno (Z-31).
-- Kanonizacija hosta. Posle `robots.txt` alat dohvata preostale tri adrese konačnog porekla
-  (`http`/`https` × sa i bez `www`) i beleži ih u `SiteSnapshot.host_variants`. Dve nove provere:
-  `infra.https.redirect.missing` (sajt radi na https-u, a `http://` istog hosta vraća 200 bez
-  preusmerenja) i `infra.host.duplicate` (sajt se otvara i sa `www` i bez `www`, a nijedna adresa ne
-  preusmerava na drugu; `low` kad canonical na svima upućuje na isto poreklo). Budžet po domenu je
-  19 zahteva umesto 16. Ulaz sa IP adresom ili portom nema varijante.
-- Uzrok `partial`-a: izveštaj domena ima `partial_causes` (`budget`, `unknown`), zbir ih broji
-  posebno, a JSON i HTML daju udeo budžeta među domenima koji rade i udeo `unknown`-a po proveri
-  (`budget_share`, `unknown_share`).
-- JSON izveštaj `report.json` sa verzijom šeme (`skener/schema/report-2.json`), otiskom
-  konfiguracije i okruženjem. `--format` ga podrazumevano piše uz HTML i CSV.
-- Snapshot nivoa 2 beleži verziju Chromium-a kojim je meren.
-- Izuzeti domeni: `[identitet] izuzeti` ili `--exclude FILE`, jedan domen po redu, uz sve
-  poddomene. Izuzet domen ne dobija nijedan zahtev; u izveštaju je samo njihov broj (status
-  `excluded` u zbiru).
-- Izveštaji na srpskom i engleskom: `--lang sr|en` za `scan` i `recheck`. `skener explain`
-  ispisuje rečenice na oba jezika.
-- Ceo prolaz je u modulu `skener.pipeline`, pa ga web aplikacija zove isto kao komandna linija
-  ([ADR-008](docs/adr/ADR-008-pipeline.md)).
-- Log tokom prolaza ima brojač napretka („nivo 1: 43/200 gotovo").
-- Sajt koji posle prvog pokušaja izgleda kao da ne radi ide na kraj reda nivoa 1 i dobija drugi
-  pokušaj, sa novim budžetom, najranije `http.second_attempt_after_s` (60 s) posle prvog.
-- HTML izveštaj ima odeljke „Ne rade", sa posebnim nacrtom mejla, i „Nije skenirano", sa
-  razlogom i brojem izuzetih domena.
-- Kad mapa sajta navodi manje adresa nego što uzorak traži, uzorak se dopunjava vezama sa početne.
-  Snapshot beleži interne veze sa početne, a nivo 2 i veze iz renderovanog DOM-a.
-- Greška i upozorenje u listi domena navode red u kom su, onako kako ga prikazuje Excel
-  („red 3: domen se ponavlja u listi").
-- Lagani nivo 2 bira broj konteksta po mašini: jedan na svaki slobodan GB memorije, najviše dva
-  po jezgru i najviše 8. Pun nivo 2 i dalje radi sa `browser.concurrency`, jer učitava jedan po
-  jedan. `browser.light_concurrency = 0` je automatski izbor, a broj ≥ 1 ga fiksira. Na listi B
-  je lagani nivo 2 sa tri konteksta trajao 168 s za 40 sajtova, a na 200 domena ih je oko 140
-  (Z-32).
+### Added
 
-### Promenjeno
+- Level 2 records the page's title, description and canonical after JavaScript (`dom.title`,
+  `dom.meta_description`, `dom.canonical`). Level 1 reads them from raw HTML, and Google executes
+  JavaScript, so on a site that sets them by script `seo.*.missing` would be false. The checks do not
+  use them yet: first we measure how many such sites there are.
+- A network profile for level 2. Every page is measured on the simulated connection from
+  `[network_profile]` (4.8 Mb/s down, 1.5 Mb/s up, 150 ms latency), so the same site gives the same
+  time on every machine. The profile is in the level-2 snapshot (`network_profile`) and in
+  `environment` of the JSON report, and the `perf.load.time` sentence states it. Chromium runs
+  without site isolation, so that the profile also applies to an iframe from another site
+  ([ADR-010](docs/adr/ADR-010-mrezni-profil.md)).
+- Real-link measurement before level 2. Once per run the tool downloads a probe file
+  (`network_profile.probe_url`, for at most `probe_max_s` seconds), and the measured speed goes into
+  the snapshot (`link_mbps`) and into `environment` of the JSON report. When the link is slower than
+  `min_link_ratio` × the profile, `perf.load.time` is `unknown` (`link_slow`), because the profile can
+  only slow things down and the time would be overstated. A snapshot without a measured link gives
+  `unknown` (`requires.link`), with one warning in the log
+  ([ADR-018](docs/adr/ADR-018-load-time-validity.md)).
+- The level-2 snapshot records the duration of level 2 for the domain (`elapsed_ms`), without
+  waiting in the load queue: the same time that `browser.max_seconds_per_domain` limits. The script
+  `scripts/raspodela.py` prints, from the snapshots, the distribution of weight, request count and
+  time to `load`, the level-2 duration and the canonical findings, for threshold calibration
+  ([ADR-020](docs/adr/ADR-020-threshold-calibration.md)).
+- The switch `browser.serial_load` (default `true`). With `false`, sites on level 2 load in parallel
+  instead of one by one. Under the network profile each context has its own simulated connection, so
+  an experiment checks whether the serial loading from BUG-006 is still needed
+  ([ADR-018](docs/adr/ADR-018-load-time-validity.md)).
+- Host canonicalization. After `robots.txt` the tool fetches the remaining three addresses of the
+  final origin (`http`/`https` × with and without `www`) and records them in
+  `SiteSnapshot.host_variants`. Two new checks: `infra.https.redirect.missing` (the site works on
+  https, and `http://` on the same host answers 200 without a redirect) and `infra.host.duplicate`
+  (the site opens both with and without `www`, and neither address redirects to the other; `low`
+  when the canonical on all of them points to the same origin). The budget per domain is 19 requests
+  instead of 16. An input with an IP address or a port has no variants.
+- The cause of `partial`: the domain report has `partial_causes` (`budget`, `unknown`), the summary
+  counts them separately, and the JSON and HTML give the budget share among working domains and the
+  `unknown` share per check (`budget_share`, `unknown_share`).
+- A JSON report `report.json` with a schema version (`skener/schema/report-2.json`), a configuration
+  digest and the environment. `--format` writes it by default next to the HTML and CSV.
+- The level-2 snapshot records the Chromium version it was measured with.
+- Excluded domains: `[identitet] izuzeti` or `--exclude FILE`, one domain per line, with all
+  subdomains. An excluded domain gets no request at all; the report shows only their number (status
+  `excluded` in the summary).
+- Reports in Serbian and English: `--lang sr|en` for `scan` and `recheck`. `skener explain` prints
+  the sentences in both languages.
+- The whole run lives in the module `skener.pipeline`, so the web application calls it the same way
+  the command line does ([ADR-008](docs/adr/ADR-008-pipeline.md)).
+- The log has a progress counter during the run ("nivo 1: 43/200 gotovo", that is "level 1: 43/200
+  done").
+- A site that looks down after the first attempt goes to the end of the level-1 queue and gets a
+  second attempt, with a fresh budget, no earlier than `http.second_attempt_after_s` (60 s) after the
+  first.
+- The HTML report has the sections "Not working", with its own draft email, and "Not scanned", with
+  the reason and the number of excluded domains.
+- When the sitemap lists fewer addresses than the sample needs, the sample is topped up with links
+  from the home page. The snapshot records the internal links of the home page, and level 2 also
+  the links from the rendered DOM.
+- An error or warning in the domain list names the row it is on, the way Excel shows it ("red 3:
+  domen se ponavlja u listi", that is "row 3: the domain is repeated in the list").
+- Light level 2 picks the number of contexts per machine: one per free GB of memory, at most two per
+  core and at most 8. Full level 2 still runs with `browser.concurrency`, because it loads one by
+  one. `browser.light_concurrency = 0` is the automatic choice, and a number ≥ 1 fixes it. On list B,
+  light level 2 with three contexts took 168 s for 40 sites, and on 200 domains there are about 140
+  of them ([ADR-019](docs/adr/ADR-019-run-duration-and-level2-coverage.md)).
 
-- Pragovi težine, broja zahteva i vremena učitavanja kalibrisani su na listi A, pod mrežnim
-  profilom: težina do `load` bez videa 2 / 4 / 7 MB (bilo 3 / 5 / 8), zahtevi do `load` 60 / 90
-  (bilo 100 / 150), vreme do `load` 6 / 9 s (bilo 4 / 8). To su zaokruženi p50, p75 i p90; kod
-  provera sa dva nivoa medium je p50, a high p75 (Z-50, [kalibracija](docs/kalibracija.md)).
+### Changed
 
-### Ispravljeno
+- The weight, request count and load time thresholds are calibrated on list A, under the network
+  profile: weight up to `load` without video 2 / 4 / 7 MB (was 3 / 5 / 8), requests up to `load`
+  60 / 90 (was 100 / 150), time to `load` 6 / 9 s (was 4 / 8). These are the rounded p50, p75 and
+  p90; for checks with two levels, medium is p50 and high is p75
+  ([ADR-020](docs/adr/ADR-020-threshold-calibration.md), [calibration log](docs/sr/kalibracija.md)).
 
-- Početna bez teksta koja samo preusmerava na isti sajt, JavaScript-om (`location = …`,
-  `location.replace(…)`) ili meta refresh-om, ocenjivana je kao početna: na listi B strana od 95 B
-  koja vodi na „uskoro" dobila je nalaze za naslov, opis i canonical koje prava strana ima. Nivo 1
-  sada takav skok prati kao HTTP preusmerenje: skok je u lancu, a ocenjuje se strana na koju vodi
-  (i na nivou 2). Stub je strana sa najviše 100 znakova vidljivog teksta; preusmerenje na drugi
-  sajt se ne prati (BUG-022).
-- `perf.img.oversized` je brojao i SVG slike i `data:` čuvare mesta za lenje učitavanje, a nalaz je
-  padao na broj slika i kad prenos nije izmeren, pa je rečenica govorila „oko 0 kB nepotrebnog
-  prenosa". Na listi B 5 od 47 nalaza bilo je samo od takvih slika, a kod još 15 broj slika je bio
-  preveliki. Sada se broje samo rasterske slike sa izmerenim viškom; kad bar 3 prevelike slike nemaju
-  izmeren prenos, provera je `unknown` (`oversized_unmeasured`) (BUG-023).
-- `infra.tls.invalid`: nepotpun lanac sertifikata („unable to get local issuer certificate") Python
-  odbija, a browser ume sam da dopuni, pa je to sada `unknown` (`tls_incomplete_chain`), ne nalaz da
-  posetilac vidi upozorenje (BUG-024).
-- `i18n.lang.mismatch` je svaki tekst sa ćirilicom ili č/ć/š/ž/đ čitao kao srpski, pa bi sajt na
-  ruskom sa `lang="ru"` dobio „Sadržaj sajta je na srpskom". Jezici koji se pišu tim slovima (hr,
-  bs, ru, mk, bg, sl, cs…) više nisu nalaz, a `lang` sa razmacima se poredi bez njih (BUG-025).
-- `infra.sitemap.missing` je gledao samo status prve `Sitemap:` iz robots.txt: mrtva prva uz drugu
-  koja radi davala je „Sajt nema mapu stranica". Ako je mapa dala adrese, provera je `ok` (BUG-026).
-- Recenzija kataloga poruka: rečenice više ne tvrde ništa što dokaz ne pokriva. h1, alt i lang se
-  mere samo na početnoj, pa to i piše („Početna strana nema glavni naslov"). Lažni 404 kaže da sajt
-  „odgovara kao da stranica postoji", a ne da vraća običnu stranicu. Ponovljen naslov i opis više
-  ne tvrde kako izgledaju u Google rezultatima. „lang" sa pogrešnim zapisom (`en_EN`) nije oznaka
-  „bez jezika". Bez izvora su izbačeni „mnogi posetioci ne čekaju toliko" (težina i vreme) i „Viber
-  grupe" (og:image); „mnogi" i „često" su na listi reči koje traže izvor. Tekst izveštaja više ne
-  tvrdi da alat ne dira ono što `robots.txt` zabranjuje: početnu i dve sonde za 404 otvara uvek.
-  Ispravljeni su i razlozi `requires.entry`, `requires.soft404` i `no_h1_raw`, engleski
-  `requires.robots`, `requires.sitemap` i pretpostavka u izveštaju, kao i padeži („bodovi: 24",
-  „od 22 slike", „301 znak").
-- Nivo 2 nije gledao HTTP status početne, pa je strana greške merena kao početna. Na listi B jedan
-  server je UA sa „HeadlessChrome" odbio sa 403, a alat je izmerio stranu greške od 358 B umesto
-  prave od oko 2 MB. Status ≥ 400 je sada neuspelo snimanje (`http_status`), pa su provere nivoa 2
-  `unknown`. Browser se predstavlja kao „Chrome/…", a identitet operatera ostaje na kraju (BUG-021).
-- Nivo 2 se predstavljao samo identitetom operatera (`MlazicSiteScanner/…`), a ne kao browser.
-  Servisi koje sajt učitava biraju sadržaj po User-Agent-u: reklamne mreže su pokretale dodatne
-  aukcije, a Google Fonts je slao veći format fonta. Na sajtu sa reklamama alat je izmerio 2,7 MB i
-  129 zahteva, a posetilac u Chrome-u dobija 1,3 MB i oko 60. Browser sada šalje svoj UA, a
-  identitet operatera je dopisan na kraj, kao kod Googlebot-a. Nivo 1 šalje isti UA kao i pre
-  (BUG-019).
-- Sajt bez razloga za eskalaciju ili van `max_level2` nije išao u browser, pa je u izveštaju stajao
-  sa „0 nalaza", a težina, zahtevi i slike nisu ni mereni. Na listi B dve strane od 4,8 i 4,9 MB
-  imale su brz i čist HTML. Takvi sajtovi sada dobijaju lagani nivo 2: posle punog nivoa 2,
-  bez mrežnog profila i bez reda za učitavanje. Vreme učitavanja za njih „ne primenjuje se"
-  (`not_applicable`, razlog `requires.level2_full`): sajt zbog toga ne postaje `partial`, a u
-  imenilac `unknown_share` za vreme ne ulazi. Snimak nosi `light`, `duration_s` nosi
-  `level2_light`, a traka napretka fazu `level2_light` (BUG-020).
-- `qa.console.errors` je sve greške iz konzole nazivao „JavaScript greške", a konzola beleži i
-  blokiran „Mixed Content" i resurse koji vraćaju 404. Na listi B kod 3 od 6 nalaza nijedna greška
-  nije bila iz skripte. Rečenica sada kaže da Chrome prijavljuje greške i šta one mogu da budu
+### Fixed
+
+- A home page without text that only redirects to the same site, by JavaScript (`location = …`,
+  `location.replace(…)`) or by meta refresh, was judged as the home page: on list B a 95 B page
+  leading to "coming soon" got findings for title, description and canonical that the real page has.
+  Level 1 now follows such a jump like an HTTP redirect: the jump is in the chain, and the page it
+  leads to is judged (on level 2 too). A stub is a page with at most 100 characters of visible
+  text; a redirect to another site is not followed (BUG-022).
+- `perf.img.oversized` counted SVG images and `data:` placeholders for lazy loading as well, and the
+  finding fired on the image count even when the transfer was not measured, so the sentence said
+  "about 0 kB of unnecessary transfer". On list B, 5 of 47 findings came only from such images, and
+  for another 15 the image count was too high. Now only raster images with measured waste count;
+  when at least 3 oversized images have no measured transfer, the check is `unknown`
+  (`oversized_unmeasured`) (BUG-023).
+- `infra.tls.invalid`: an incomplete certificate chain ("unable to get local issuer certificate") is
+  rejected by Python, but a browser can complete it on its own, so it is now `unknown`
+  (`tls_incomplete_chain`), not a finding that the visitor sees a warning (BUG-024).
+- `i18n.lang.mismatch` read every text with Cyrillic or č/ć/š/ž/đ as Serbian, so a Russian site with
+  `lang="ru"` would get "the site's content is in Serbian". Languages written with those letters
+  (hr, bs, ru, mk, bg, sl, cs…) are no longer a finding, and a `lang` with spaces is compared without
+  them (BUG-025).
+- `infra.sitemap.missing` looked only at the status of the first `Sitemap:` in robots.txt: a dead
+  first one next to a second one that works gave "the site has no sitemap". If the sitemap produced
+  addresses, the check is `ok` (BUG-026).
+- Review of the message catalog: sentences no longer claim anything the evidence does not cover.
+  `h1`, `alt` and `lang` are measured only on the home page, so the sentence says so ("the home page
+  has no main heading"). The soft 404 says the site "responds as if the page exists", not that it
+  returns an ordinary page. Repeated title and description no longer claim how they look in Google
+  results. A `lang` with a wrong format (`en_EN`) is not a "no language" tag. Unsourced claims were
+  removed: "many visitors do not wait that long" (weight and time) and "Viber groups" (og:image);
+  "many" and "often" joined the list of words that require a source. The report text no longer
+  claims that the tool does not touch what `robots.txt` forbids: it always opens the home page and
+  the two 404 probes. Also corrected were the reasons `requires.entry`, `requires.soft404` and
+  `no_h1_raw`, the English `requires.robots`, `requires.sitemap` and the assumption in the report,
+  as well as Serbian grammatical cases ("bodovi: 24", "od 22 slike", "301 znak").
+- Level 2 did not look at the HTTP status of the home page, so an error page was measured as the
+  home page. On list B one server refused a UA with "HeadlessChrome" with 403, and the tool measured
+  a 358 B error page instead of the real one of about 2 MB. A status ≥ 400 is now a failed recording
+  (`http_status`), so the level-2 checks are `unknown`. The browser presents itself as "Chrome/…",
+  and the operator identity stays at the end (BUG-021).
+- Level 2 presented itself only with the operator identity (`MlazicSiteScanner/…`), not as a
+  browser. Services that a site loads choose content by User-Agent: ad networks ran extra auctions,
+  and Google Fonts sent a larger font format. On a site with ads the tool measured 2.7 MB and 129
+  requests, while a visitor in Chrome gets 1.3 MB and about 60. The browser now sends its own UA,
+  with the operator identity appended at the end, as Googlebot does. Level 1 sends the same UA as
+  before (BUG-019).
+- A site without an escalation reason, or beyond `max_level2`, did not go to the browser, so it
+  stood in the report with "0 findings", and its weight, requests and images were never measured. On
+  list B two pages of 4.8 and 4.9 MB had fast, clean HTML. Such sites now get light level 2: after
+  the full level 2, without the network profile and without the load queue. Load time for them "does
+  not apply" (`not_applicable`, reason `requires.level2_full`): the site does not become `partial`
+  because of it, and it does not enter the denominator of `unknown_share` for time. The snapshot
+  carries `light`, `duration_s` carries `level2_light`, and the progress bar the phase
+  `level2_light` (BUG-020).
+- `qa.console.errors` called every console error a "JavaScript error", but the console also logs
+  blocked "Mixed Content" and resources that return 404. On list B, for 3 of 6 findings not a single
+  error came from a script. The sentence now says that Chrome reports errors and what they can be
   (BUG-018).
-- `infra.host.duplicate` je u spisak adresa stavljao i http varijante, pa je rečenica uz „2 adrese"
-  nabrajala četiri kad http ne preusmerava na https. Spisak su sada hostovi (`x.rs`, `www.x.rs`), kao
-  i broj; http bez preusmerenja ostaje nalaz `infra.https.redirect.missing` (BUG-017).
+- `infra.host.duplicate` also put the http variants in the address list, so the sentence next to
+  "2 addresses" listed four when http does not redirect to https. The list is now hosts (`x.rs`,
+  `www.x.rs`), like the count; http without a redirect stays the finding
+  `infra.https.redirect.missing` (BUG-017).
+- `seo.canonical.duplicate` counted a page whose canonical points to its own `http` or `www` version
+  as a page with a foreign canonical, so the sentence showed the owner their own home page as
+  "another address". Such a canonical no longer counts
+  ([ADR-020](docs/adr/ADR-020-threshold-calibration.md)).
+- A temporary DNS error (EAI_AGAIN) is retried once, on level 1 and in the address check on level 2.
+  Over a mobile hotspot it hit every fourth domain, so working sites dropped out as `failed`, and on
+  level 2 one error blocked all requests to that host. A host variant with a temporary DNS error is
+  `unknown`, because it is not known whether that address serves the site.
+- Level 1 processes 16 domains at once instead of 8. It mostly waits for the pauses towards the same
+  site, so a run over 200 domains had been estimated at about 20 minutes. Politeness towards each
+  site is the same: one request at a time and the same pause
+  ([ADR-019](docs/adr/ADR-019-run-duration-and-level2-coverage.md)).
+- The politeness key was the exact host, so `www.x.rs` and `x.rs` could get two requests at the same
+  time. Now the key is the host without a leading `www.`: both share a queue and a pause.
+- A host variant that redirects to the home page downloaded the home page once more. On slow hosting
+  that used up the domain's time budget before the page sample, so on list A 21 domains ran out of
+  budget. A variant now stops before the home page and takes the status and canonical from it.
+- The language checks (`i18n.lang.missing`, `invalid`, `mismatch`) looked only at raw HTML, so a
+  site whose text is drawn by JavaScript got `unknown`, and a `lang` set by JavaScript was reported
+  as missing. When level 2 ran, the checks now look at the page after JavaScript, as a screen reader
+  reads it, and the evidence names the source (`sirovi_html` or `nivo2`). The level-2 snapshot
+  records `lang` and the visible text after JavaScript.
+- When the SSRF protection on level 2 refuses a request, Chromium reports only
+  `ERR_BLOCKED_BY_CLIENT`, so a failed DNS lookup could not be told apart from a private address.
+  Now the log (INFO, once per host) gives the reason: "DNS nije razrešio ime" ("DNS did not resolve
+  the name") or "adresa nije javna: …" ("address is not public: …").
+- Weight and request count also counted what arrives after the `load` event (analytics, chat, lazy
+  images), so the same site had 179 requests once and 281 the next time. Now only requests started
+  before `load` count; a body that arrives later for such a request still counts. The total is only
+  in the technical sentence and in the JSON. When `load` does not arrive, the weight is `unknown`.
+  The level-2 snapshot has `requests_at_load`, `bytes_at_load`, `bytes_by_type_at_load` and
+  `unmeasured_at_load`, and for a 1.x snapshot both checks are `unknown`.
+- `seo.canonical.duplicate` also counted a page that points to itself, so two subpages of seven,
+  with a canonical to the home page, gave `critical`. Now only pages with a foreign canonical count
+  (at least two, from two path groups), and the severity depends on their share of the sample:
+  `medium`, `high` from 0.4, `critical` from 0.6. The sentence says how many of how many checked
+  pages.
+- A site with one or two pages was `partial`, because the duplicate checks had nothing to compare.
+  They are now `not_applicable`, but only when the site really has no more pages. When the sample is
+  small because of the budget or links from JavaScript, they stay `unknown`, with a reason.
+- When the home page did not reach `load` within 25 s, the sentence claimed "it needs 25 s to load
+  fully", but it needs more. Now it says it did not load fully even in 25 s.
+- Unsourced sentences: `infra.tls.invalid` no longer claims that most visitors turn back at the
+  warning, and `infra.robots.missing` does not claim that every search engine asks for that file
+  first, but that Google reads it before crawling the site. A test now forbids words that claim
+  frequency or human behaviour (`većina`, `uvek`, `svaki`, `most`, `always`, `every`…) in the
+  sentences of both languages.
+- The HTML report said "1 nalaza"; now number and noun agree ("1 nalaz", "3 nalaza").
+- The Serbian HTML report wrote the score, points, duration and the speed from the assumption with a
+  decimal point ("99.4"), and client sentences with a comma. Now every such number goes through the
+  language's formatter ("99,4" in Serbian, "99.4" in English), with one decimal. The technical
+  sentence, evidence, CSV and JSON keep machine notation, with a point and full precision.
+- Without Playwright installed (`pip install skener` without `[browser]`) a run with level 2 crashed.
+  Now level 2 is skipped with a message, and level 1 works.
 
-- `seo.canonical.duplicate` je stranicu čiji canonical upućuje na njenu `http` ili `www` verziju
-  brojao kao stranicu sa tuđim canonical-om, pa je rečenica vlasniku kao „drugu adresu" pokazivala
-  njegovu sopstvenu početnu. Takav canonical se više ne broji (Z-50).
+## 1.0.0 — 2026-09-24
 
-- Privremena greška DNS-a (EAI_AGAIN) se ponavlja jednom, na nivou 1 i u proveri adresa na nivou 2.
-  Preko mobilnog hotspota je bila na svakom četvrtom domenu, pa su sajtovi koji rade ispadali kao
-  `failed`, a na nivou 2 jedna greška je blokirala sve zahteve ka tom hostu. Varijanta hosta sa
-  privremenom greškom DNS-a je `unknown`, jer se ne zna da li ta adresa služi sajt.
-- Nivo 1 obrađuje 16 domena odjednom umesto 8. Uglavnom čeka pauze ka istom sajtu, pa je prolaz
-  nad 200 domena bio procenjen na oko 20 minuta. Pristojnost prema svakom sajtu je ista: jedan
-  zahtev odjednom i ista pauza (Z-32).
-
-- Ključ pristojnosti bio je tačan host, pa bi `www.x.rs` i `x.rs` mogli da dobiju dva zahteva
-  istovremeno. Sada je ključ host bez vodećeg `www.`: oba dele red i pauzu.
-
-- Varijanta hosta koja preusmerava na početnu preuzimala je početnu još jednom. Na sporom hostingu
-  to je trošilo vremenski budžet domena pre uzorka stranica, pa je na listi A 21 domen ostao bez
-  budžeta. Varijanta sada staje pred početnom i od nje uzima status i canonical.
-
-- Jezičke provere (`i18n.lang.missing`, `invalid`, `mismatch`) gledale su samo sirovi HTML, pa je
-  sajt čiji tekst crta JavaScript imao `unknown`, a `lang` koji postavi JavaScript bio je prijavljen
-  kao nepostojeći. Kad je nivo 2 radio, provere sada gledaju stranicu posle JavaScript-a, onakvu
-  kakvu čita čitač ekrana, a dokaz kaže izvor (`sirovi_html` ili `nivo2`). Snimak nivoa 2 beleži
-  `lang` i vidljiv tekst posle JavaScript-a.
-
-- Kad SSRF zaštita na nivou 2 odbije zahtev, Chromium javlja samo `ERR_BLOCKED_BY_CLIENT`, pa se
-  neuspeo DNS upit nije razlikovao od privatne adrese. Sada log (INFO, jednom po hostu) kaže
-  razlog: „DNS nije razrešio ime" ili „adresa nije javna: …".
-
-- Težina i broj zahteva brojali su i ono što stigne posle događaja `load` (analitika, chat, lenje
-  slike), pa je isti sajt jednom imao 179, a drugi put 281 zahtev. Sada se broje samo zahtevi
-  započeti pre `load`; telo koje stigne kasnije za takav zahtev se broji. Ukupno je samo u
-  tehničkoj rečenici i u JSON-u. Kad `load` ne stigne, težina je `unknown`. Snapshot nivoa 2 ima
-  `requests_at_load`, `bytes_at_load`, `bytes_by_type_at_load` i `unmeasured_at_load`, a za
-  snapshot iz 1.x obe provere su `unknown`.
-
-- `seo.canonical.duplicate` je brojao i stranicu koja upućuje na sebe, pa su dve podstranice od
-  sedam, sa canonical-om na početnu, davale `critical`. Sada se broje samo stranice sa tuđim
-  canonical-om (bar dve, iz dve grupe putanja), a ozbiljnost zavisi od njihovog udela u uzorku:
-  `medium`, `high` od 0,4, `critical` od 0,6. Rečenica kaže koliko od koliko proverenih stranica.
-
-- Sajt sa jednom ili dve stranice bio je `partial`, jer provere duplikata nisu imale šta da
-  uporede. Sada su `not_applicable`, ali samo kad sajt stvarno nema više stranica. Kad je uzorak
-  mali zbog budžeta ili veza iz JavaScript-a, ostaju `unknown`, sa razlogom.
-
-- Kad početna ne stigne do `load` za 25 s, rečenica je tvrdila „treba joj 25 s da se do kraja
-  učita", a treba joj više. Sada kaže da se ni za 25 s nije do kraja učitala.
-- Rečenice bez izvora: `infra.tls.invalid` više ne tvrdi da se većina posetilaca vrati sa
-  upozorenja, a `infra.robots.missing` ne tvrdi da taj fajl svaki pretraživač prvo traži, nego da
-  ga Google čita pre obilaska sajta. Test sada zabranjuje reči koje tvrde učestalost ili ponašanje
-  ljudi (`većina`, `uvek`, `svaki`, `most`, `always`, `every`…) u rečenicama oba jezika.
-- U HTML izveštaju je pisalo „1 nalaza"; sada se broj i imenica slažu („1 nalaz", „3 nalaza").
-- HTML izveštaj na srpskom pisao je skor, bodove, trajanje i brzinu iz pretpostavke sa decimalnom
-  tačkom („99.4"), a rečenice za klijenta sa zarezom. Sada svaki takav broj ide kroz formatter
-  jezika („99,4" na srpskom, „99.4" na engleskom), sa jednom decimalom. Tehnička rečenica, dokaz,
-  CSV i JSON ostaju mašinski zapis, sa tačkom i punom preciznošću.
-- Bez instaliranog Playwright-a (`pip install skener` bez `[browser]`) prolaz sa nivoom 2 je
-  pucao. Sada se nivo 2 preskače uz poruku, a nivo 1 radi.
-
-## 1.0.0 — 24.09.2026.
-
-Prvo izdanje: 28 provera na dva nivoa (sirovi HTTP i pravi browser), bodovanje po delatnosti,
-rangiranje, HTML i CSV izveštaj sa rečenicama za klijenta na srpskom, `recheck` nad sačuvanim
-snapshotima i identitet operatera u User-Agent-u. Provereno u tri prolaza nad 100 pravih domena
-([IT-SKENER-002](docs/izvestaj-testiranja-2.md)).
+First release: 28 checks on two levels (raw HTTP and a real browser), scoring by industry, ranking,
+HTML and CSV reports with client sentences in Serbian, `recheck` over saved snapshots, and the
+operator identity in the User-Agent. Verified in three runs over 100 real domains
+([IT-SKENER-002](docs/sr/izvestaj-testiranja-2.md)).
