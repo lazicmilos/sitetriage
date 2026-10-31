@@ -1,4 +1,5 @@
-"""SiteTriage: rangiranje domena po tome koji zaslužuju pun ručni audit."""
+"""SiteTriage: ranks domains by which deserve a full manual audit."""
 
-# Jedini izvor verzije: pyproject.toml je čita odavde. Između izdanja je `.dev0` (CHANGELOG.md).
+# The only source of the version: pyproject.toml reads it from here. Between releases it ends in
+# `.dev0` (CHANGELOG.md).
 __version__ = "3.0.0.dev0"

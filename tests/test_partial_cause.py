@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import jsonschema
 from factories import clean_browser, clean_site
-from test_json import SEMA
+from test_json import SCHEMA
 
 from sitetriage import pipeline, store
 from sitetriage.config import load_config
@@ -57,7 +57,7 @@ def test_partial_by_budget_and_by_unknown_count_separately(tmp_path):
     result = pipeline.recheck(tmp_path, load_config())
     assert result.summary["partial_budget"] == 2 and result.summary["partial_unknown"] == 2
     assert result.budget_share == 0.5 and result.unknown_share["infra.robots.missing"] == 0.5
-    jsonschema.validate(to_jsonable(result), SEMA)
+    jsonschema.validate(to_jsonable(result), SCHEMA)
 
 
 def test_unknown_share_does_not_count_unreachable_domains():

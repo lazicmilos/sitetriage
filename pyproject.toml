@@ -47,9 +47,11 @@ sitetriage = "sitetriage.cli:main"
 [tool.setuptools.packages.find]
 include = ["sitetriage*"]
 
-# The JSON report schema ships with the package: integrations and the web app validate against it.
+# The JSON report schema and the default config ship with the package: integrations and the web
+# app validate against the schema, and an installed `sitetriage` reads its defaults from
+# sitetriage/sitetriage.toml.
 [tool.setuptools.package-data]
-sitetriage = ["schema/*.json"]
+sitetriage = ["schema/*.json", "sitetriage.toml"]
 
 [tool.setuptools.dynamic]
 version = { attr = "sitetriage.__version__" }
@@ -75,7 +77,7 @@ do_not_mutate = [
     "sitetriage/__init__.py", "sitetriage/cli.py", "sitetriage/pipeline.py", "sitetriage/models.py", "sitetriage/store.py",
     "sitetriage/fetch/*", "sitetriage/report/*",
 ]
-also_copy = ["sitetriage.toml", "sitetriage/schema/"]
+also_copy = ["sitetriage/sitetriage.toml", "sitetriage/schema/"]
 
 [tool.ruff]
 line-length = 110

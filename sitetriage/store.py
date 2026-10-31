@@ -1,8 +1,9 @@
-"""Snapshoti na disku: pisanje pri prolazu, čitanje pri `recheck`-u (§2.2, §12.2).
+"""Snapshots on disk: written during a run, read by `recheck`.
 
-Snapshoti se **uvek** pišu, i u normalnom radu, ne samo u test režimu. Koštaju par
-stotina kilobajta po domenu i kupuju ti testove bez mreže, kalibraciju bez
-ponovnog prolaza i dijagnostiku (§2.1).
+Snapshots are **always** written, in normal use too, not only in a test mode. They cost a
+few hundred kilobytes per domain and buy you tests without a network, calibration without a
+new run, and diagnosis: checks receive a finished snapshot and never touch the network
+(CONTRIBUTING, "Architecture rules").
 """
 
 from __future__ import annotations
@@ -30,11 +31,11 @@ _UNSAFE = re.compile(r"[^a-z0-9._-]+")
 
 
 def slug(domain: str) -> str:
-    """Ime direktorijuma iz domena.
+    """Directory name from a domain.
 
-    Domen dolazi iz CSV-a koji piše korisnik i ume da bude pun origin sa portom,
-    pa ne sme da ide direktno u putanju — `../` u imenu domena bi pisao van
-    izlaznog direktorijuma.
+    The domain comes from a CSV the user writes and can be a full origin with a port, so it
+    must not go straight into a path: `../` in a domain name would write outside the output
+    directory.
     """
     cleaned = _UNSAFE.sub("_", domain.strip().lower()).strip("._-")
     return cleaned or "unknown-domain"
@@ -80,7 +81,7 @@ def _find(folder: Path, name: str) -> Path | None:
 
 
 def read_all(directory: Path) -> Iterator[tuple[SiteSnapshot, BrowserSnapshot | None]]:
-    """Čita svaki poddirektorijum; gzipovani i obični fajlovi rade isto."""
+    """Reads every subdirectory; gzipped and plain files work the same."""
     for folder in sorted(Path(directory).iterdir()):
         if not folder.is_dir():
             continue

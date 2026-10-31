@@ -62,7 +62,7 @@ def test_allowed_entry_must_be_host_and_port(entry):
 def test_allowed_private_is_not_a_list():
     cfg = load_config()
     cfg["net"]["allowed_private"] = "localhost:8123"
-    with pytest.raises(ConfigError, match="lista"):
+    with pytest.raises(ConfigError, match="a list"):
         _validate(cfg)
 
 

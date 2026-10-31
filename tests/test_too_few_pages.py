@@ -106,7 +106,7 @@ def test_not_applicable_does_not_make_partial():
 
 
 def test_not_applicable_without_reason_is_a_bug():
-    with pytest.raises(ValueError, match="bez `reason`"):
+    with pytest.raises(ValueError, match="without a `reason`"):
         CheckResult(check_id="seo.title.duplicate", status="not_applicable")
 
 

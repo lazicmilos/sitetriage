@@ -1,7 +1,8 @@
-"""JSON izveštaj: ugovor za programe koji čitaju izlaz (web aplikacija, `diff`, `outcomes`, CRM).
+"""JSON report: the contract for programs that read the output (web app, `diff`, `outcomes`, CRM).
 
-Serijalizovan `ScanResult`, bez rečenica: rečenica se pravi iz dokaza na jeziku onoga ko
-čita. Oblik opisuje `sitetriage/schema/report-3.json`, a pravila promene su u README-u.
+A serialized `ScanResult`, without sentences: a sentence is built from the evidence in the
+reader's language. `sitetriage/schema/report-3.json` describes the shape, and the rules for
+changing it are in ADR-011.
 """
 
 from __future__ import annotations
