@@ -1,5 +1,6 @@
 import pytest
 
+from skener import __version__
 from skener.config import ConfigError, _validate, digest, get, load_config, multiplier, user_agent
 
 
@@ -85,9 +86,8 @@ def test_nepotpun_identitet_puca(bez_okruzenja, naziv, kontakt):
 def test_user_agent_nosi_operatera_a_ne_autora(bez_okruzenja):
     cfg = load_config()
     cfg["identitet"] = {"naziv": "Web studio Primer", "kontakt": "kontakt@primer.rs"}
-    ua = user_agent(cfg)
-    assert "Web studio Primer" in ua and "kontakt@primer.rs" in ua
-    assert "miloslazic458" not in ua
+    # Tačno ono što je operater upisao, ništa više: ni autor alata ni podrazumevani kontakt.
+    assert user_agent(cfg) == f"SiteTriage/{__version__} (+kontakt@primer.rs; Web studio Primer)"
 
 
 def test_identitet_iz_okruzenja_ima_prednost(monkeypatch):
