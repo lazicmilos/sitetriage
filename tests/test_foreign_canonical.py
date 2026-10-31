@@ -1,7 +1,7 @@
-"""Z-23: `seo.canonical.duplicate` broji samo stranice čiji canonical upućuje na drugu adresu.
+"""`seo.canonical.duplicate` counts only pages whose canonical points to a different URL.
 
-Početna koja upućuje na sebe je ispravna. Ozbiljnost zavisi od udela takvih stranica u uzorku,
-jer dve podstranice od sedam nisu isto što i ceo sajt (O-9).
+A home page that points to itself is correct. The severity depends on the share of such pages in
+the sample, because two subpages out of seven are not the same as the whole site (ADR-020).
 """
 
 from __future__ import annotations
@@ -11,16 +11,16 @@ from factories import clean_site, page, run_level
 
 from sitetriage.messages import render
 
-POCETNA = "https://cist.rs/"
+HOME = "https://cist.rs/"
 
 
-def sajt(ukupno: int, tudji: dict[int, str]):
-    """`ukupno` uspešno dohvaćenih stranica, svaka u svojoj grupi putanja; `tudji[i]` je
-    canonical i-te stranice (0 je početna). Ostale upućuju na sebe."""
+def site_with(total: int, foreign: dict[int, str]):
+    """`total` successfully fetched pages, each in its own path group; `foreign[i]` is the
+    canonical of the i-th page (0 is the home page). The others point to themselves."""
     site = clean_site()
-    site.pages = [site.home] + [page(f"https://cist.rs/g{i}/strana") for i in range(1, ukupno)]
-    for i, cilj in tudji.items():
-        site.pages[i].canonical_normalized = cilj
+    site.pages = [site.home] + [page(f"https://cist.rs/g{i}/strana") for i in range(1, total)]
+    for i, target in foreign.items():
+        site.pages[i].canonical_normalized = target
     site.sitemap.urls = [p.url for p in site.pages[1:]]
     return site
 
@@ -29,24 +29,24 @@ def canonical(site):
     return run_level(1, site)["seo.canonical.duplicate"]
 
 
-def test_pocetna_koja_upucuje_na_sebe_se_ne_broji():
-    rezultat = canonical(sajt(7, {1: POCETNA, 2: POCETNA}))
-    assert rezultat.status == "finding"
-    assert rezultat.findings[0].evidence["page_count"] == 2, "početna upućuje na sebe"
+def test_home_page_pointing_to_itself_does_not_count():
+    result = canonical(site_with(7, {1: HOME, 2: HOME}))
+    assert result.status == "finding"
+    assert result.findings[0].evidence["page_count"] == 2, "the home page points to itself"
 
 
-def test_dve_podstranice_od_sedam_daju_medium():
-    nalaz = canonical(sajt(7, {1: POCETNA, 2: POCETNA})).findings[0]
-    assert nalaz.severity == "medium"
-    assert (nalaz.evidence["page_count"], nalaz.evidence["total"]) == (2, 7)
+def test_two_subpages_out_of_seven_give_medium():
+    found = canonical(site_with(7, {1: HOME, 2: HOME})).findings[0]
+    assert found.severity == "medium"
+    assert (found.evidence["page_count"], found.evidence["total"]) == (2, 7)
 
 
-def test_jedna_stranica_sa_tudjim_canonical_om_nije_nalaz():
-    assert canonical(sajt(7, {1: POCETNA})).status == "ok"
+def test_one_page_with_foreign_canonical_is_not_a_finding():
+    assert canonical(site_with(7, {1: HOME})).status == "ok"
 
 
 @pytest.mark.parametrize(
-    "tudjih, ozbiljnost",
+    "foreign_count, severity",
     [
         pytest.param(39, "medium", id="gv-0,39"),
         pytest.param(40, "high", id="gv-0,40"),
@@ -55,56 +55,56 @@ def test_jedna_stranica_sa_tudjim_canonical_om_nije_nalaz():
         pytest.param(60, "critical", id="gv-0,60"),
     ],
 )
-def test_ozbiljnost_po_udelu(tudjih, ozbiljnost):
-    site = sajt(100, dict.fromkeys(range(1, tudjih + 1), POCETNA))
-    nalaz = canonical(site).findings[0]
-    assert nalaz.severity == ozbiljnost
-    assert nalaz.evidence["share"] == tudjih / 100
+def test_severity_by_share(foreign_count, severity):
+    site = site_with(100, dict.fromkeys(range(1, foreign_count + 1), HOME))
+    found = canonical(site).findings[0]
+    assert found.severity == severity
+    assert found.evidence["share"] == foreign_count / 100
 
 
-def test_paginacija_jednog_bloga_nije_nalaz():
-    """Strane 2 i 3 bloga upućuju na prvu: to je jedna grupa putanja, ne ceo sajt."""
-    site = sajt(7, {})
-    for i, strana in ((1, 2), (2, 3)):
-        site.pages[i].url = site.pages[i].final_url = f"https://cist.rs/blog?page={strana}"
+def test_pagination_of_one_blog_is_not_a_finding():
+    """Blog pages 2 and 3 point to the first: that is one path group, not the whole site."""
+    site = site_with(7, {})
+    for i, page_number in ((1, 2), (2, 3)):
+        site.pages[i].url = site.pages[i].final_url = f"https://cist.rs/blog?page={page_number}"
         site.pages[i].canonical_normalized = "https://cist.rs/blog"
     assert canonical(site).status == "ok"
 
 
-def test_canonical_koji_se_razlikuje_samo_po_normalizaciji_nije_tudji():
-    """Početna dohvaćena kao `https://cist.rs?utm_source=fb`, sa canonical-om `https://cist.rs/`."""
-    site = sajt(7, {1: POCETNA, 2: POCETNA})
+def test_canonical_differing_only_by_normalization_is_not_foreign():
+    """The home page fetched as `https://cist.rs?utm_source=fb`, with the canonical `https://cist.rs/`."""
+    site = site_with(7, {1: HOME, 2: HOME})
     site.home.final_url = "https://cist.rs?utm_source=fb"
-    site.home.canonical_normalized = POCETNA
+    site.home.canonical_normalized = HOME
     assert canonical(site).findings[0].evidence["page_count"] == 2
 
 
 @pytest.mark.parametrize(
-    "cilj",
+    "target",
     [
         pytest.param("http://cist.rs/", id="http"),
         pytest.param("https://www.cist.rs/", id="www"),
         pytest.param("http://www.cist.rs/", id="http-www"),
     ],
 )
-def test_canonical_na_istu_stranicu_sa_drugom_semom_ili_www_nije_tudji(cilj):
-    """Z-50: početna upućuje na svoju `http` ili `www` verziju, a jedna podstranica na početnu.
-    „Druga adresa" iz rečenice bila bi vlasnikova sopstvena početna."""
-    assert canonical(sajt(7, {0: cilj, 1: cilj})).status == "ok"
+def test_canonical_to_same_page_with_other_scheme_or_www_is_not_foreign(target):
+    """ADR-020: the home page points to its own `http` or `www` version, and one subpage to the home page.
+    The "other URL" in the sentence would be the owner's own home page."""
+    assert canonical(site_with(7, {0: target, 1: target})).status == "ok"
 
 
-def test_druga_sema_ka_drugoj_stranici_je_i_dalje_tudji():
-    nalaz = canonical(sajt(7, {1: "http://cist.rs/", 2: "http://cist.rs/"})).findings[0]
-    assert nalaz.evidence["page_count"] == 2
+def test_other_scheme_to_a_different_page_is_still_foreign():
+    found = canonical(site_with(7, {1: "http://cist.rs/", 2: "http://cist.rs/"})).findings[0]
+    assert found.evidence["page_count"] == 2
 
 
 @pytest.mark.parametrize(
-    "lang, ocekivano",
+    "lang, expected",
     [
         pytest.param("sr", "2 od 7 proverenih stranica sajta", id="sr"),
         pytest.param("en", "2 of the 7 checked pages", id="en"),
     ],
 )
-def test_recenica_kaze_koliko_od_koliko(lang, ocekivano):
-    nalaz = canonical(sajt(7, {1: POCETNA, 2: POCETNA})).findings[0]
-    assert ocekivano in render(nalaz, lang).client
+def test_sentence_says_how_many_out_of_how_many(lang, expected):
+    found = canonical(site_with(7, {1: HOME, 2: HOME})).findings[0]
+    assert expected in render(found, lang).client
