@@ -1,7 +1,8 @@
-"""Provere nivoa 1 (§5). Po proveri tri testa: pozitivan, negativan, `unknown` (§12.3).
+"""Level 1 checks. Three tests per check: positive, negative and `unknown`.
 
-Negativan je najvažniji — to je test protiv lažnih pozitiva, a lažni pozitivi su
-jedina stvar koja alat za rangiranje pretvara u generator šuma (§1.2, U4).
+The negative one matters most. It is the test against false positives, and false positives
+are the one thing that turns a ranking tool into a noise generator (a deliberately clean
+control site must get no findings).
 """
 
 from __future__ import annotations
@@ -19,35 +20,35 @@ LEVEL1_IDS = sorted(s.check_id for s in registry.REGISTRY.values() if s.level ==
 
 
 # --------------------------------------------------------------------------- #
-# Negativan: čist sajt ćuti. Jedan test pokriva svih 20 provera.
+# Negative: a clean site stays silent. One test covers all 20 checks.
 # --------------------------------------------------------------------------- #
-def test_cist_sajt_nema_nijedan_nalaz():
+def test_clean_site_has_no_findings():
     results = run_level(1, clean_site())
     assert findings(results) == set()
     assert set(statuses(results).values()) == {"ok"}
 
 
-def test_cist_sajt_pokriva_sve_registrovane_provere():
-    """Ako dodaš proveru a ne pokriješ je, ovo pada."""
+def test_clean_site_covers_all_registered_checks():
+    """If you add a check and do not cover it, this fails."""
     assert sorted(run_level(1, clean_site())) == LEVEL1_IDS
 
 
 # --------------------------------------------------------------------------- #
-# Pozitivan: jedna pokvarena stvar → tačno ta provera
+# Positive: one broken thing → exactly that check
 # --------------------------------------------------------------------------- #
-def _sve_stranice(site, **attrs):
+def _all_pages(site, **attrs):
     for page in site.pages:
         for key, value in attrs.items():
             setattr(page, key, value)
 
 
-POZITIVNI = {
+POSITIVE_CASES = {
     "seo.canonical.missing": lambda s: setattr(s.home, "canonical", None),
-    "seo.canonical.duplicate": lambda s: _sve_stranice(s, canonical_normalized="https://cist.rs/"),
+    "seo.canonical.duplicate": lambda s: _all_pages(s, canonical_normalized="https://cist.rs/"),
     "seo.title.missing": lambda s: setattr(s.home, "title", "   "),
-    "seo.title.duplicate": lambda s: _sve_stranice(s, title="Dobrodošli"),
+    "seo.title.duplicate": lambda s: _all_pages(s, title="Dobrodošli"),
     "seo.description.missing": lambda s: setattr(s.home, "meta_description", None),
-    "seo.description.duplicate": lambda s: _sve_stranice(s, meta_description="Isti opis svuda."),
+    "seo.description.duplicate": lambda s: _all_pages(s, meta_description="Isti opis svuda."),
     "social.og.title.missing": lambda s: setattr(s.home.og, "title", None),
     "social.og.description.missing": lambda s: setattr(s.home.og, "description", None),
     "social.og.image.missing": lambda s: setattr(s.home.og, "image", None),
@@ -81,11 +82,11 @@ POZITIVNI = {
         setattr(s, "entry", Entry("https://cist.rs/", error_kind="dns_nxdomain", error_detail="NXDOMAIN")),
         setattr(s, "entry_attempts", ["2026-09-22T09:00:00Z", "2026-09-22T09:01:05Z"]),
     ),
-    # http://cist.rs/ ostaje na http-u.
+    # http://cist.rs/ stays on http.
     "infra.https.redirect.missing": lambda s: s.host_variants.__setitem__(
         1, HostVariant(url="http://cist.rs/", status=200, final_url="http://cist.rs/")
     ),
-    # https://www.cist.rs/ služi sajt, bez preusmerenja na cist.rs.
+    # https://www.cist.rs/ serves the site, without a redirect to cist.rs.
     "infra.host.duplicate": lambda s: s.host_variants.__setitem__(
         0, HostVariant(url="https://www.cist.rs/", status=200, final_url="https://www.cist.rs/")
     ),
@@ -93,39 +94,39 @@ POZITIVNI = {
 
 
 @pytest.mark.parametrize("check_id", LEVEL1_IDS)
-def test_pozitivan_nalaz(check_id):
+def test_positive_finding(check_id):
     site = clean_site()
-    POZITIVNI[check_id](site)
+    POSITIVE_CASES[check_id](site)
     result = run_level(1, site)[check_id]
-    assert result.status == "finding", f"{check_id}: očekivan nalaz, dobijeno {result.status}"
+    assert result.status == "finding", f"{check_id}: expected a finding, got {result.status}"
 
     found = result.findings[0]
-    assert found.evidence, "nalaz bez dokaza (§3.5)"
+    assert found.evidence, "a finding without evidence"
     assert any(isinstance(v, (int, float)) for v in found.evidence.values()), (
-        f"{check_id}: dokaz mora da sadrži broj — „sajt je spor\" nije nalaz (§3.5)"
+        f"{check_id}: the evidence must contain a number; \"the site is slow\" is not a finding"
     )
     for lang in LANGS:
-        poruka = render(found, lang)
-        assert poruka.client and "{" not in poruka.client
-        assert poruka.tech and "{" not in poruka.tech
+        message = render(found, lang)
+        assert message.client and "{" not in message.client
+        assert message.tech and "{" not in message.tech
     assert found.check_id == check_id and found.level == 1
 
 
 @pytest.mark.parametrize("check_id", LEVEL1_IDS)
-def test_pozitivan_ne_budi_ostale_provere(check_id):
-    """Jedna pokvarena stvar sme da probudi svoju proveru, ne ceo registar."""
+def test_positive_does_not_wake_other_checks(check_id):
+    """One broken thing may wake its own check, not the whole registry."""
     site = clean_site()
-    POZITIVNI[check_id](site)
-    probudjene = findings(run_level(1, site))
-    # `lang=zxx` legitimno pali i `invalid`; sve ostalo mora da pogodi tačno jednu.
-    dozvoljeno = {check_id} | ({"i18n.lang.invalid"} if check_id == "i18n.lang.invalid" else set())
-    assert probudjene <= dozvoljeno, f"{check_id} je probudio i: {probudjene - dozvoljeno}"
+    POSITIVE_CASES[check_id](site)
+    woken = findings(run_level(1, site))
+    # `lang=zxx` legitimately also fires `invalid`; everything else must hit exactly one.
+    allowed = {check_id} | ({"i18n.lang.invalid"} if check_id == "i18n.lang.invalid" else set())
+    assert woken <= allowed, f"{check_id} also woke: {woken - allowed}"
 
 
 # --------------------------------------------------------------------------- #
-# `unknown`: nedostaju podaci → razlog, ne pad i ne `ok` (§12.3, treći tip)
+# `unknown`: missing data → a reason, not a crash and not `ok` (the third test type)
 # --------------------------------------------------------------------------- #
-UNKNOWN_SLUCAJEVI = {
+UNKNOWN_CASES = {
     "home": (lambda s: s.pages.clear(), ["seo.canonical.missing", "seo.title.missing", "i18n.lang.missing"]),
     "pages": (
         lambda s: s.pages.__setitem__(slice(2, None), []),
@@ -138,20 +139,20 @@ UNKNOWN_SLUCAJEVI = {
 }
 
 
-@pytest.mark.parametrize("scenario", sorted(UNKNOWN_SLUCAJEVI))
-def test_unknown_ima_razlog(scenario):
-    mutate, expected_ids = UNKNOWN_SLUCAJEVI[scenario]
+@pytest.mark.parametrize("scenario", sorted(UNKNOWN_CASES))
+def test_unknown_has_reason(scenario):
+    mutate, expected_ids = UNKNOWN_CASES[scenario]
     site = clean_site()
     mutate(site)
     results = run_level(1, site)
     for check_id in expected_ids:
         result = results[check_id]
-        assert result.status == "unknown", f"{check_id}: očekivan unknown, dobijeno {result.status}"
-        assert result.reason, "unknown bez razloga je bug (§3.4)"
+        assert result.status == "unknown", f"{check_id}: expected unknown, got {result.status}"
+        assert result.reason, "unknown without a reason is a bug"
 
 
-def test_prazan_domen_ne_ruši_nijednu_proveru():
-    """Domen koji nije ni odgovorio mora da da 20 rezultata, ne izuzetak (§8.2)."""
+def test_empty_domain_crashes_no_check():
+    """A domain that did not even respond must give 20 results, not an exception."""
     site = clean_site()
     site.pages.clear()
     site.entry = Entry(requested_url="https://cist.rs/", error_kind="dns_nxdomain", error_detail="NXDOMAIN")
@@ -166,10 +167,10 @@ def test_prazan_domen_ne_ruši_nijednu_proveru():
 
 
 # --------------------------------------------------------------------------- #
-# Granični slučajevi koje spec izričito imenuje
+# Edge cases the specification names explicitly
 # --------------------------------------------------------------------------- #
-def test_zxx_pada_u_invalid_a_ne_u_mismatch():
-    """§12.4, hotel-planina.example: lang=zxx mora da padne u `invalid`."""
+def test_zxx_lands_in_invalid_not_mismatch():
+    """The hotel-planina.example fixture: lang=zxx must land in `invalid`."""
     site = clean_site()
     site.home.lang = "zxx"
     results = run_level(1, site)
@@ -177,8 +178,8 @@ def test_zxx_pada_u_invalid_a_ne_u_mismatch():
     assert results["i18n.lang.mismatch"].status == "ok"
 
 
-def test_mismatch_je_unknown_kad_je_teksta_premalo():
-    """§5.1, tačka 1 — ujedno i signal za eskalaciju na nivo 2."""
+def test_mismatch_is_unknown_when_text_is_too_short():
+    """Too little text gives `unknown`, and it is also a signal to escalate to level 2."""
     site = clean_site()
     site.home.lang = "en"
     site.home.text_sample = "Kratko."
@@ -188,8 +189,8 @@ def test_mismatch_je_unknown_kad_je_teksta_premalo():
     assert "premalo teksta" in reason(result.reason)
 
 
-def test_sadrzaj_bez_dijakritika_ne_pravi_mismatch():
-    """Engleski od srpskog bez dijakritika ne razlikuješ — kad ne znaš, `ok` (§5.1)."""
+def test_content_without_diacritics_gives_no_mismatch():
+    """English cannot be told from Serbian without diacritics; when you do not know, `ok`."""
     site = clean_site()
     site.home.lang = "en"
     site.home.text_sample = "Dobrodosli na sajt. Nudimo usluge i proizvode. " * 20
@@ -197,7 +198,7 @@ def test_sadrzaj_bez_dijakritika_ne_pravi_mismatch():
     assert run_level(1, site)["i18n.lang.mismatch"].status == "ok"
 
 
-def test_cirilica_pravi_mismatch():
+def test_cyrillic_gives_mismatch():
     site = clean_site()
     site.home.lang = "de"
     site.home.text_sample = "Добродошли на сајт. Нудимо услуге и производе. " * 20
@@ -206,44 +207,44 @@ def test_cirilica_pravi_mismatch():
 
 
 @pytest.mark.parametrize(
-    "lang, tekst",
+    "lang, text",
     [
-        pytest.param("ru", "Добро пожаловать на сайт. Мы предлагаем услуги. ", id="ke-ruski-cirilica"),
-        pytest.param("mk-MK", "Добредојдовте на сајтот. Нудиме услуги. ", id="ke-makedonski"),
-        pytest.param("hr", "Dobrodošli na stranicu. Nudimo usluge i proizvode, čišćenje. ", id="ke-hrvatski"),
-        pytest.param(" sr-Latn ", "Dobrodošli na sajt. Nudimo usluge, čišćenje. ", id="ke-sr-razmaci"),
+        pytest.param("ru", "Добро пожаловать на сайт. Мы предлагаем услуги. ", id="ke-russian-cyrillic"),
+        pytest.param("mk-MK", "Добредојдовте на сајтот. Нудиме услуги. ", id="ke-macedonian"),
+        pytest.param("hr", "Dobrodošli na stranicu. Nudimo usluge i proizvode, čišćenje. ", id="ke-croatian"),
+        pytest.param(" sr-Latn ", "Dobrodošli na sajt. Nudimo usluge, čišćenje. ", id="ke-sr-whitespace"),
     ],
 )
-def test_jezik_istog_pisma_nije_mismatch(lang, tekst):
-    """Detektor vidi samo ćirilicu i č/ć/š/ž/đ: ruski sa lang="ru" nije „sadržaj na srpskom"."""
+def test_same_script_language_is_not_mismatch(lang, text):
+    """The detector sees only Cyrillic and č/ć/š/ž/đ: Russian with lang="ru" is not "Serbian content"."""
     site = clean_site()
     site.home.lang = lang
-    site.home.text_sample = tekst * 20
+    site.home.text_sample = text * 20
     site.home.text_length = len(site.home.text_sample)
     assert run_level(1, site)["i18n.lang.mismatch"].status == "ok"
 
 
-def test_nepotpun_lanac_sertifikata_je_unknown():
-    """Browser sam dopuni međusertifikat, pa „posetilac vidi upozorenje" nije dokazano."""
+def test_incomplete_certificate_chain_is_unknown():
+    """A browser fills in the intermediate certificate itself, so "the visitor sees a warning" is unproven."""
     site = clean_site()
     site.entry.tls = Tls(
         valid=False,
         error="[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer "
         "certificate (_ssl.c:1000)",
     )
-    rezultat = run_level(1, site)["infra.tls.invalid"]
-    assert rezultat.status == "unknown"
-    assert "lanac" in reason(rezultat.reason)
+    result = run_level(1, site)["infra.tls.invalid"]
+    assert result.status == "unknown"
+    assert "lanac" in reason(result.reason)
 
 
-def test_istekao_sertifikat_ostaje_nalaz():
+def test_expired_certificate_stays_a_finding():
     site = clean_site()
     site.entry.tls = Tls(valid=False, error="certificate verify failed: certificate has expired")
     assert run_level(1, site)["infra.tls.invalid"].status == "finding"
 
 
-def test_jedna_sonda_200_druga_404_nije_nalaz():
-    """§5.2: jedna sonda može slučajno da pogodi postojeću adresu."""
+def test_one_probe_200_other_404_is_not_a_finding():
+    """One probe can hit an existing URL by chance."""
     site = clean_site()
     site.soft404 = Soft404(
         probes=[
@@ -254,14 +255,14 @@ def test_jedna_sonda_200_druga_404_nije_nalaz():
     assert run_level(1, site)["infra.soft404"].status == "ok"
 
 
-def test_soft404_belezi_slicnost_sa_pocetnom():
-    """Sličnost ≥ 90 % je tvrd dokaz i mora da uđe u `evidence` (§5.2)."""
+def test_soft404_records_similarity_with_home_page():
+    """Similarity ≥ 90 % is hard evidence and must go into `evidence`."""
     site = clean_site()
-    tekst = site.home.text_sample
+    text = site.home.text_sample
     site.soft404 = Soft404(
         probes=[
-            Soft404Probe(url="https://cist.rs/abc", status=200, text_sample=tekst),
-            Soft404Probe(url="https://cist.rs/abc.html", status=200, text_sample=tekst),
+            Soft404Probe(url="https://cist.rs/abc", status=200, text_sample=text),
+            Soft404Probe(url="https://cist.rs/abc.html", status=200, text_sample=text),
         ]
     )
     evidence = run_level(1, site)["infra.soft404"].findings[0].evidence
@@ -269,8 +270,8 @@ def test_soft404_belezi_slicnost_sa_pocetnom():
     assert evidence["hard_evidence"] is True
 
 
-def test_duplikat_trazi_razlicite_grupe_putanja():
-    """Isti naslov na osam blog postova nije isto što i ceo sajt kao jedna strana (§5)."""
+def test_duplicate_requires_different_path_groups():
+    """The same title on eight blog posts is not the same as a whole site as one page."""
     site = clean_site()
     site.pages = [
         copy.deepcopy(site.home),
@@ -290,16 +291,16 @@ def test_duplikat_trazi_razlicite_grupe_putanja():
     assert run_level(1, site)["seo.title.duplicate"].status == "ok"
 
 
-def test_duplikat_broji_stranicu_jednom_iako_do_nje_vode_dve_adrese():
-    """Jezička adresa koja vodi nazad na početnu nije još jedna stranica sa istim naslovom (BUG-029)."""
+def test_duplicate_counts_a_page_once_even_when_two_urls_lead_to_it():
+    """A language URL that leads back to the home page is not one more page with the same title (BUG-029)."""
     site = clean_site()
-    _sve_stranice(site, title="Dobrodošli")
+    _all_pages(site, title="Dobrodošli")
     site.pages[1].final_url = site.home.final_url
     assert run_level(1, site)["seo.title.duplicate"].findings[0].evidence["page_count"] == 4
 
 
-def test_kompresija_se_ne_prijavljuje_za_mali_html():
-    """Prag od 50 kB postoji da sitne strane ne prave šum (§5)."""
+def test_compression_is_not_reported_for_small_html():
+    """The 50 kB floor exists so that small pages do not make noise."""
     site = clean_site()
     site.home.headers = {}
     site.home.html_bytes = 20_000
@@ -307,130 +308,130 @@ def test_kompresija_se_ne_prijavljuje_za_mali_html():
 
 
 # --------------------------------------------------------------------------- #
-# BUG-003: status ≠ 200 nije isto što i „ne postoji". Samo 404 i 410 to tvrde;
-# 401/403/429/5xx znače da je pristup odbijen, pa ne znamo. Klase ekvivalencije
-# statusa: postoji / ne postoji / ne zna se.
+# BUG-003: a status ≠ 200 is not the same as "does not exist". Only 404 and 410
+# claim that; 401/403/429/5xx mean access was refused, so we do not know.
+# Equivalence classes of the status: exists / not found / unknown.
 # --------------------------------------------------------------------------- #
-POSTOJI, NE_POSTOJI, NE_ZNA_SE = "ok", "finding", "unknown"
+EXISTS, NOT_FOUND, UNKNOWN = "ok", "finding", "unknown"
 
-STATUSI_FAJLA = [
-    pytest.param(200, POSTOJI, id="ke-postoji-200"),
-    pytest.param(404, NE_POSTOJI, id="ke-ne-postoji-404"),
-    pytest.param(410, NE_POSTOJI, id="ke-ne-postoji-410"),
-    pytest.param(401, NE_ZNA_SE, id="ke-odbijeno-401"),
-    pytest.param(403, NE_ZNA_SE, id="ke-odbijeno-403"),
-    pytest.param(429, NE_ZNA_SE, id="ke-odbijeno-429"),
-    pytest.param(500, NE_ZNA_SE, id="ke-greska-servera-500"),
-    pytest.param(503, NE_ZNA_SE, id="ke-greska-servera-503"),
+FILE_STATUSES = [
+    pytest.param(200, EXISTS, id="ke-exists-200"),
+    pytest.param(404, NOT_FOUND, id="ke-not-found-404"),
+    pytest.param(410, NOT_FOUND, id="ke-not-found-410"),
+    pytest.param(401, UNKNOWN, id="ke-refused-401"),
+    pytest.param(403, UNKNOWN, id="ke-refused-403"),
+    pytest.param(429, UNKNOWN, id="ke-refused-429"),
+    pytest.param(500, UNKNOWN, id="ke-server-error-500"),
+    pytest.param(503, UNKNOWN, id="ke-server-error-503"),
 ]
 
 
-@pytest.mark.parametrize("status, ocekivano", STATUSI_FAJLA)
-def test_robots_status_odredjuje_ishod(status, ocekivano):
+@pytest.mark.parametrize("status, expected", FILE_STATUSES)
+def test_robots_status_decides_outcome(status, expected):
     site = clean_site()
     site.robots.status = status
-    rezultat = run_level(1, site)["infra.robots.missing"]
-    assert rezultat.status == ocekivano
-    if ocekivano == NE_ZNA_SE:
-        assert str(status) in reason(rezultat.reason)
+    result = run_level(1, site)["infra.robots.missing"]
+    assert result.status == expected
+    if expected == UNKNOWN:
+        assert str(status) in reason(result.reason)
 
 
-@pytest.mark.parametrize("status, ocekivano", STATUSI_FAJLA)
-def test_sitemap_status_odredjuje_ishod(status, ocekivano):
+@pytest.mark.parametrize("status, expected", FILE_STATUSES)
+def test_sitemap_status_decides_outcome(status, expected):
     site = clean_site()
     site.sitemap.status = status
     if status != 200:
         site.sitemap.urls.clear()
-    rezultat = run_level(1, site)["infra.sitemap.missing"]
-    assert rezultat.status == ocekivano
-    if ocekivano == NE_ZNA_SE:
-        assert str(status) in reason(rezultat.reason)
+    result = run_level(1, site)["infra.sitemap.missing"]
+    assert result.status == expected
+    if expected == UNKNOWN:
+        assert str(status) in reason(result.reason)
 
 
-def test_mrtva_prva_mapa_uz_drugu_koja_radi_nije_nalaz():
-    """`status` je status prve `Sitemap:` iz robots.txt; adrese iz druge znače da mapa postoji."""
+def test_dead_first_sitemap_next_to_a_working_one_is_not_a_finding():
+    """`status` is the status of the first `Sitemap:` in robots.txt; URLs from the second mean one exists."""
     site = clean_site()
     site.sitemap.status = 404
     assert site.sitemap.urls
     assert run_level(1, site)["infra.sitemap.missing"].status == "ok"
 
 
-def test_sitemap_200_bez_ijednog_url_a_je_nalaz():
-    """Granična vrednost: fajl postoji, ali je prazan."""
+def test_sitemap_200_without_any_url_is_a_finding():
+    """Boundary value: the file exists, but it is empty."""
     site = clean_site()
     site.sitemap.urls.clear()
-    assert run_level(1, site)["infra.sitemap.missing"].status == NE_POSTOJI
+    assert run_level(1, site)["infra.sitemap.missing"].status == NOT_FOUND
 
 
-def _sonde(domain: str, prva: int, druga: int) -> Soft404:
+def _probes(domain: str, first: int, second: int) -> Soft404:
     return Soft404(
         probes=[
-            Soft404Probe(url=f"https://{domain}/abc123", status=prva),
-            Soft404Probe(url=f"https://{domain}/abc123.html", status=druga),
+            Soft404Probe(url=f"https://{domain}/abc123", status=first),
+            Soft404Probe(url=f"https://{domain}/abc123.html", status=second),
         ]
     )
 
 
 @pytest.mark.parametrize(
-    "prva, druga, ocekivano",
+    "first, second, expected",
     [
-        pytest.param(200, 200, NE_POSTOJI, id="tab-obe-200"),
-        pytest.param(404, 404, POSTOJI, id="tab-obe-404"),
-        pytest.param(410, 404, POSTOJI, id="tab-410-i-404"),
-        pytest.param(200, 404, POSTOJI, id="tab-200-i-404"),
-        pytest.param(403, 403, NE_ZNA_SE, id="tab-obe-odbijene"),
-        pytest.param(200, 403, NE_ZNA_SE, id="tab-200-i-odbijena"),
-        pytest.param(404, 503, NE_ZNA_SE, id="tab-404-i-greska"),
-        pytest.param(429, 429, NE_ZNA_SE, id="tab-obe-429"),
+        pytest.param(200, 200, NOT_FOUND, id="tab-both-200"),
+        pytest.param(404, 404, EXISTS, id="tab-both-404"),
+        pytest.param(410, 404, EXISTS, id="tab-410-and-404"),
+        pytest.param(200, 404, EXISTS, id="tab-200-and-404"),
+        pytest.param(403, 403, UNKNOWN, id="tab-both-refused"),
+        pytest.param(200, 403, UNKNOWN, id="tab-200-and-refused"),
+        pytest.param(404, 503, UNKNOWN, id="tab-404-and-error"),
+        pytest.param(429, 429, UNKNOWN, id="tab-both-429"),
     ],
 )
-def test_soft404_tabela_odlucivanja(prva, druga, ocekivano):
-    """Tabela odlučivanja nad statusima dve sonde (§5.2); `NE_POSTOJI` ovde znači nalaz."""
+def test_soft404_decision_table(first, second, expected):
+    """Decision table over the statuses of the two probes; `NOT_FOUND` here means a finding."""
     site = clean_site()
-    site.soft404 = _sonde(site.domain, prva, druga)
-    assert run_level(1, site)["infra.soft404"].status == ocekivano
+    site.soft404 = _probes(site.domain, first, second)
+    assert run_level(1, site)["infra.soft404"].status == expected
 
 
-def test_blokiran_sajt_ne_dobija_nalaze_iz_odbijenih_zahteva():
-    """BUG-003, snimljeno: ceo sajt vraća 403 „Checking your browser before accessing"."""
+def test_blocked_site_gets_no_findings_from_refused_requests():
+    """BUG-003, recorded: the whole site returns 403 "Checking your browser before accessing"."""
     site = clean_site()
     site.robots.status = 403
     site.sitemap.status = 403
     site.sitemap.urls.clear()
-    site.soft404 = _sonde(site.domain, 403, 403)
-    rezultati = run_level(1, site)
+    site.soft404 = _probes(site.domain, 403, 403)
+    results = run_level(1, site)
     for check_id in ("infra.robots.missing", "infra.sitemap.missing", "infra.soft404"):
-        assert rezultati[check_id].status == NE_ZNA_SE, check_id
-        assert "403" in reason(rezultati[check_id].reason)
+        assert results[check_id].status == UNKNOWN, check_id
+        assert "403" in reason(results[check_id].reason)
 
 
 # --------------------------------------------------------------------------- #
-# O-3: nalaz o jeziku sme da tvrdi samo ono što je tačno
+# A language finding may claim only what is true (ADR-022)
 # --------------------------------------------------------------------------- #
-def test_mismatch_poruka_ne_tvrdi_nista_o_pretrazivacima():
-    """Google jezik stranice određuje iz sadržaja, `lang` atribut ne koristi.
+def test_mismatch_message_claims_nothing_about_search_engines():
+    """Google determines the page language from the content and does not use the `lang` attribute.
 
-    Tvrdnja „pretraživači ga nude pogrešnom tržištu" bila bi netačna u mejlu
-    klijentu. Tačan i proverljiv argument je čitač ekrana.
+    The claim "search engines offer it to the wrong market" would be false in an email to the
+    client. The accurate and verifiable argument is the screen reader.
     """
     site = clean_site()
     site.home.lang = "en-US"
-    nalaz = run_level(1, site)["i18n.lang.mismatch"].findings[0]
-    assert "pretraživač" not in render(nalaz).client.lower()
-    assert "čitač" in render(nalaz).client.lower()
-    assert nalaz.severity == "medium"
+    found = run_level(1, site)["i18n.lang.mismatch"].findings[0]
+    assert "pretraživač" not in render(found).client.lower()
+    assert "čitač" in render(found).client.lower()
+    assert found.severity == "medium"
 
 
 # --------------------------------------------------------------------------- #
-# BUG-004: sajt dohvaćen preko http-a posle neuspelog https-a — sertifikat
-# nije proveren, pa „ok" ne sme da stoji
+# BUG-004: a site fetched over http after https failed. The certificate was
+# not checked, so "ok" must not stand
 # --------------------------------------------------------------------------- #
-def test_tls_je_unknown_kad_je_https_pao_a_sajt_dohvacen_preko_http():
+def test_tls_is_unknown_when_https_failed_and_site_was_fetched_over_http():
     from sitetriage.models import SnapshotError
 
     site = clean_site()
     site.entry.requested_url = "http://cist.rs/"
     site.errors.append(SnapshotError("entry", "tls_handshake", "UNEXPECTED_EOF_WHILE_READING"))
-    rezultat = run_level(1, site)["infra.tls.invalid"]
-    assert rezultat.status == "unknown"
-    assert "UNEXPECTED_EOF_WHILE_READING" in reason(rezultat.reason)
+    result = run_level(1, site)["infra.tls.invalid"]
+    assert result.status == "unknown"
+    assert "UNEXPECTED_EOF_WHILE_READING" in reason(result.reason)
