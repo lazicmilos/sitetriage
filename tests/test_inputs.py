@@ -202,3 +202,51 @@ def test_different_sites_stay_distinct(first, second):
     rows, warnings = read(f"domain\n{first}\n{second}\n")
     assert [r.domain for r in rows] == [first, second]
     assert warnings == []
+
+
+# --------------------------------------------------------------------------- #
+# Header names from Excel (BUG-08)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "header",
+    [
+        pytest.param("domain, industry, note", id="ke-space-after-comma"),
+        pytest.param("domain;\t industry ;note", id="ke-tab-and-space"),
+        pytest.param(" domain ,industry,note ", id="gv-space-around-the-edge-columns"),
+        pytest.param("Domain,Industry,Note", id="ke-capitalised-by-excel"),
+        pytest.param("DOMAIN;INDUSTRY;NOTE", id="ke-upper-case"),
+    ],
+)
+def test_header_names_ignore_surrounding_whitespace_and_case(header):
+    sep = ";" if ";" in header else ","
+    rows, warnings = read(f"{header}\n10.0.0.1{sep} hotel{sep} beleska\n")
+    assert [(r.domain, r.industry, r.note) for r in rows] == [("10.0.0.1", "hotel", "beleska")]
+    assert warnings == []
+
+
+def test_unknown_header_column_is_warned_once_with_the_header_row():
+    """pg-: a typo in `industry` used to score every site as `other` without a word."""
+    rows, warnings = read("\ndomain,industy,note\na.example,hotel,\nb.example,restaurant,\n")
+    assert [r.industry for r in rows] == ["other", "other"]
+    assert [(w.row, w.domain, w.message) for w in warnings] == [
+        (2, None, "unknown column `industy` in the header, ignoring it (known: domain, industry, note)")
+    ]
+
+
+def test_every_unknown_column_is_named_in_one_warning():
+    _, warnings = read("domain,Sajt,expected\na.example,x,y\n")
+    assert [w.message for w in warnings] == [
+        "unknown columns `sajt`, `expected` in the header, ignoring them (known: domain, industry, note)"
+    ]
+
+
+def test_empty_header_cell_is_not_an_unknown_column():
+    """pg-: Excel writes a trailing separator when a column to the right was once used."""
+    _, warnings = read("domain,industry,\na.example,hotel,\n")
+    assert warnings == []
+
+
+def test_excel_csv_header_names_are_stripped_and_lower_case():
+    table = read_excel_csv(b" Domain ;\tIndustry\na.rs;hotel\n", "d.csv")
+    assert table.fieldnames == ["domain", "industry"]
+    assert table.rows == [(2, {"domain": "a.rs", "industry": "hotel"})]
