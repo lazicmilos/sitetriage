@@ -48,8 +48,8 @@ FINDINGS: dict[str, dict] = {
             "truncated": {
                 "client": (
                     "The server sends the page uncompressed (more than {kb} kB). Compression would cut "
-                    "the transfer to roughly a quarter, which on a slower mobile connection ({speed_mbps} Mb/s) "
-                    "shortens loading by more than {saving_s} s."
+                    "the transfer to roughly a quarter, which on a slower mobile connection "
+                    "({speed_mbps} Mb/s) shortens loading by more than {saving_s} s."
                 ),
                 "tech": (
                     "content-encoding={encoding}, html_bytes>{bytes} (decoded, cut at http.max_body_kb), "
