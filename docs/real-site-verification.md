@@ -7,8 +7,9 @@ measurement, soft-404 probes, TLS evidence; called B1–B4) had been invisible f
 reason. The procedure exists to find the fifth. Run it again before a release that changes
 fetching, level 2 or thresholds.
 
-Run it locally, on a machine with a real network connection. The result is not "pass/fail" but new
-entries in the calibration log ([docs/sr/kalibracija.md](sr/kalibracija.md)).
+Run it locally, on a machine with a real network connection. The result is not "pass/fail" but
+calibration decisions, each recorded in an [ADR](adr/README.md). The log of the v1 and v2 runs is
+[docs/sr/kalibracija.md](sr/kalibracija.md), in Serbian.
 
 ## 0. Preparation (10 min; the first build pulls about 2 GB)
 
@@ -46,7 +47,7 @@ Every failure in `live.txt` is one of three things. Say which one:
 
 | Cause | Example | What to do |
 |---|---|---|
-| the site changed | institucija.example fixed its canonical | a note in the calibration log; the fixture is refreshed |
+| the site changed | institucija.example fixed its canonical | a note in your results; the fixture is refreshed |
 | the threshold is wrong | `lang.mismatch` does not fire on an obviously Serbian site | a change in `sitetriage.toml`, checked with `recheck` |
 | a bug | the check says `ok`, but you can see the problem by hand | a failing test plus the fix, as with B1–B4 |
 
@@ -94,7 +95,7 @@ them comes out of `metrike.py`.
 
 ## 5. Afterwards
 
-Every decision goes into the calibration log in the form **threshold, observation, decision**. Try
+Record every decision in the form **threshold, observation, decision**, in an ADR. Try
 thresholds in `rad/calibration.toml`, which holds only what you change: the defaults ship with the
 tool, and your own TOML passed with `--config` overrides only what it sets. That way there is no
 image rebuild between two attempts and no second download of the sites:
