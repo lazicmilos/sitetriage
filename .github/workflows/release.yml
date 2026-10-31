@@ -1,23 +1,79 @@
-# Release: on a pushed tag `v*`, build the sdist and wheel, publish them to PyPI and push the
-# Docker image to GitHub Container Registry (ghcr.io).
+# Release: build the sdist and wheel, publish them to PyPI and push the Docker image to GitHub
+# Container Registry (ghcr.io).
+#
+# Two ways to start it:
+# - push a tag `v*` (for example from a GitHub release created in the web UI);
+# - run it by hand (Actions → release → Run workflow, or the API) on `main` with the version. The
+#   `tag` job checks that the version is the one in `sitetriage/__init__.py` and in CHANGELOG.md,
+#   creates the tag `v<version>`, and once PyPI and the image are published, the GitHub release.
+#   A tag pushed with the workflow's own token does not start another run, so this run does it all.
+#
 # PyPI publishing uses trusted publishing (OIDC, no API token): it only works after a trusted
 # publisher for this repository, this workflow and the `pypi` environment is configured on PyPI.
-# The first public release is planned for v3.0.0.
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, without the v (for example 3.0.0); must match sitetriage/__init__.py"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+env:
+  # On a tag push this is the tag (v3.0.0); docker/metadata-action reads it as semver either way.
+  VERSION: ${{ inputs.version || github.ref_name }}
+  # What build and docker check out: the tag the `tag` job created, or the pushed tag.
+  RELEASE_REF: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref }}
+
 jobs:
+  tag:
+    if: github.event_name == 'workflow_dispatch'
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the version and create the tag
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::run the release from main, not $GITHUB_REF"; exit 1
+          fi
+          if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must look like 3.0.0, got '$INPUT_VERSION'"; exit 1
+          fi
+          grep -qx "__version__ = \"$INPUT_VERSION\"" sitetriage/__init__.py || {
+            echo "::error::sitetriage/__init__.py does not say $INPUT_VERSION"; exit 1; }
+          grep -q "^## $INPUT_VERSION " CHANGELOG.md || {
+            echo "::error::CHANGELOG.md has no section for $INPUT_VERSION"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/v$INPUT_VERSION" >/dev/null; then
+            echo "::error::tag v$INPUT_VERSION already exists"; exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$INPUT_VERSION" -m "SiteTriage $INPUT_VERSION"
+          git push origin "v$INPUT_VERSION"
+
   build:
+    needs: tag
+    # Runs after `tag` on a manual run; on a tag push `tag` is skipped and this runs anyway.
+    if: ${{ !failure() && !cancelled() }}
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_REF }}
 
       - uses: actions/setup-python@v5
         with:
@@ -35,6 +91,7 @@ jobs:
 
   pypi:
     needs: build
+    if: ${{ !failure() && !cancelled() }}
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     environment: pypi
@@ -49,6 +106,8 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   docker:
+    needs: tag
+    if: ${{ !failure() && !cancelled() }}
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     permissions:
@@ -56,6 +115,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_REF }}
 
       - uses: docker/login-action@v3
         with:
@@ -68,9 +129,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}},value=${{ env.VERSION }}
 
       - uses: docker/build-push-action@v6
         with:
@@ -78,3 +139,32 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  github-release:
+    # Only on a manual run: a pushed tag usually comes from a release that already exists.
+    needs: [pypi, docker]
+    if: ${{ github.event_name == 'workflow_dispatch' && !failure() && !cancelled() }}
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_REF }}
+
+      - name: Create the GitHub release from the CHANGELOG section
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          awk -v v="$INPUT_VERSION" '
+            index($0, "## " v " ") == 1 { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md
+          # Relative links do not resolve in a release body: point them at the tagged tree.
+          sed -i "s#](docs/#](https://github.com/$GITHUB_REPOSITORY/blob/v$INPUT_VERSION/docs/#g" notes.md
+          gh release create "v$INPUT_VERSION" --verify-tag --title "SiteTriage $INPUT_VERSION" --notes-file notes.md
