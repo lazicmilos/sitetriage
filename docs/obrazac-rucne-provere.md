@@ -50,7 +50,7 @@ Da li bih ovom sajtu poslao mejl: **da / ne / možda**. Zašto:
 Otvori sajt i potraži očigledan ozbiljan problem koji alat nije prijavio: sajt se ne otvara na
 telefonu, učitava se veoma sporo, nema https, stranice vraćaju grešku, sadržaj je prazan ili
 pokvaren. Za svaki problem zapiši i koja provera je trebalo da ga nađe. Ako ga ne pokriva nijedna
-provera iz `skener explain --all`, upiši „—".
+provera iz `sitetriage explain --all`, upiši „—".
 
 | Mesto | Domen | Ozbiljan problem koji alat nije našao | Provera koja je trebalo da ga nađe | Kako je provereno |
 |---|---|---|---|---|
