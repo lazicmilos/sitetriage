@@ -39,7 +39,7 @@ OUTCOMES = {
     "dns_temporary": ("dns_temporary", "[Errno -3] Temporary failure in name resolution"),
     "no_connection": ("no_connection", "[Errno 111] Connection refused"),
     "handshake": ("tls_handshake", "[SSL: UNEXPECTED_EOF_WHILE_READING]"),
-    "blocked": ("blocked", "address is not public: ne-rade.test → 10.0.0.5"),
+    "blocked": ("blocked", "address is not public: ne-rade.test:443 → 10.0.0.5"),
 }
 
 
