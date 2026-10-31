@@ -1,37 +1,42 @@
-"""Srpski katalog. Rečenica ide pravo u mejl, pa mora biti tačna i pravilna (§3.5)."""
+"""Serbian catalog. A sentence goes straight into an email, so it must be accurate and
+grammatical (ADR-022).
+
+The sentences, labels and reasons are the Serbian locale and stay in Serbian; only the code
+around them is in English.
+"""
 
 from __future__ import annotations
 
 
-def decimalni(broj: float) -> str:
-    """„14,9", „22", „0,1" — decimalni zarez i bez „,0", kako se piše u mejlu (BUG-015)."""
-    return f"{broj:.1f}".removesuffix(".0").replace(".", ",")
+def decimal(number: float) -> str:
+    """„14,9", „22", „0,1": a decimal comma and no „,0", as written in an email (BUG-015)."""
+    return f"{number:.1f}".removesuffix(".0").replace(".", ",")
 
 
-def oblik(broj: int, jednina: str, paukal: str, mnozina: str) -> str:
-    """Srpski bira oblik po poslednjoj cifri, osim za 11–14: jednina posle 1 (ali ne
-    11), paukal posle 2–4 (ali ne 12–14), množina za sve ostalo. Oblike daje šablon,
-    jer zavise i od padeža: „ima 21 grešku", ali „od 21 slike".
+def form(number: int, singular: str, paucal: str, plural: str) -> str:
+    """Serbian picks the form by the last digit, except for 11–14: singular after 1 (but not
+    11), paucal after 2–4 (but not 12–14), plural for everything else. The template supplies
+    the forms, because they also depend on the case: „ima 21 grešku", but „od 21 slike".
     """
-    if broj % 10 == 1 and broj % 100 != 11:
-        return jednina
-    if 2 <= broj % 10 <= 4 and not 12 <= broj % 100 <= 14:
-        return paukal
-    return mnozina
+    if number % 10 == 1 and number % 100 != 11:
+        return singular
+    if 2 <= number % 10 <= 4 and not 12 <= number % 100 <= 14:
+        return paucal
+    return plural
 
 
-def sa_brojem(broj: int, jednina: str, paukal: str, mnozina: str) -> str:
+def with_number(number: int, singular: str, paucal: str, plural: str) -> str:
     """„1 stranica", „3 stranice", „5 stranica", „21 stranica", „12 stranica"."""
-    return f"{broj} {oblik(broj, jednina, paukal, mnozina)}"
+    return f"{number} {form(number, singular, paucal, plural)}"
 
 
-def plural(broj: int, oblici: list[str]) -> str:
-    return oblik(broj, *oblici)
+def plural(number: int, forms: list[str]) -> str:
+    return form(number, *forms)
 
 
-DECIMAL = decimalni
+DECIMAL = decimal
 
-# Tehnički kodovi iz dokaza, onako kako se čitaju u rečenici.
+# Technical codes from the evidence, as they read in a sentence.
 CODES: dict[str, dict[object, str]] = {
     "encoding": {None: "nema"},
     "error": {"unknown": "nepoznata"},
@@ -48,7 +53,7 @@ CODES: dict[str, dict[object, str]] = {
     },
 }
 
-_TEZINA = (
+_WEIGHT = (
     "Na sporijoj mobilnoj vezi ({speed_mbps} Mb/s) za to je potrebno oko {seconds} s."
 )
 
@@ -99,14 +104,14 @@ FINDINGS: dict[str, dict] = {
         },
     },
     "perf.page.weight": {
-        "client": "Početna strana prenosi {mb} MB. " + _TEZINA,
+        "client": "Početna strana prenosi {mb} MB. " + _WEIGHT,
         "tech": (
             "bytes_at_load={bytes}, bez videa {mb} MB, video {video_mb} MB, zahteva={requests}, "
             "nemereno={unmeasured}, reached={reached}; sa onim posle load {total_bytes} B i "
             "{total_requests} zahteva (informativno)"
         ),
         "variants": {
-            "video": {"client": "Početna strana prenosi {mb} MB (video dodatno {video_mb} MB). " + _TEZINA}
+            "video": {"client": "Početna strana prenosi {mb} MB (video dodatno {video_mb} MB). " + _WEIGHT}
         },
     },
     "perf.request.count": {
@@ -338,7 +343,7 @@ FINDINGS: dict[str, dict] = {
     },
 }
 
-# Oznake u HTML izveštaju i nacrt mejla. Ključevi sa `_html` smeju da sadrže oznake.
+# Labels in the HTML report and the email draft. Keys ending in `_html` may contain markup.
 TEXT: dict[str, str] = {
     "page_title": "SiteTriage — izveštaj",
     "heading": "SiteTriage — izveštaj",
@@ -418,8 +423,8 @@ TEXT: dict[str, str] = {
     "severity_low": "NISKO",
 }
 
-# Razlozi: zašto nešto nije provereno (`unknown`) i zašto domen ide na nivo 2. Čita ih
-# operater, ne klijent, pa su tehnički.
+# Reasons: why something was not checked (`unknown`) and why a domain goes to level 2. The
+# operator reads them, not the client, so they are technical.
 REASONS: dict[str, str] = {
     "requires.entry": "početna strana nije zabeležena (dohvatanje je puklo, vidi log)",
     "requires.entry_response": "početna nije vratila nijedan odgovor (mrežna greška pre HTTP-a)",
@@ -472,7 +477,7 @@ REASONS: dict[str, str] = {
     "unreachable_unsure": (
         "početna nije vratila odgovor ({kind}, pokušaja: {attempts}); iz toga se ne vidi da sajt ne radi"
     ),
-    # provere duplikata kad uzorak ima manje stranica od praga (Z-21)
+    # duplicate checks when the sample has fewer pages than the threshold (ADR-015)
     "pages_budget": (
         "uzorak ima manje od {threshold:n:stranice|stranice|stranica}, jer je budžet potrošen pre kraja"
     ),
@@ -488,20 +493,20 @@ REASONS: dict[str, str] = {
         "sajt ima {address_count:n:internu adresu|interne adrese|internih adresa}, a za "
         "poređenje treba bar {threshold}"
     ),
-    # varijante hosta: http/https × www/bez www (Z-26)
+    # host variants: http/https × www/without www (ADR-014)
     "requires.host_variants": "varijante adrese (http/https, sa i bez www) nisu dohvaćene u ovom snimku",
     "variant_unchecked": "{url} nije viđena kao u pretraživaču ({kind}), pa se ne zna da li služi sajt",
     "no_https": "https na {url} ne vraća stranicu, pa nema na šta da se preusmerava",
-    # lagani nivo 2 za sajtove van limita (BUG-020)
+    # light level 2 for sites over the limit (BUG-020)
     "requires.level2_full": (
         "sajt je meren lagano, bez mrežnog profila, jer nije bio među sajtovima izabranim za pun "
         "nivo 2, pa vreme učitavanja nije mereno"
     ),
-    # mrežni profil nivoa 2 (Z-30)
+    # network profile of level 2 (ADR-010)
     "requires.network_profile": (
         "snimak je napravljen pre mrežnog profila, pa je vreme izmereno bez mrežnog profila, na stvarnoj vezi"
     ),
-    # stvarna veza pre nivoa 2 (Z-33)
+    # real connection measured before level 2 (ADR-018)
     "requires.link": (
         "stvarna veza nije izmerena pre nivoa 2, pa se ne zna da li je vreme mereno pod profilom"
     ),
@@ -510,11 +515,11 @@ REASONS: dict[str, str] = {
         "{required_mbps} Mb/s, "
         "pa bi vreme bilo precenjeno"
     ),
-    # zašto domen nije skeniran (lista „Nije skenirano")
+    # why a domain was not scanned (the „Nije skenirano" list)
     "entry_missing": "snapshot nema početnu (dohvatanje je puklo, vidi log)",
     "entry_status": "početna je vratila status {status}",
     "entry_error": "{kind}: {detail}",
-    # eskalacija na nivo 2
+    # escalation to level 2
     "raw_text_short": "sirovi HTML ima {chars:n:znak|znaka|znakova} teksta (< {threshold})",
     "no_h1_raw": "sirovi HTML nema nijedan h1 — nivo 2 proverava da li ga crta JavaScript",
     "medium_finding": "ima bar jedan nalaz nivoa 1 ozbiljnosti ≥ medium",

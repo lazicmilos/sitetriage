@@ -1,4 +1,4 @@
-"""CSV izlaz (§10.1). Jedan red po nalazu, ne po domenu — da može da se filtrira."""
+"""CSV output. One row per finding, not per domain, so it can be filtered."""
 
 from __future__ import annotations
 
@@ -85,7 +85,7 @@ def write_summary(path: Path, reports: Sequence[DomainReport], *, bom: bool = Fa
 def _write(path: Path, header: Sequence[str], rows: Sequence[Sequence[object]], bom: bool) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # BOM samo kad se traži: Excel ga traži, svaki drugi alat ga smatra smećem.
+    # A BOM only when asked for: Excel wants it, every other tool treats it as garbage.
     encoding = "utf-8-sig" if bom else "utf-8"
     with path.open("w", encoding=encoding, newline="") as handle:
         writer = csv.writer(handle, quoting=csv.QUOTE_MINIMAL)  # RFC 4180

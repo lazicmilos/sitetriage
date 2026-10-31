@@ -1,10 +1,10 @@
-"""HTML izveštaj (§10.2): jedan samostalan fajl, bez spoljnih zavisnosti.
+"""HTML report: one self-contained file, without external dependencies.
 
-Bez CDN-a i bez template fajla — CSS i ono malo JS-a stoje ovde, pa se izveštaj
-otvara i bez mreže, a paket nema šta da pakuje pored koda.
+No CDN and no template file: the CSS and the little JS there is live here, so the report
+opens without a network, and the package has nothing to ship besides the code.
 
-Ozbiljnost se ne prepoznaje samo po boji: svaka nosi i oznaku i znak, da se
-razlikuje u sivim tonovima i kod daltonista (§10.2).
+Severity is not shown by colour alone: each one also carries a label and a glyph, so it can
+be told apart in greyscale and by colour-blind readers.
 """
 
 from __future__ import annotations
@@ -17,13 +17,13 @@ from pathlib import Path
 from sitetriage import __version__
 from sitetriage.config import get
 from sitetriage.messages import number, text
-from sitetriage.messages import reason as razlog
-from sitetriage.messages import render as poruka
+from sitetriage.messages import reason as render_reason
+from sitetriage.messages import render as render_message
 from sitetriage.models import DomainReport
 from sitetriage.score import RADE, partial_shares
 
-# Znak i boje po ozbiljnosti; oznaka („KRITIČNO") dolazi iz kataloga jezika.
-OZBILJNOST = {
+# Glyph and colours by severity; the label ("KRITIČNO", "CRITICAL") comes from the language catalog.
+SEVERITY = {
     "critical": ("▲", "#7f1d1d", "#fee2e2"),
     "high": ("●", "#9a3412", "#ffedd5"),
     "medium": ("◆", "#854d0e", "#fef9c3"),
@@ -100,26 +100,26 @@ def _e(value: object) -> str:
 
 
 def _badge(severity: str, lang: str) -> str:
-    glyph, fg, bg = OZBILJNOST.get(severity, ("?", "#374151", "#e5e7eb"))
-    label = text(f"severity_{severity}", lang) if severity in OZBILJNOST else "?"
+    glyph, fg, bg = SEVERITY.get(severity, ("?", "#374151", "#e5e7eb"))
+    label = text(f"severity_{severity}", lang) if severity in SEVERITY else "?"
     return f'<span class="tag" style="color:{fg};background:{bg}">{glyph} {_e(label)}</span>'
 
 
-def _ne_radi(report: DomainReport):
+def _unreachable_finding(report: DomainReport):
     return next(f for f in report.findings if f.check_id == "infra.unreachable")
 
 
 def email_draft(report: DomainReport, lang: str = "sr") -> str:
-    """Tri rečenice od tri najteža nalaza — toliko staje u mejl (§9.4).
+    """Three sentences from the three heaviest findings: that is what fits in an email.
 
-    Sajt koji ne radi dobija svoj nacrt, bez „primetio sam sledeće probleme" (Z-20).
+    An unreachable site gets its own draft, without "I noticed the following problems" (ADR-013).
     """
     if report.status == "unreachable":
-        recenica = poruka(_ne_radi(report), lang).client
-        return text("draft_unreachable", lang, domain=report.domain, sentence=recenica)
+        sentence = render_message(_unreachable_finding(report), lang).client
+        return text("draft_unreachable", lang, domain=report.domain, sentence=sentence)
     if not report.findings:
         return text("draft_clean", lang, domain=report.domain)
-    lines = [f"{i}. {poruka(f, lang).client}" for i, f in enumerate(report.top_findings, start=1)]
+    lines = [f"{i}. {render_message(f, lang).client}" for i, f in enumerate(report.top_findings, start=1)]
     opening = text("draft_opening", lang, domain=report.domain)
     return opening + "\n\n".join(lines) + text("draft_closing", lang)
 
@@ -135,31 +135,31 @@ def render(
     def t(key: str, **values) -> str:
         return _e(text(key, lang, **values))
 
-    def sa(status: str) -> list[DomainReport]:
+    def with_status(status: str) -> list[DomainReport]:
         return [r for r in reports if r.status == status]
 
-    # Rangiranje je samo za sajtove koji rade; ostali imaju svoje odeljke (Z-20).
+    # Ranking is only for working sites; the others have their own sections (ADR-013).
     ranked = [r for r in reports if r.status in RADE]
     level2 = sum(1 for r in reports if r.level2_ran)
     generated = reports[0].scanned_at if reports else ""
 
     cards = [
         (t("card_domains"), len(reports)),
-        (t("card_scanned"), len(sa("scanned"))),
-        (t("card_partial"), len(sa("partial"))),
-        (t("card_unreachable"), len(sa("unreachable"))),
-        (t("card_failed"), len(sa("failed"))),
+        (t("card_scanned"), len(with_status("scanned"))),
+        (t("card_partial"), len(with_status("partial"))),
+        (t("card_unreachable"), len(with_status("unreachable"))),
+        (t("card_failed"), len(with_status("failed"))),
         (t("card_level2"), level2),
     ]
     if excluded:
         cards.append((t("card_excluded"), excluded))
     if duration_s is not None:
-        trajanje = number(duration_s, lang) if duration_s < 10 else f"{duration_s:.0f}"
-        cards.append((t("card_duration"), f"{trajanje} s"))
+        duration = number(duration_s, lang) if duration_s < 10 else f"{duration_s:.0f}"
+        cards.append((t("card_duration"), f"{duration} s"))
 
     speed = get(config, "network_profile.download_mbps")
     overhead = get(config, "report.mobile_overhead_s")
-    # Brojevi, ne tekst: formatter jezika ih piše sa zarezom ili tačkom (Z-28).
+    # Numbers, not text: the language formatter writes them with a comma or a point.
     assumption = text("assumption_html", lang, speed=speed, mb_per_s=round(speed / 8, 2), overhead=overhead)
     labels = {"copy": text("copy_draft", lang), "copied": text("copied", lang)}
     js = JS.replace("__LABELS__", json.dumps(labels, ensure_ascii=False))
@@ -192,7 +192,7 @@ def render(
 <tbody>
 {"".join(_row(r, lang) for r in ranked)}
 </tbody></table>
-{_unreachable(sa("unreachable"), lang)}{_not_scanned(sa("failed"), excluded, lang)}
+{_unreachable(with_status("unreachable"), lang)}{_not_scanned(with_status("failed"), excluded, lang)}
 <h2>{t("by_domain")}</h2>
 {"".join(_details(r, lang) for r in ranked)}
 
@@ -221,12 +221,12 @@ def _row(report: DomainReport, lang: str) -> str:
 
 
 def _shares(reports: Sequence[DomainReport], lang: str) -> str:
-    """Oba uzroka `partial`-a posebno, kao izlazni kriterijumi iz §7 (Z-22)."""
-    budzet, po_proveri = partial_shares(reports)
+    """Both causes of `partial` separately, as in the exit criteria (ADR-015)."""
+    budget, by_check = partial_shares(reports)
     rows = "".join(
-        f'<tr><td>{_e(check_id)}</td><td class="num">{_e(text("percent", lang, share=udeo * 100))}</td></tr>'
-        for check_id, udeo in sorted(po_proveri.items(), key=lambda kv: (-kv[1], kv[0]))
-        if udeo
+        f'<tr><td>{_e(check_id)}</td><td class="num">{_e(text("percent", lang, share=share * 100))}</td></tr>'
+        for check_id, share in sorted(by_check.items(), key=lambda kv: (-kv[1], kv[0]))
+        if share
     )
     table = (
         f'<details class="unknowns"><summary>{_e(text("share_unknown", lang))}</summary>'
@@ -236,7 +236,7 @@ def _shares(reports: Sequence[DomainReport], lang: str) -> str:
         if rows
         else ""
     )
-    return f'<p class="sub">{_e(text("share_budget", lang, share=budzet * 100))}</p>\n{table}\n'
+    return f'<p class="sub">{_e(text("share_budget", lang, share=budget * 100))}</p>\n{table}\n'
 
 
 def _unreachable(reports: Sequence[DomainReport], lang: str) -> str:
@@ -245,7 +245,7 @@ def _unreachable(reports: Sequence[DomainReport], lang: str) -> str:
     copy = _e(text("copy_draft", lang))
     rows = "".join(
         f"<tr><td><b>{_e(r.domain)}</b></td><td>{_e(r.industry)}</td>"
-        f"<td>{_e(poruka(_ne_radi(r), lang).client)}</td>"
+        f"<td>{_e(render_message(_unreachable_finding(r), lang).client)}</td>"
         f'<td><button data-draft="{_e(email_draft(r, lang))}">{copy}</button></td></tr>'
         for r in reports
     )
@@ -263,7 +263,7 @@ def _not_scanned(reports: Sequence[DomainReport], excluded: int, lang: str) -> s
         return ""
     rows = "".join(
         f"<tr><td><b>{_e(r.domain)}</b></td><td>{_e(r.industry)}</td>"
-        f"<td>{_e(razlog(r.reason, lang) if r.reason else '—')}</td></tr>"
+        f"<td>{_e(render_reason(r.reason, lang) if r.reason else '—')}</td></tr>"
         for r in reports
     )
     table = (
@@ -272,11 +272,13 @@ def _not_scanned(reports: Sequence[DomainReport], excluded: int, lang: str) -> s
         if reports
         else ""
     )
-    izuzeto = f'<p class="sub">{_e(text("excluded_count", lang, count=excluded))}</p>' if excluded else ""
+    excluded_note = (
+        f'<p class="sub">{_e(text("excluded_count", lang, count=excluded))}</p>' if excluded else ""
+    )
     return f"""
 <h2>{_e(text("not_scanned", lang))}</h2>
 <p class="sub">{_e(text("not_scanned_note", lang))}</p>
-{table}{izuzeto}
+{table}{excluded_note}
 """
 
 
@@ -288,20 +290,21 @@ def _details(report: DomainReport, lang: str) -> str:
     unknowns = ""
     if report.unknowns:
         items = "".join(
-            f"<li><code>{_e(u.check_id)}</code> — {_e(razlog(u.reason, lang))}</li>" for u in report.unknowns
+            f"<li><code>{_e(u.check_id)}</code> — {_e(render_reason(u.reason, lang))}</li>"
+            for u in report.unknowns
         )
-        naslov = _e(text("unknowns", lang, count=len(report.unknowns)))
-        unknowns = f'<details class="unknowns"><summary>{naslov}</summary><ul>{items}</ul></details>'
+        heading = _e(text("unknowns", lang, count=len(report.unknowns)))
+        unknowns = f'<details class="unknowns"><summary>{heading}</summary><ul>{items}</ul></details>'
     unknowns += "".join(
         f'<p class="tech"><code>{_e(n.check_id)}</code> — '
-        f'{_e(text("not_applicable", lang, text=razlog(n.reason, lang)))}</p>'
+        f'{_e(text("not_applicable", lang, text=render_reason(n.reason, lang)))}</p>'
         for n in report.not_applicable
     )
     reasons = ""
     if report.escalation_reasons:
-        razlozi = "; ".join(razlog(r, lang) for r in report.escalation_reasons)
-        razlozi = _e(text("escalated_because", lang) + razlozi)
-        reasons = f'<p class="tech">{razlozi}</p>'
+        because = "; ".join(render_reason(r, lang) for r in report.escalation_reasons)
+        because = _e(text("escalated_because", lang) + because)
+        reasons = f'<p class="tech">{because}</p>'
     meta = text(
         "summary_meta",
         lang,
@@ -324,7 +327,7 @@ def _finding(finding, lang: str) -> str:
         f'<div><a href="{_e(u)}" rel="noopener noreferrer nofollow">{_e(u)}</a></div>'
         for u in finding.evidence_urls[:3]
     )
-    message = poruka(finding, lang)
+    message = render_message(finding, lang)
     meta = text("finding_meta", lang, level=finding.level, weight=finding.weight)
     return f"""<div class="finding">
 <p>{_badge(finding.severity, lang)} <code>{_e(finding.check_id)}</code>

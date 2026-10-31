@@ -19,7 +19,7 @@ from poruke_slucajevi import GOLDEN, slucajevi
 from sitetriage.checks import registry
 from sitetriage.messages import LANGS, catalog, reason, render
 from sitetriage.messages.en import plural as en_oblik
-from sitetriage.messages.sr import sa_brojem
+from sitetriage.messages.sr import with_number
 
 registry.load_all()
 SPECS = sorted(registry.REGISTRY.values(), key=lambda s: s.check_id)
@@ -89,7 +89,7 @@ def test_razlozi_na_engleskom_nemaju_srpskih_reci():
 
 
 def test_nepoznat_jezik_je_greska():
-    with pytest.raises(ValueError, match="nepoznat jezik 'de'"):
+    with pytest.raises(ValueError, match="unknown language 'de'"):
         catalog("de")
 
 
@@ -238,7 +238,7 @@ def test_usteda_od_kompresije_se_racuna_iz_velicine():
     ],
 )
 def test_srpski_broj(broj, ocekivano):
-    assert sa_brojem(broj, "stranica", "stranice", "stranica") == ocekivano
+    assert with_number(broj, "stranica", "stranice", "stranica") == ocekivano
 
 
 @pytest.mark.parametrize(
