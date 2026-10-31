@@ -60,7 +60,7 @@ def _stanje(snapshot: SiteSnapshot, ctx: Context) -> tuple[str | None, str, int,
 
 def _secen_sirovi_html(snapshot: SiteSnapshot, izvor: str) -> bool:
     """Sirovi HTML početne je sečen na `http.max_body_kb`; posle nivoa 2 važi stranica iz browsera."""
-    return izvor == "sirovi_html" and snapshot.home.truncated
+    return izvor == "raw_html" and snapshot.home.truncated
 
 
 def _lang_usable(lang: str | None) -> bool:
