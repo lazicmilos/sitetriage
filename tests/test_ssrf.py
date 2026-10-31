@@ -10,6 +10,7 @@ import socket
 import pytest
 from localserver import FakeSite, Response, html
 
+from sitetriage import addresses
 from sitetriage.config import load_config
 from sitetriage.fetch import http
 from sitetriage.fetch.http import Fetcher, fetch_site
@@ -55,7 +56,9 @@ def test_redirect_to_private_address_is_refused():
             snapshot = _scan(site.base_url)
     assert target.requests == [], "the redirect target must not get a single request"
     assert snapshot.entry.error_kind == "blocked"
-    assert "127.0.0.1 → 127.0.0.1" in snapshot.entry.error_detail
+    # BUG-12: the message names the refused connection, not only the address of the first site.
+    _, port = target.address
+    assert snapshot.entry.error_detail == f"address is not public: 127.0.0.1:{port} → 127.0.0.1"
 
 
 def test_name_that_resolves_to_private_address_is_refused(monkeypatch):
@@ -69,8 +72,30 @@ def test_name_that_resolves_to_private_address_is_refused(monkeypatch):
     snapshot = _scan("privatno.test")
     assert resolved and set(resolved) == {"privatno.test"}
     assert snapshot.entry.error_kind == "blocked"
-    assert snapshot.entry.error_detail == "address is not public: privatno.test → 10.0.0.5"
+    assert snapshot.entry.error_detail == "address is not public: privatno.test:443 → 10.0.0.5"
     assert snapshot.pages == [], "after a block there is neither robots.txt nor a sitemap"
+
+
+@pytest.mark.parametrize(
+    "host, ip, message",
+    [
+        pytest.param("intranet.test", "10.0.0.5", "intranet.test:8080 → 10.0.0.5", id="ke-name"),
+        pytest.param("::1", "::1", "[::1]:8080 → ::1", id="ke-ipv6-in-brackets"),
+    ],
+)
+def test_block_names_host_and_port_of_the_refused_connection(monkeypatch, host, ip, message):
+    async def fake_dns(host, port):
+        return [(socket.AF_INET6 if ":" in ip else socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port))]
+
+    class MustNotConnect:
+        async def connect_tcp(self, *_args, **_kwargs):
+            raise AssertionError("a blocked address must not be connected to")
+
+    monkeypatch.setattr(http, "_resolve", fake_dns)
+    backend = http._PublicAddresses(MustNotConnect(), frozenset())
+    with pytest.raises(addresses.BlockedAddress) as blocked:
+        asyncio.run(backend.connect_tcp(host, 8080))
+    assert str(blocked.value) == f"address is not public: {message}"
 
 
 def test_refused_connection_on_allowed_address_is_not_a_block():

@@ -292,7 +292,9 @@ class _PublicAddresses(httpcore.AsyncNetworkBackend):
         ips = list(dict.fromkeys(info[4][0] for info in infos))
         public = [ip for ip in ips if addresses.may_connect(ip, host, port, self._allowed)]
         if not public:
-            raise addresses.BlockedAddress(f"address is not public: {host} → {', '.join(ips) or '—'}")
+            # host:port of the refused connection: after a redirect it is not the domain from the list.
+            target = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+            raise addresses.BlockedAddress(f"address is not public: {target} → {', '.join(ips) or '—'}")
         error: Exception | None = None
         accepted = False
         for ip in public:
