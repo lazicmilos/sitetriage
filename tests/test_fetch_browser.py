@@ -1,6 +1,7 @@
 """Nivo 2 protiv lokalnog servera i pravog Chromiuma (§7).
 
-Označeno `browser`: preskače se ako Playwright ili Chromium nisu instalirani.
+Označeno `browser`: preskače se ako Playwright ili Chromium nisu instalirani
+(`chromium_se_pokrece` u `conftest.py`).
 """
 
 from __future__ import annotations
@@ -28,29 +29,7 @@ from skener.models import (
     to_jsonable,
 )
 
-playwright_api = pytest.importorskip("playwright.async_api", reason="Playwright nije instaliran")
 pytestmark = pytest.mark.browser
-
-
-@pytest.fixture(scope="module", autouse=True)
-def chromium_se_pokrece():
-    """Uvoz nije dovoljan: paket bez odgovarajućeg Chromium-a puca tek na `launch`.
-
-    Tipično posle nadogradnje Playwright-a bez `playwright install` — to je stanje
-    okruženja, ne greška u alatu, pa je preskakanje, a ne deset crvenih testova.
-    """
-    from skener.fetch.browser import _launch_options
-
-    async def probaj() -> None:
-        async with playwright_api.async_playwright() as pw:
-            browser = await pw.chromium.launch(**_launch_options(load_config()))
-            await browser.close()
-
-    try:
-        asyncio.run(probaj())
-    except playwright_api.Error as exc:
-        razlog = str(exc).splitlines()[0]
-        pytest.skip(f"Chromium se ne pokreće ({razlog}); pokreni `playwright install chromium`")
 
 
 def png(width: int, height: int) -> bytes:
