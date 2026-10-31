@@ -199,9 +199,14 @@ klinika.example,healthcare,clean control site
 is worth: a link-preview image matters a lot to a hotel and hardly at all to a b2b site.
 
 The list usually comes out of Excel, so the tool also accepts what Excel writes on a Serbian Windows
-system: columns separated by `;` and a file saved in windows-1250 instead of UTF-8. A domain that
-appears twice is scanned once, and the first occurrence wins. Errors and warnings name the row, the
-way Excel numbers it.
+system: columns separated by `;` and a file saved in windows-1250 instead of UTF-8. Header names
+ignore letter case and the spaces around them (`Domain, Industry, Note` works), and a column the
+tool does not know is ignored with a warning, so a typo like `industy` does not go unnoticed. A site that
+appears twice is scanned once, and the first occurrence wins. Two rows are the same site when they
+differ only in letter case, the scheme, a leading `www.`, a trailing `.` or `/`, or a port that is
+the default for the scheme: `x.example`, `https://www.x.example/` and `http://x.example:80` are one
+site, while `blog.x.example`, `x.example:8443` and `x.example/en` (another entry page) are not.
+Errors and warnings name the row, the way Excel numbers it.
 
 The output folder holds:
 
