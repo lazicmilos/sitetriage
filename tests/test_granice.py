@@ -23,7 +23,7 @@ def nalaz(check_id: str, category: str, severity: str) -> CheckResult:
         findings=[
             Finding(
                 domain="d.rs", check_id=check_id, level=1, category=category, severity=severity,
-                evidence={"broj": 1},
+                evidence={"count": 1},
             )
         ],
     )

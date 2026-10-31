@@ -53,9 +53,9 @@ def _stanje(snapshot: SiteSnapshot, ctx: Context) -> tuple[str | None, str, int,
     """
     b = ctx.browser
     if b is not None and b.status != "failed" and b.dom.text_length is not None:
-        return b.dom.lang, b.dom.text_sample, b.dom.text_length, "nivo2"
+        return b.dom.lang, b.dom.text_sample, b.dom.text_length, "rendered"
     home = snapshot.home
-    return home.lang, home.text_sample, home.text_length, "sirovi_html"
+    return home.lang, home.text_sample, home.text_length, "raw_html"
 
 
 def _lang_usable(lang: str | None) -> bool:
@@ -82,7 +82,7 @@ def lang_missing(snapshot: SiteSnapshot, ctx: Context):
     return finding(
         lang_missing.spec,
         ctx,
-        evidence={"stranica": snapshot.home.final_url or snapshot.home.url, "lang_oznaka": 0, "izvor": izvor},
+        evidence={"page": snapshot.home.final_url or snapshot.home.url, "lang_tag_count": 0, "source": izvor},
         urls=[snapshot.home.final_url or snapshot.home.url],
     )
 
@@ -104,10 +104,10 @@ def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
         lang_invalid.spec,
         ctx,
         evidence={
-            "stranica": snapshot.home.final_url or snapshot.home.url,
+            "page": snapshot.home.final_url or snapshot.home.url,
             "lang": lang,
-            "duzina_koda": len(lang.strip()),
-            "izvor": izvor,
+            "code_length": len(lang.strip()),
+            "source": izvor,
         },
         urls=[snapshot.home.final_url or snapshot.home.url],
     )
@@ -133,8 +133,8 @@ def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
     min_text = ctx.th("thresholds.i18n.min_text_length")
     if duzina < min_text:
         # Iz sirovog HTML-a ujedno i signal za eskalaciju na nivo 2 (§6): sadržaj se verovatno crta iz JS-a.
-        razlog = "text_too_short" if izvor == "sirovi_html" else "text_too_short_rendered"
-        return unknown(lang_mismatch.spec, razlog, duzina=duzina, prag=min_text)
+        razlog = "text_too_short" if izvor == "raw_html" else "text_too_short_rendered"
+        return unknown(lang_mismatch.spec, razlog, length=duzina, threshold=min_text)
     # Nedostajuću i neupotrebljivu oznaku pokrivaju druge dve provere; `zxx` mora
     # da padne u `invalid`, ne ovde (§12.4).
     if not _lang_usable(lang):
@@ -153,13 +153,13 @@ def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
         lang_mismatch.spec,
         ctx,
         evidence={
-            "stranica": home.final_url or home.url,
+            "page": home.final_url or home.url,
             "lang": lang,
-            "prepoznat_jezik": detected,
-            "cirilica_udeo": round(cyr / (cyr + lat), 4) if cyr + lat else 0.0,
-            "dijakritici_udeo": round(dia / lat, 4) if lat else 0.0,
-            "duzina_teksta": duzina,
-            "izvor": izvor,
+            "detected_language": detected,
+            "cyrillic_share": round(cyr / (cyr + lat), 4) if cyr + lat else 0.0,
+            "diacritic_share": round(dia / lat, 4) if lat else 0.0,
+            "text_length": duzina,
+            "source": izvor,
         },
         urls=[home.final_url or home.url],
     )

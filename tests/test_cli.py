@@ -194,8 +194,8 @@ def _izvestaj(**kwargs) -> DomainReport:
         category="seo",
         severity="critical",
         evidence={
-            "stranica": 5, "ukupno": 7, "udeo": 0.7143, "canonical": "https://d.rs/", "grupa_putanja": 5,
-            "uzorak": "sitemap",
+            "page_count": 5, "total": 7, "share": 0.7143, "canonical": "https://d.rs/", "path_groups": 5,
+            "sample": "sitemap",
         },
         evidence_urls=["https://d.rs/a"],
         weight=40.0,
@@ -265,9 +265,8 @@ def test_html_bezi_od_html_a_iz_sadrzaja_sajta():
 def test_unknown_razlozi_se_prikazuju():
     from sitetriage.models import Reason, Unknown
 
-    report = _izvestaj(
-        unknowns=[Unknown("perf.page.weight", Reason("unmeasured_responses", {"nemereno": 9, "prag": 5}))]
-    )
+    razlog = Reason("unmeasured_responses", {"unmeasured": 9, "threshold": 5})
+    report = _izvestaj(unknowns=[Unknown("perf.page.weight", razlog)])
     page = html_out.render([report], load_config())
     assert "9 odgovora nije izmereno (prag 5)" in page
     assert "perf.page.weight" in page

@@ -32,13 +32,13 @@ def canonical(site):
 def test_pocetna_koja_upucuje_na_sebe_se_ne_broji():
     rezultat = canonical(sajt(7, {1: POCETNA, 2: POCETNA}))
     assert rezultat.status == "finding"
-    assert rezultat.findings[0].evidence["stranica"] == 2, "početna upućuje na sebe"
+    assert rezultat.findings[0].evidence["page_count"] == 2, "početna upućuje na sebe"
 
 
 def test_dve_podstranice_od_sedam_daju_medium():
     nalaz = canonical(sajt(7, {1: POCETNA, 2: POCETNA})).findings[0]
     assert nalaz.severity == "medium"
-    assert (nalaz.evidence["stranica"], nalaz.evidence["ukupno"]) == (2, 7)
+    assert (nalaz.evidence["page_count"], nalaz.evidence["total"]) == (2, 7)
 
 
 def test_jedna_stranica_sa_tudjim_canonical_om_nije_nalaz():
@@ -59,7 +59,7 @@ def test_ozbiljnost_po_udelu(tudjih, ozbiljnost):
     site = sajt(100, dict.fromkeys(range(1, tudjih + 1), POCETNA))
     nalaz = canonical(site).findings[0]
     assert nalaz.severity == ozbiljnost
-    assert nalaz.evidence["udeo"] == tudjih / 100
+    assert nalaz.evidence["share"] == tudjih / 100
 
 
 def test_paginacija_jednog_bloga_nije_nalaz():
@@ -76,7 +76,7 @@ def test_canonical_koji_se_razlikuje_samo_po_normalizaciji_nije_tudji():
     site = sajt(7, {1: POCETNA, 2: POCETNA})
     site.home.final_url = "https://cist.rs?utm_source=fb"
     site.home.canonical_normalized = POCETNA
-    assert canonical(site).findings[0].evidence["stranica"] == 2
+    assert canonical(site).findings[0].evidence["page_count"] == 2
 
 
 @pytest.mark.parametrize(
@@ -95,7 +95,7 @@ def test_canonical_na_istu_stranicu_sa_drugom_semom_ili_www_nije_tudji(cilj):
 
 def test_druga_sema_ka_drugoj_stranici_je_i_dalje_tudji():
     nalaz = canonical(sajt(7, {1: "http://cist.rs/", 2: "http://cist.rs/"})).findings[0]
-    assert nalaz.evidence["stranica"] == 2
+    assert nalaz.evidence["page_count"] == 2
 
 
 @pytest.mark.parametrize(

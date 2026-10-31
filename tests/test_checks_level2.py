@@ -130,7 +130,8 @@ def test_jedan_izvor_brzine_za_recenicu_i_merenje():
     browser.timing.load_ms = 9_000
     ctx = registry.Context(domain=browser.domain, industry="other", config=cfg)
     nalazi = {r.check_id: r.findings[0] for r in registry.run(2, browser, ctx) if r.status == "finding"}
-    assert nalazi["perf.page.weight"].evidence["brzina"] == nalazi["perf.load.time"].evidence["brzina"] == 9.6
+    brzine = [nalazi[c].evidence["speed_mbps"] for c in ("perf.page.weight", "perf.load.time")]
+    assert brzine == [9.6, 9.6]
 
 
 @pytest.mark.parametrize("reached, load_ms", [("load", 9_000), ("timeout", None)])
@@ -184,9 +185,9 @@ def test_evidence_razlikuje_nema_atributa_od_praznog():
     browser = clean_browser()
     browser.dom = DomStats(h1_count=1, images_total=30, images_without_alt_attr=28, images_empty_alt=2)
     evidence = run_level(2, browser)["a11y.img.alt.missing"].findings[0].evidence
-    assert evidence["bez_alta"] == 28
-    assert evidence["ukupno"] == 30
-    assert evidence["prazan_alt"] == 2
+    assert evidence["without_alt"] == 28
+    assert evidence["total"] == 30
+    assert evidence["empty_alt"] == 2
 
 
 def test_malo_slika_ne_pravi_nalaz():
@@ -337,7 +338,7 @@ def test_nalaz_broji_samo_slike_sa_izmerenim_viskom():
     browser.dom.oversized_images = [_slika(f"https://cist.rs/s{i}.jpg", 100) for i in range(3)]
     browser.dom.oversized_images.append(_slika("https://cist.rs/nemerena.jpg", 0))
     nalaz = run_level(2, browser)["perf.img.oversized"].findings[0]
-    assert (nalaz.evidence["broj_slika"], nalaz.evidence["kb"]) == (3, 300)
+    assert (nalaz.evidence["image_count"], nalaz.evidence["kb"]) == (3, 300)
     assert "nemerena" not in " ".join(nalaz.evidence_urls)
 
 
@@ -352,7 +353,7 @@ def test_ista_slika_vise_puta_na_strani_broji_se_jednom_sa_najvecim_viskom():
         _slika("https://cist.rs/baner.jpg", 80),
     ]
     nalaz = run_level(2, browser)["perf.img.oversized"].findings[0]
-    assert (nalaz.evidence["broj_slika"], nalaz.evidence["kb"], nalaz.evidence["najgora"]) == (
+    assert (nalaz.evidence["image_count"], nalaz.evidence["kb"], nalaz.evidence["worst_image"]) == (
         3, 430, "https://cist.rs/slajd.jpg"
     )
     assert nalaz.evidence_urls == ["https://cist.rs/slajd.jpg", "https://cist.rs/baner.jpg", "https://cist.rs/logo.png"]

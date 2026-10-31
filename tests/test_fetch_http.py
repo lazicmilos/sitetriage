@@ -272,7 +272,7 @@ def test_lazni_404_se_prepoznaje_kroz_ceo_lanac():
     assert all(p.status == 200 for p in snapshot.soft404.probes)
     result = run_level(1, snapshot)["infra.soft404"]
     assert result.status == "finding"
-    assert result.findings[0].evidence["tvrd_dokaz"] is True
+    assert result.findings[0].evidence["hard_evidence"] is True
 
 
 def test_preusmerenja_se_belezе():

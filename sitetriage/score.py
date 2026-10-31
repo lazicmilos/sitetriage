@@ -127,7 +127,7 @@ def _failure(site: SiteSnapshot) -> Reason:
         return Reason("entry_missing")
     if entry.status is not None:
         return Reason("entry_status", {"status": entry.status})
-    return Reason("entry_error", {"vrsta": entry.error_kind, "detalj": entry.error_detail or ""})
+    return Reason("entry_error", {"kind": entry.error_kind, "detail": entry.error_detail or ""})
 
 
 def rank(reports: Iterable[DomainReport]) -> list[DomainReport]:
@@ -161,7 +161,7 @@ def escalation_reasons(site: SiteSnapshot, results: Sequence[CheckResult], confi
     reasons: list[Reason] = []
     text_limit = get(config, "escalation.empty_html_text_threshold")
     if home.text_length < text_limit:
-        reasons.append(Reason("raw_text_short", {"znakova": home.text_length, "prag": text_limit}))
+        reasons.append(Reason("raw_text_short", {"chars": home.text_length, "threshold": text_limit}))
     if home.h1_count_raw == 0:
         reasons.append(Reason("no_h1_raw"))
 
@@ -171,7 +171,7 @@ def escalation_reasons(site: SiteSnapshot, results: Sequence[CheckResult], confi
 
     html_limit = get(config, "escalation.raw_html_bytes")
     if home.html_bytes > html_limit:
-        reasons.append(Reason("html_large", {"bajtova": home.html_bytes, "prag": html_limit}))
+        reasons.append(Reason("html_large", {"bytes": home.html_bytes, "threshold": html_limit}))
     if any(f.check_id == "perf.compression.missing" for f in findings):
         reasons.append(Reason("html_uncompressed"))
 
@@ -179,7 +179,7 @@ def escalation_reasons(site: SiteSnapshot, results: Sequence[CheckResult], confi
     # i sporom stranicom inače nikad ne bi stigao na nivo 2 (§6, `b2b-firma.example`).
     slow = get(config, "escalation.slow_entry_ms")
     if site.entry and site.entry.elapsed_ms and site.entry.elapsed_ms > slow:
-        reasons.append(Reason("slow_entry", {"ms": site.entry.elapsed_ms, "prag": slow}))
+        reasons.append(Reason("slow_entry", {"ms": site.entry.elapsed_ms, "threshold": slow}))
     return reasons
 
 

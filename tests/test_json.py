@@ -18,7 +18,7 @@ from sitetriage.models import BrowserSnapshot, from_dict, to_jsonable
 from sitetriage.report import json_out
 
 FIXTURES = Path(__file__).parent / "fixtures"
-SEMA = json.loads(files("sitetriage").joinpath("schema/report-2.json").read_text(encoding="utf-8"))
+SEMA = json.loads(files("sitetriage").joinpath("schema/report-3.json").read_text(encoding="utf-8"))
 
 
 def test_json_izvestaj_prolazi_semu(tmp_path):

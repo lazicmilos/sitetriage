@@ -128,7 +128,7 @@ def test_cetiri_varijante(monkeypatch, ponasanje, manjkava, duplikat):
 def test_dokaz_duplikata_su_hostovi(monkeypatch):
     snapshot, _ = skeniraj(monkeypatch, sajt(True, True, True))
     [nalaz] = run_level(1, snapshot)[DUPLIKAT].findings
-    assert nalaz.evidence["adrese"] == [DOMEN, f"www.{DOMEN}"]
+    assert nalaz.evidence["hosts"] == [DOMEN, f"www.{DOMEN}"]
 
 
 def test_broj_adresa_u_recenici_odgovara_spisku(monkeypatch):

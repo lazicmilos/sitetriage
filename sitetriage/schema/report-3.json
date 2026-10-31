@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/lazicmilos/skener/schema/report-2.json",
-  "title": "Skener: izveštaj o prolazu",
-  "description": "Serijalizovan ScanResult. Dodato polje podiže drugi broj verzije šeme, a obrisano polje, promenjen tip ili značenje i preimenovan check_id podižu prvi.",
+  "$id": "https://raw.githubusercontent.com/lazicmilos/sitetriage/main/sitetriage/schema/report-3.json",
+  "title": "SiteTriage: run report",
+  "description": "A serialized ScanResult. An added field raises the minor schema version; a removed field, a changed type or meaning, a renamed check_id or a renamed evidence key raises the major version (ADR-011, ADR-012).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,19 +11,19 @@
     "not_scanned"
   ],
   "properties": {
-    "schema_version": {"const": "2.0"},
+    "schema_version": {"const": "3.0"},
     "scanner_version": {"type": "string", "minLength": 1},
     "started_at": {"$ref": "#/$defs/utc"},
     "finished_at": {"$ref": "#/$defs/utc"},
     "duration_s": {
-      "description": "Trajanje u sekundama: level1, level2, level2_light i total za scan, samo total za recheck.",
+      "description": "Duration in seconds: level1, level2, level2_light and total for scan, only total for recheck.",
       "type": "object",
       "required": ["total"],
       "propertyNames": {"enum": ["level1", "level2", "level2_light", "total"]},
       "additionalProperties": {"type": "number", "minimum": 0}
     },
     "config_digest": {
-      "description": "sha256 konfiguracije koja utiče na rezultat, bez identiteta i paralelizma.",
+      "description": "sha256 of the configuration that affects the result, without the operator identity, concurrency and browser path.",
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
@@ -34,9 +34,9 @@
       "properties": {
         "os": {"type": "string"},
         "python": {"type": "string"},
-        "chromium": {"type": ["string", "null"], "description": "null kad nivo 2 nije radio"},
+        "chromium": {"type": ["string", "null"], "description": "null when level 2 did not run"},
         "network_profile": {
-          "description": "Simulirana veza pod kojom nivo 2 meri (Z-30); null kad nivo 2 nije radio ili je snimak stariji od profila",
+          "description": "The simulated connection level 2 measures under (Z-30); null when level 2 did not run or the snapshot predates the profile",
           "type": ["object", "null"],
           "additionalProperties": false,
           "required": ["download_mbps", "upload_mbps", "latency_ms"],
@@ -47,14 +47,14 @@
           }
         },
         "link_mbps": {
-          "description": "Stvarna veza izmerena pre nivoa 2, u Mb/s (Z-33); null kad merenje nije uspelo ili nivo 2 nije radio",
+          "description": "The real connection measured before level 2, in Mb/s (Z-33); null when the measurement failed or level 2 did not run",
           "type": ["number", "null"],
           "minimum": 0
         }
       }
     },
     "summary": {
-      "description": "Broj domena po statusu i po uzroku partial-a; izuzeti domeni su samo broj, bez imena.",
+      "description": "Number of domains per status and per partial cause; excluded domains are only a count, without names.",
       "type": "object",
       "required": [
         "scanned", "partial", "failed", "unreachable", "excluded", "partial_budget", "partial_unknown"
@@ -62,22 +62,22 @@
       "additionalProperties": {"type": "integer", "minimum": 0}
     },
     "budget_share": {
-      "description": "Udeo domena koji rade (scanned, partial) sa potrošenim budžetom.",
+      "description": "Share of working domains (scanned, partial) that exhausted their budget.",
       "type": "number", "minimum": 0, "maximum": 1
     },
     "unknown_share": {
-      "description": "Po check_id: udeo unknown-a među domenima koji rade i na kojima je provera pokrenuta.",
+      "description": "Per check_id: share of unknown among working domains on which the check ran.",
       "type": "object",
       "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
     },
     "ranked": {"type": "array", "items": {"$ref": "#/$defs/domain_report"}},
     "unreachable": {
-      "description": "Sajtovi koji se ne otvaraju ni u drugom pokušaju; razlog je nalaz infra.unreachable.",
+      "description": "Sites that did not open on the second attempt either; the reason is the infra.unreachable finding.",
       "type": "array",
       "items": {"$ref": "#/$defs/domain_report"}
     },
     "not_scanned": {
-      "description": "Domeni sa statusom failed, sa razlogom. Izuzeti domeni su samo broj u summary.",
+      "description": "Domains with status failed, with a reason. Excluded domains are only a count in summary.",
       "type": "array",
       "items": {"$ref": "#/$defs/domain_report"}
     }
@@ -86,11 +86,14 @@
     "utc": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
     "severity": {"enum": ["critical", "high", "medium", "low"]},
     "reason": {
-      "description": "Razlog bez rečenice: kod iz kataloga i podaci. Rečenicu pravi skener.messages.",
+      "description": "A reason without a sentence: a catalog code and data. sitetriage.messages builds the sentence.",
       "type": "object",
       "additionalProperties": false,
       "required": ["code", "evidence"],
-      "properties": {"code": {"type": "string", "minLength": 1}, "evidence": {"type": "object"}}
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "evidence": {"type": "object", "description": "Data for the sentence, with English snake_case keys (ADR-012)."}
+      }
     },
     "check_reason": {
       "type": "object",
@@ -116,22 +119,22 @@
         "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
         "unknowns": {"type": "array", "items": {"$ref": "#/$defs/check_reason"}},
         "not_applicable": {
-          "description": "Provere koje nemaju šta da provere na ovom sajtu; ne čine domen partial.",
+          "description": "Checks that have nothing to check on this site; they do not make the domain partial.",
           "type": "array",
           "items": {"$ref": "#/$defs/check_reason"}
         },
         "total_score": {"type": "number", "minimum": 0},
         "max_finding_weight": {"type": "number", "minimum": 0},
-        "rank": {"type": "integer", "minimum": 0, "description": "0 = nije rangiran (unreachable, failed)"},
+        "rank": {"type": "integer", "minimum": 0, "description": "0 = not ranked (unreachable, failed)"},
         "scanned_at": {"type": "string"},
         "reason": {
-          "description": "Zašto je domen failed; null za ostale.",
+          "description": "Why the domain failed; null for the others.",
           "oneOf": [{"type": "null"}, {"$ref": "#/$defs/reason"}]
         }
       }
     },
     "finding": {
-      "description": "Nalaz bez rečenice: rečenicu pravi skener.messages iz dokaza, na jeziku čitaoca.",
+      "description": "A finding without a sentence: sitetriage.messages builds the sentence from the evidence, in the reader's language.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -143,7 +146,10 @@
         "level": {"enum": [1, 2]},
         "category": {"enum": ["seo", "social", "i18n", "infra", "perf", "a11y", "qa"]},
         "severity": {"$ref": "#/$defs/severity"},
-        "evidence": {"type": "object"},
+        "evidence": {
+          "description": "Numbers, booleans, URLs, technical codes, raw error messages and text taken from the site, with English snake_case keys per check_id (ADR-012). Never a sentence.",
+          "type": "object"
+        },
         "evidence_urls": {"type": "array", "items": {"type": "string"}},
         "weight": {"type": "number", "minimum": 0},
         "variant": {"type": ["string", "null"]}

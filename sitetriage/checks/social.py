@@ -32,8 +32,8 @@ def og_title_missing(snapshot: SiteSnapshot, ctx: Context):
         og_title_missing.spec,
         ctx,
         evidence={
-            "stranica": snapshot.home.final_url or snapshot.home.url,
-            "og_oznaka_ukupno": _og_count(snapshot),
+            "page": snapshot.home.final_url or snapshot.home.url,
+            "og_tag_count": _og_count(snapshot),
         },
         urls=[snapshot.home.final_url or snapshot.home.url],
     )
@@ -55,8 +55,8 @@ def og_description_missing(snapshot: SiteSnapshot, ctx: Context):
         og_description_missing.spec,
         ctx,
         evidence={
-            "stranica": snapshot.home.final_url or snapshot.home.url,
-            "og_oznaka_ukupno": _og_count(snapshot),
+            "page": snapshot.home.final_url or snapshot.home.url,
+            "og_tag_count": _og_count(snapshot),
         },
         urls=[snapshot.home.final_url or snapshot.home.url],
     )
@@ -78,8 +78,8 @@ def og_image_missing(snapshot: SiteSnapshot, ctx: Context):
         og_image_missing.spec,
         ctx,
         evidence={
-            "stranica": snapshot.home.final_url or snapshot.home.url,
-            "og_oznaka_ukupno": _og_count(snapshot),
+            "page": snapshot.home.final_url or snapshot.home.url,
+            "og_tag_count": _og_count(snapshot),
         },
         urls=[snapshot.home.final_url or snapshot.home.url],
     )

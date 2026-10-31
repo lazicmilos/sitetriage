@@ -116,7 +116,7 @@ def email_draft(report: DomainReport, lang: str = "sr") -> str:
     """
     if report.status == "unreachable":
         recenica = poruka(_ne_radi(report), lang).client
-        return text("draft_unreachable", lang, domain=report.domain, recenica=recenica)
+        return text("draft_unreachable", lang, domain=report.domain, sentence=recenica)
     if not report.findings:
         return text("draft_clean", lang, domain=report.domain)
     lines = [f"{i}. {poruka(f, lang).client}" for i, f in enumerate(report.top_findings, start=1)]
@@ -224,7 +224,7 @@ def _shares(reports: Sequence[DomainReport], lang: str) -> str:
     """Oba uzroka `partial`-a posebno, kao izlazni kriterijumi iz §7 (Z-22)."""
     budzet, po_proveri = partial_shares(reports)
     rows = "".join(
-        f'<tr><td>{_e(check_id)}</td><td class="num">{_e(text("percent", lang, udeo=udeo * 100))}</td></tr>'
+        f'<tr><td>{_e(check_id)}</td><td class="num">{_e(text("percent", lang, share=udeo * 100))}</td></tr>'
         for check_id, udeo in sorted(po_proveri.items(), key=lambda kv: (-kv[1], kv[0]))
         if udeo
     )
@@ -236,7 +236,7 @@ def _shares(reports: Sequence[DomainReport], lang: str) -> str:
         if rows
         else ""
     )
-    return f'<p class="sub">{_e(text("share_budget", lang, udeo=budzet * 100))}</p>\n{table}\n'
+    return f'<p class="sub">{_e(text("share_budget", lang, share=budzet * 100))}</p>\n{table}\n'
 
 
 def _unreachable(reports: Sequence[DomainReport], lang: str) -> str:
@@ -294,7 +294,7 @@ def _details(report: DomainReport, lang: str) -> str:
         unknowns = f'<details class="unknowns"><summary>{naslov}</summary><ul>{items}</ul></details>'
     unknowns += "".join(
         f'<p class="tech"><code>{_e(n.check_id)}</code> — '
-        f'{_e(text("not_applicable", lang, tekst=razlog(n.reason, lang)))}</p>'
+        f'{_e(text("not_applicable", lang, text=razlog(n.reason, lang)))}</p>'
         for n in report.not_applicable
     )
     reasons = ""

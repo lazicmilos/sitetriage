@@ -50,11 +50,11 @@ def img_alt_missing(snapshot, ctx: Context):
         ctx,
         severity=severity,
         evidence={
-            "bez_alta": dom.images_without_alt_attr,
-            "ukupno": dom.images_total,
-            "prazan_alt": dom.images_empty_alt,
-            "udeo": round(ratio, 3),
-            "nemereno": dom.images_unmeasured,
+            "without_alt": dom.images_without_alt_attr,
+            "total": dom.images_total,
+            "empty_alt": dom.images_empty_alt,
+            "share": round(ratio, 3),
+            "unmeasured": dom.images_unmeasured,
         },
         urls=[snapshot.url],
     )
