@@ -5,6 +5,13 @@ izmena koja lomi kompatibilnost (status domena, `check_id`, oblik nalaza, JSON) 
 
 ## Neobjavljeno
 
+Projekat je otvoren pod imenom SiteTriage, uz licencu MIT. Paket i komanda se i dalje zovu `skener`.
+
+### Izmene koje lome kompatibilnost
+
+- User-Agent počinje sa `SiteTriage/` umesto `MlazicSiteScanner/`, na nivou 1 i na kraju UA
+  browsera na nivou 2. Ko filtrira logove ili pravi izuzetke po starom imenu, mora da ih promeni.
+
 ### Promenjeno
 
 - Tekst uz svaki sajt je u izveštaju „predlog teksta”, a ne „nacrt mejla”: može da posluži za

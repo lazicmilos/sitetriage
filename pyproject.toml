@@ -33,7 +33,7 @@ dependencies = [
 browser = ["playwright>=1.44"]
 # Playwright je zakucan: paket traži tačno svoju reviziju Chromium-a, pa nadogradnja
 # bez `playwright install` obori sve browser testove (vidi `chromium_se_pokrece`).
-dev = ["pytest>=8", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18"]
+dev = ["pytest>=8", "pytest-cov==6.0.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18", "pre-commit>=3.5"]
 
 [project.urls]
 Homepage = "https://github.com/lazicmilos/skener"
@@ -47,7 +47,7 @@ skener = "skener.cli:main"
 [tool.setuptools.packages.find]
 include = ["skener*"]
 
-# Šema JSON izveštaja ide uz paket: kupac koda i web aplikacija validiraju po njoj.
+# Šema JSON izveštaja ide uz paket: integracije i web aplikacija validiraju po njoj.
 [tool.setuptools.package-data]
 skener = ["schema/*.json"]
 

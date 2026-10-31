@@ -1,4 +1,4 @@
-# Skener sajtova
+# SiteTriage (skener sajtova)
 
 Skener prolazi kroz listu domena, obično stotinak do dvesta, i pravi rangiranu listu sajtova koji
 zaslužuju pun ručni audit. Uz svaki sajt ide nekoliko rečenica na srpskom ili engleskom koje se mogu
@@ -307,7 +307,7 @@ Kako se testira i šta je nađeno opisuju [plan testiranja](docs/plan-testiranja
 ## Etika
 
 ```
-User-Agent: MlazicSiteScanner/1.0.0 (+kontakt@primer.rs; Web studio Primer)
+User-Agent: SiteTriage/2.0.0 (+kontakt@primer.rs; Web studio Primer)
 ```
 
 Ime alata, ko skenira i kako da ga kontaktira moraju biti u svakom zahtevu. Bez toga si anonimni bot
@@ -315,7 +315,7 @@ koji sa jedne adrese obilazi dvesta sajtova, i administrator koji te blokira pos
 User-Agent predstavlja onoga ko pokreće alat, a ne autora alata.
 
 Browser na nivou 2 šalje UA koji Chromium sam prijavljuje, a isti identitet je dopisan na kraj
-(`Mozilla/5.0 … HeadlessChrome/141… Safari/537.36 MlazicSiteScanner/…`). Reklame i Google Fonts
+(`Mozilla/5.0 … HeadlessChrome/141… Safari/537.36 SiteTriage/…`). Reklame i Google Fonts
 po User-Agent-u biraju šta šalju, a strana se meri onakva kakvu je dobija posetilac (BUG-019).
 
 - Nikad dva zahteva istovremeno ka istom sajtu, a `www.x.rs` i `x.rs` su isti sajt. Globalni semafor
@@ -351,6 +351,13 @@ U browseru (nivo 2) zaštita ne vidi cilj preusmerenja ni WebSocket, pa web apli
 produkciji mora da ima i filter izlaznog saobraćaja na nivou mreže
 ([ADR-006](docs/adr/ADR-006-ssrf.md)). Nivo 1 ne čita `HTTP(S)_PROXY` iz okruženja, jer bi
 proxy zaobišao proveru.
+
+## Doprinos, bezbednost i licenca
+
+Kako se postavlja okruženje, pokreću testovi i dodaje nova provera piše u
+[CONTRIBUTING.md](CONTRIBUTING.md). Ranjivost se prijavljuje privatno, kako piše u
+[SECURITY.md](SECURITY.md), a ne kroz javni issue. Za ponašanje u projektu važi
+[Code of Conduct](CODE_OF_CONDUCT.md). Kod je pod licencom [MIT](LICENSE).
 
 ## Planirano, nije u v2
 
