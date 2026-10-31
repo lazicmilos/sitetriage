@@ -1,7 +1,7 @@
-"""Z-22: uzrok `partial`-a. Budžet i `unknown` su dva izlazna kriterijuma (§7), pa se broje posebno.
+"""The cause of `partial` (ADR-015). Budget and `unknown` are two exit criteria, so they count separately.
 
-Budžet se meri među domenima koji rade, a `unknown` po proveri, među domenima na kojima je provera
-pokrenuta: bez `failed`, `unreachable` i `excluded`, a za nivo 2 samo gde je nivo 2 radio.
+The budget share is measured among working domains, and `unknown` per check, among the domains the
+check ran on: without `failed`, `unreachable` and `excluded`, and for level 2 only where level 2 ran.
 """
 
 from __future__ import annotations
@@ -17,102 +17,103 @@ from sitetriage.report import html_out
 from sitetriage.score import analyze, partial_shares
 
 
-def _sajt(domain: str, *, budzet: bool = False, unknown: bool = False):
+def _site(domain: str, *, budget: bool = False, unknown: bool = False):
     site = clean_site(domain=domain)
-    site.budget.exhausted = budzet
+    site.budget.exhausted = budget
     if unknown:
-        site.robots.status = 403  # iz toga se ne vidi da li robots.txt postoji
+        site.robots.status = 403  # this does not show whether robots.txt exists
     return site
 
 
-def _sajtovi():
+def _sites():
     return [
-        _sajt("cist.rs"),
-        _sajt("budzet.rs", budzet=True),
-        _sajt("nepoznato.rs", unknown=True),
-        _sajt("oba.rs", budzet=True, unknown=True),
+        _site("cist.rs"),
+        _site("budzet.rs", budget=True),
+        _site("nepoznato.rs", unknown=True),
+        _site("oba.rs", budget=True, unknown=True),
     ]
 
 
-def _izvestaji():
+def _reports():
     config = load_config()
-    return {s.domain: analyze(s, config) for s in _sajtovi()}
+    return {s.domain: analyze(s, config) for s in _sites()}
 
 
-def test_partial_zbog_budzeta_i_zbog_unknown_se_broje_posebno(tmp_path):
-    izvestaji = _izvestaji()
-    uzroci = {domen: r.partial_causes for domen, r in izvestaji.items()}
-    assert uzroci == {
+def test_partial_by_budget_and_by_unknown_count_separately(tmp_path):
+    reports = _reports()
+    causes = {domain: r.partial_causes for domain, r in reports.items()}
+    assert causes == {
         "cist.rs": [],
         "budzet.rs": ["budget"],
         "nepoznato.rs": ["unknown"],
         "oba.rs": ["budget", "unknown"],
     }
-    budzet, po_proveri = partial_shares(list(izvestaji.values()))
-    assert budzet == 0.5
-    assert po_proveri["infra.robots.missing"] == 0.5 and po_proveri["seo.title.missing"] == 0.0
+    budget, per_check = partial_shares(list(reports.values()))
+    assert budget == 0.5
+    assert per_check["infra.robots.missing"] == 0.5 and per_check["seo.title.missing"] == 0.0
 
-    for site in _sajtovi():
+    for site in _sites():
         store.write_site(tmp_path, site)
-    rezultat = pipeline.recheck(tmp_path, load_config())
-    assert rezultat.summary["partial_budget"] == 2 and rezultat.summary["partial_unknown"] == 2
-    assert rezultat.budget_share == 0.5 and rezultat.unknown_share["infra.robots.missing"] == 0.5
-    jsonschema.validate(to_jsonable(rezultat), SEMA)
+    result = pipeline.recheck(tmp_path, load_config())
+    assert result.summary["partial_budget"] == 2 and result.summary["partial_unknown"] == 2
+    assert result.budget_share == 0.5 and result.unknown_share["infra.robots.missing"] == 0.5
+    jsonschema.validate(to_jsonable(result), SEMA)
 
 
-def test_udeo_unknown_ne_broji_domene_koji_ne_rade():
+def test_unknown_share_does_not_count_unreachable_domains():
     config = load_config()
-    ne_radi = clean_site(domain="ugasen.rs", pages=[])
-    ne_radi.entry = Entry("https://ugasen.rs/", error_kind="dns_nxdomain")
-    ne_radi.entry_attempts = ["2026-09-22T09:00:00Z", "2026-09-22T09:01:05Z"]
-    nije_skeniran = clean_site(domain="zatvoren.rs", pages=[])
-    nije_skeniran.entry.status = 403
-    izvestaji = [
-        analyze(_sajt("nepoznato.rs", unknown=True), config),
-        analyze(_sajt("cist.rs"), config, browser=clean_browser(domain="cist.rs")),
-        analyze(ne_radi, config),
-        analyze(nije_skeniran, config),
+    unreachable = clean_site(domain="ugasen.rs", pages=[])
+    unreachable.entry = Entry("https://ugasen.rs/", error_kind="dns_nxdomain")
+    unreachable.entry_attempts = ["2026-09-22T09:00:00Z", "2026-09-22T09:01:05Z"]
+    not_scanned = clean_site(domain="zatvoren.rs", pages=[])
+    not_scanned.entry.status = 403
+    reports = [
+        analyze(_site("nepoznato.rs", unknown=True), config),
+        analyze(_site("cist.rs"), config, browser=clean_browser(domain="cist.rs")),
+        analyze(unreachable, config),
+        analyze(not_scanned, config),
     ]
-    assert [r.status for r in izvestaji[2:]] == ["unreachable", "failed"]
-    budzet, po_proveri = partial_shares(izvestaji)
-    assert budzet == 0.0
-    assert po_proveri["infra.robots.missing"] == 0.5, "samo dva domena rade"
-    # Nivo 2 je radio samo na jednom domenu: imenilac je 1, a ne 2.
-    assert po_proveri["perf.page.weight"] == 0.0
+    assert [r.status for r in reports[2:]] == ["unreachable", "failed"]
+    budget, per_check = partial_shares(reports)
+    assert budget == 0.0
+    assert per_check["infra.robots.missing"] == 0.5, "only two domains are working"
+    # Level 2 ran on only one domain: the denominator is 1, not 2.
+    assert per_check["perf.page.weight"] == 0.0
 
 
-def test_lagani_nivo_2_ne_pravi_partial_i_nije_u_imeniocu_za_vreme():
-    """BUG-020: lagani nivo 2 vreme namerno ne meri. Na B je 29 sajtova bilo `partial` samo zbog toga
-    (vlasnik, 5. 10.: „ne primenjuje se"). Imenilac za vreme su sajtovi mereni pod profilom."""
+def test_light_level2_makes_no_partial_and_is_not_in_the_time_denominator():
+    """BUG-020: light level 2 deliberately does not measure time. On list B, 29 sites were `partial` only
+    because of that (owner, 5 Oct: "not applicable"). The time denominator is the sites measured under the
+    profile."""
     config = load_config()
-    lagan = clean_browser(domain="lagan.rs", light=True, network_profile=None, link_mbps=None)
-    spor = clean_browser(domain="pun.rs", link_mbps=5.0)  # pun nivo 2 na sporoj vezi: vreme je unknown
-    izvestaji = [
-        analyze(_sajt("pun.rs"), config, browser=spor),
-        analyze(_sajt("lagan.rs"), config, browser=lagan),
+    light = clean_browser(domain="lagan.rs", light=True, network_profile=None, link_mbps=None)
+    slow = clean_browser(domain="pun.rs", link_mbps=5.0)  # full level 2 on a slow link: time is unknown
+    reports = [
+        analyze(_site("pun.rs"), config, browser=slow),
+        analyze(_site("lagan.rs"), config, browser=light),
     ]
-    lagani = izvestaji[1]
-    assert lagani.status == "scanned" and lagani.partial_causes == []
-    vreme = [n for n in lagani.not_applicable if n.check_id == "perf.load.time"]
-    assert vreme, "kartica sajta kaže da vreme nije mereno"
-    _, po_proveri = partial_shares(izvestaji)
-    assert po_proveri["perf.load.time"] == 1.0, "lagani sajt nije u imeniocu"
-    assert po_proveri["perf.page.weight"] == 0.0
+    light_report = reports[1]
+    assert light_report.status == "scanned" and light_report.partial_causes == []
+    load_time = [n for n in light_report.not_applicable if n.check_id == "perf.load.time"]
+    assert load_time, "the site card says the time was not measured"
+    _, per_check = partial_shares(reports)
+    assert per_check["perf.load.time"] == 1.0, "the light site is not in the denominator"
+    assert per_check["perf.page.weight"] == 0.0
 
 
-def test_provera_nivoa_2_bez_ijednog_domena_na_nivou_2_nema_udeo():
-    _, po_proveri = partial_shares([analyze(_sajt("cist.rs"), load_config())])
-    assert "perf.page.weight" not in po_proveri and "seo.title.missing" in po_proveri
+def test_level2_check_without_any_level2_domain_has_no_share():
+    _, per_check = partial_shares([analyze(_site("cist.rs"), load_config())])
+    assert "perf.page.weight" not in per_check and "seo.title.missing" in per_check
 
 
-def test_prazan_prolaz_nema_deljenja_nulom():
+def test_empty_run_has_no_division_by_zero():
     assert partial_shares([]) == (0.0, {})
 
 
-def test_html_prikazuje_oba_udela_po_jeziku():
-    izvestaji = list(_izvestaji().values())[:3]  # jedan od tri zbog budžeta, jedan od tri zbog unknown
-    sr = html_out.render(izvestaji, load_config())
-    en = html_out.render(izvestaji, load_config(), lang="en")
+def test_html_shows_both_shares_per_language():
+    reports = list(_reports().values())[:3]  # one in three for the budget, one in three for unknown
+    sr = html_out.render(reports, load_config())
+    en = html_out.render(reports, load_config(), lang="en")
     assert "Potrošen budžet: 33,3 % domena koji rade" in sr
     assert "<td>infra.robots.missing</td><td class=\"num\">33,3 %</td>" in sr
     assert "Budget spent: 33.3 % of working domains" in en
