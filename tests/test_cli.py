@@ -472,6 +472,38 @@ def test_without_playwright_level2_is_skipped_with_a_message(tmp_path, monkeypat
     assert "Playwright is not installed" in caplog.text
 
 
+@pytest.mark.parametrize(
+    "level",
+    [pytest.param("2", id="pg-level2-chromium-missing"), pytest.param("auto", id="pg-auto-chromium-missing")],
+)
+def test_without_chromium_level2_is_skipped_with_a_message(tmp_path, monkeypatch, caplog, level):
+    """Playwright is installed but Chromium is not (BUG-01): level 2 is skipped, the reports are written.
+
+    The launch error escaped the pipeline, so a long level 1 ended in a traceback with only snapshots.
+    """
+    pytest.importorskip("playwright.async_api")
+    monkeypatch.delenv("SITETRIAGE_CHROMIUM", raising=False)
+    missing = tmp_path / "no-chromium" / "chrome"
+    config = tmp_path / "fast.toml"
+    config.write_text(
+        f'[http]\ndelay_ms = [0, 0]\n[browser]\nexecutable_path = "{missing.as_posix()}"\n', encoding="utf-8"
+    )
+    with FakeSite() as site:
+        domains = tmp_path / "d.csv"
+        domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
+        out = tmp_path / "report"
+        arguments = ["scan", str(domains), "--out", str(out), "--level", level, "--config", str(config)]
+        assert cli.main(arguments) == 0
+
+    assert (out / "index.html").exists() and (out / "report.json").exists()
+    rows = list(csv.DictReader((out / "summary.csv").open(encoding="utf-8")))
+    assert rows[0]["level2_ran"] == "0"
+    assert not list((out / "snapshots").glob("*/browser.json"))
+    errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+    assert any("Chromium could not be started" in m and "playwright install chromium" in m for m in errors)
+    assert sum("Chromium could not be started" in m for m in errors) == 1, "light level 2 must not retry"
+
+
 @pytest.mark.browser
 def test_record_level2_also_records_the_browser_snapshot(tmp_path):
     config = tmp_path / "fast.toml"
