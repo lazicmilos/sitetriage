@@ -23,7 +23,7 @@ from typing import Any
 
 from sitetriage import __version__
 from sitetriage.addresses import parse_allowed
-from sitetriage.models import CATEGORIES, CONTENT_LANGUAGES, INDUSTRIES
+from sitetriage.models import CATEGORIES, CONTENT_LANGUAGES, INDUSTRIES, REPORT_LANGUAGES
 
 CONFIG_NAME = "sitetriage.toml"
 PROFILES_DIR = "profiles"
@@ -39,6 +39,8 @@ NOT_IN_DIGEST = (
     "http.per_host_concurrency",
     "http.domain_concurrency",
     "http.user_agent",
+    # The language changes the sentences, not the findings or the scores.
+    "report.lang",
     "browser.concurrency",
     "browser.light_concurrency",
     "browser.executable_path",
@@ -280,6 +282,9 @@ def _validate(cfg: dict[str, Any]) -> None:
             f"thresholds.i18n.content_languages must be a list of languages with a detector "
             f"({', '.join(CONTENT_LANGUAGES)}), got {languages!r}; a profile such as `rs` sets it"
         )
+    lang = get(cfg, "report.lang")
+    if lang not in REPORT_LANGUAGES:
+        raise ConfigError(f"report.lang must be one of {', '.join(REPORT_LANGUAGES)}, got {lang!r}")
     allowed = get(cfg, "net.allowed_private")
     if not isinstance(allowed, list):
         raise ConfigError(f"net.allowed_private must be a list of \"host:port\" pairs, got {allowed!r}")
