@@ -10,6 +10,7 @@ import socket
 import pytest
 from localserver import FakeSite, Response, html
 
+from sitetriage import addresses
 from sitetriage.config import load_config
 from sitetriage.fetch import http
 from sitetriage.fetch.http import Fetcher, fetch_site
@@ -55,7 +56,9 @@ def test_redirect_to_private_address_is_refused():
             snapshot = _scan(site.base_url)
     assert target.requests == [], "the redirect target must not get a single request"
     assert snapshot.entry.error_kind == "blocked"
-    assert "127.0.0.1 → 127.0.0.1" in snapshot.entry.error_detail
+    # BUG-12: the message names the refused connection, not only the address of the first site.
+    _, port = target.address
+    assert snapshot.entry.error_detail == f"address is not public: 127.0.0.1:{port} → 127.0.0.1"
 
 
 def test_name_that_resolves_to_private_address_is_refused(monkeypatch):
@@ -69,8 +72,30 @@ def test_name_that_resolves_to_private_address_is_refused(monkeypatch):
     snapshot = _scan("privatno.test")
     assert resolved and set(resolved) == {"privatno.test"}
     assert snapshot.entry.error_kind == "blocked"
-    assert snapshot.entry.error_detail == "address is not public: privatno.test → 10.0.0.5"
+    assert snapshot.entry.error_detail == "address is not public: privatno.test:443 → 10.0.0.5"
     assert snapshot.pages == [], "after a block there is neither robots.txt nor a sitemap"
+
+
+@pytest.mark.parametrize(
+    "host, ip, message",
+    [
+        pytest.param("intranet.test", "10.0.0.5", "intranet.test:8080 → 10.0.0.5", id="ke-name"),
+        pytest.param("::1", "::1", "[::1]:8080 → ::1", id="ke-ipv6-in-brackets"),
+    ],
+)
+def test_block_names_host_and_port_of_the_refused_connection(monkeypatch, host, ip, message):
+    async def fake_dns(host, port):
+        return [(socket.AF_INET6 if ":" in ip else socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port))]
+
+    class MustNotConnect:
+        async def connect_tcp(self, *_args, **_kwargs):
+            raise AssertionError("a blocked address must not be connected to")
+
+    monkeypatch.setattr(http, "_resolve", fake_dns)
+    backend = http._PublicAddresses(MustNotConnect(), frozenset())
+    with pytest.raises(addresses.BlockedAddress) as blocked:
+        asyncio.run(backend.connect_tcp(host, 8080))
+    assert str(blocked.value) == f"address is not public: {message}"
 
 
 def test_refused_connection_on_allowed_address_is_not_a_block():
@@ -120,6 +145,94 @@ def test_input_with_ip_address_sends_no_request():
         snapshot = _scan(f"127.0.0.1:{port}")
     assert site.requests == []
     assert snapshot.entry.error_kind == "blocked" and "with a port" in snapshot.entry.error_detail
+
+
+def test_nv_octal_ip_address_is_refused_with_a_reason():
+    """BUG-12: `0177.0.0.1` is 127.0.0.1 to a browser; the report said only `entry_missing`."""
+    snapshot = _scan("0177.0.0.1")
+    assert snapshot.entry.error_kind == "blocked" and "IP address" in snapshot.entry.error_detail
+    report = analyze(snapshot, load_config())
+    assert report.status == "failed" and report.reason.code == "entry_error"
+    assert "IP address" in report.reason.evidence["detail"]
+
+
+# --------------------------------------------------------------------------- #
+# The link probe before level 2 (ADR-018) goes through the same check as level 1
+# --------------------------------------------------------------------------- #
+def _probe(url: str, config: dict | None = None):
+    cfg = config or load_config()
+    cfg["network_profile"] |= {"probe_url": url, "probe_max_s": 2}
+    return asyncio.run(http.measure_link(cfg))
+
+
+def test_pg_probe_on_private_address_sends_no_request(caplog):
+    """BUG-05: `probe_url` on a private address got a `GET /` although level 1 would refuse it."""
+    caplog.set_level("WARNING", logger="sitetriage")
+    with FakeSite(allowed=False, extra={"/": Response(b"x" * 100_000)}) as private:
+        speed = _probe(f"{private.base_url}/")
+    assert private.requests == [], "the probe must not open a private address"
+    assert speed is None, "a blocked probe is a failed measurement: load time becomes unknown"
+    [record] = [r for r in caplog.records if "not measured" in r.getMessage()]
+    assert "address is not public" in record.getMessage()
+
+
+def test_ke_probe_on_explicitly_allowed_private_address_is_measured():
+    """The probe uses the same `[net] allowed_private` as level 1."""
+    with FakeSite(allowed=False, extra={"/": Response(b"x" * 100_000)}) as private:
+        cfg = load_config()
+        host, port = private.address
+        cfg["net"]["allowed_private"] = [f"{host}:{port}"]
+        speed = _probe(f"{private.base_url}/", cfg)
+    assert private.requests == ["/"]
+    assert speed is not None and speed > 0
+
+
+PROXY_VARIABLES = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY")
+
+
+@pytest.fixture
+def proxy_in_environment(monkeypatch):
+    """A "proxy" from the environment: a proxy resolves the name itself and would bypass the check."""
+    with FakeSite(allowed=False) as proxy:
+        for name in PROXY_VARIABLES:
+            monkeypatch.setenv(name, proxy.base_url)
+            monkeypatch.setenv(name.lower(), proxy.base_url)
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        monkeypatch.delenv("no_proxy", raising=False)
+        yield proxy
+
+
+def test_pg_level_1_ignores_proxy_from_the_environment(proxy_in_environment):
+    """httpx 0.28 mounts no proxy from the environment on a client with its own transport, so
+    `trust_env=True` alone changes nothing today. The client is still checked for `trust_env=False`,
+    so that a later httpx, or a client without our transport, cannot bring the proxy back."""
+    cfg = load_config()
+    cfg["http"]["delay_ms"] = [0, 0]
+    with FakeSite() as target:
+
+        async def run():
+            async with Fetcher(cfg) as fetcher:
+                outcome = await fetcher.request(f"{target.base_url}/", http.DomainBudget(5, 30))
+                return outcome, fetcher._pick_client(verify=True).trust_env
+
+        outcome, trust_env = asyncio.run(run())
+    assert proxy_in_environment.requests == [], "level 1 must not go through HTTP(S)_PROXY"
+    assert target.requests == ["/"] and outcome.status == 200
+    assert trust_env is False
+
+
+def test_pg_probe_ignores_proxy_from_the_environment(proxy_in_environment):
+    with FakeSite(extra={"/": Response(b"x" * 100_000)}) as target:
+        speed = _probe(f"{target.base_url}/")
+    assert proxy_in_environment.requests == [], "the probe must not go through HTTP(S)_PROXY"
+    assert target.requests == ["/"] and speed is not None
+
+
+def test_ke_probe_on_allowed_server_is_measured():
+    with FakeSite(extra={"/": Response(b"x" * 100_000)}) as site:
+        speed = _probe(f"{site.base_url}/")
+    assert site.requests == ["/"]
+    assert speed is not None and speed > 0
 
 
 # --------------------------------------------------------------------------- #

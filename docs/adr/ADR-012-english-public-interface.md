@@ -78,7 +78,7 @@ The migration to English runs in waves:
 
 | Old | New |
 |---|---|
-| `skener.toml` (repository root, default config; `--config` is merged over it) | `sitetriage.toml`, same meaning, comments in English; shipped inside the package as `sitetriage/sitetriage.toml` (a complete `sitetriage.toml` in the working directory still replaces it) |
+| `skener.toml` (repository root, default config; `--config` is merged over it) | `sitetriage.toml`, same meaning, comments in English; shipped inside the package as `sitetriage/sitetriage.toml`; a `sitetriage.toml` in the working directory is not read unless passed with `--config`, and then it is merged over the defaults like any other file (BUG-04) |
 
 ### Config keys
 

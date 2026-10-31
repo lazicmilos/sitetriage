@@ -43,6 +43,57 @@ def test_recheck_without_snapshots_is_an_input_error(tmp_path):
         pipeline.recheck(tmp_path, load_config())
 
 
+def _snapshot_folder(tmp_path: Path, name: str, content: bytes) -> Path:
+    """A copy of one fixture domain with `name` replaced by `content`."""
+    import shutil
+
+    folder = tmp_path / "snapshots" / "institucija.example"
+    shutil.copytree(FIXTURES / "institucija.example", folder)
+    for old in folder.glob(f"{name.removesuffix('.gz')}*"):
+        old.unlink()
+    (folder / name).write_bytes(content)
+    return folder / name
+
+
+@pytest.mark.parametrize(
+    ("name", "content", "reason"),
+    [
+        pytest.param("site.json", b'{"domain": "a.example",', "not valid JSON", id="pg-truncated-json"),
+        pytest.param("site.json", b"", "not valid JSON", id="pg-empty-file"),
+        pytest.param("site.json", "{}".encode("utf-16"), "not valid JSON", id="pg-not-utf8"),
+        pytest.param("site.json", b"[1, 2]", "not a snapshot", id="nv-json-array"),
+        pytest.param("site.json", b'{"industry": "other"}', "not a snapshot", id="nv-no-domain"),
+        pytest.param("site.json.gz", b"not gzip at all", "not valid gzip", id="pg-not-gzip"),
+        pytest.param("browser.json", b"{oops", "not valid JSON", id="pg-corrupt-browser"),
+    ],
+)
+def test_recheck_of_a_corrupt_snapshot_names_the_file(tmp_path, name, content, reason):
+    """A calibration run must not quietly drop a domain, nor end in a traceback (BUG-10)."""
+    path = _snapshot_folder(tmp_path, name, content)
+    with pytest.raises(InputError, match=reason) as raised:
+        pipeline.recheck(tmp_path / "snapshots", load_config())
+    assert str(path) in str(raised.value)
+
+
+def _file(path: Path) -> Path:
+    path.write_text("domain,industry\n", encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize(
+    ("make", "reason"),
+    [
+        pytest.param(lambda tmp: tmp / "missing", "does not exist", id="nv-missing-folder"),
+        pytest.param(lambda tmp: _file(tmp / "domains.csv"), "is not a folder", id="nv-a-file"),
+    ],
+)
+def test_recheck_of_something_that_is_not_a_folder_is_an_input_error(tmp_path, make, reason):
+    path = make(tmp_path)
+    with pytest.raises(InputError, match=reason) as raised:
+        pipeline.recheck(path, load_config())
+    assert str(path) in str(raised.value)
+
+
 def test_result_carries_summary_and_time():
     result = pipeline.recheck(FIXTURES, load_config())
     statuses = ("scanned", "partial", "failed", "unreachable", "excluded")

@@ -74,8 +74,8 @@ another server.
 
 The tool opens public addresses only. `localhost`, `10.x`, `192.168.x`, `169.254.169.254` and the
 other private and special addresses are never opened, not when a public name resolves to them and
-not after a redirect. A domain given with an IP address, a port or a user name gets no request at
-all. Without this, a web application built on the scanner would let its users look inside the
+not after a redirect. A domain given with an IP address (in any notation, `0177.0.0.1` and `127.1`
+included), a port or a user name gets no request at all. Without this, a web application built on the scanner would let its users look inside the
 server (SSRF).
 
 Staging with a port works only when you allow it explicitly:
@@ -87,8 +87,10 @@ allowed_private = ["staging.example:8123"]
 
 In the browser (level 2) the protection cannot see the target of a redirect or a WebSocket, so a web
 application in production also needs an egress filter at the network level
-([ADR-006](docs/adr/ADR-006-ssrf.md)). Level 1 does not read `HTTP(S)_PROXY` from the environment,
-because a proxy would bypass the check.
+([ADR-006](docs/adr/ADR-006-ssrf.md)). Level 1 and the link probe before level 2 (`probe_url`) do
+not read `HTTP(S)_PROXY` from the environment, because a proxy would bypass the check. A `probe_url`
+on a private address is not opened either, unless `allowed_private` lists it: the link is then not
+measured, and load time is `unknown`.
 
 ## Quick start
 
@@ -140,6 +142,12 @@ header accepts only ASCII.
 
 The defaults ship with the tool; your own TOML passed with `--config` overrides only what it sets.
 All defaults, with comments, are in [`sitetriage/sitetriage.toml`](sitetriage/sitetriage.toml).
+A value must have the type of its default (a number where the default is a number, a whole number
+for counts) and a sensible range (points, timeouts and ratios above 0, `delay_ms` as `[min, max]`,
+severity tiers that grow); otherwise the tool stops before the first request and names the key and
+the value. A key or section the defaults do not have is an error too, with the closest known key
+when there is one (`html_size_kbb` → `did you mean thresholds.perf.html_size_kb?`), so a typo
+cannot silently leave a default in place.
 
 ### Profiles
 
@@ -199,9 +207,14 @@ klinika.example,healthcare,clean control site
 is worth: a link-preview image matters a lot to a hotel and hardly at all to a b2b site.
 
 The list usually comes out of Excel, so the tool also accepts what Excel writes on a Serbian Windows
-system: columns separated by `;` and a file saved in windows-1250 instead of UTF-8. A domain that
-appears twice is scanned once, and the first occurrence wins. Errors and warnings name the row, the
-way Excel numbers it.
+system: columns separated by `;` and a file saved in windows-1250 instead of UTF-8. Header names
+ignore letter case and the spaces around them (`Domain, Industry, Note` works), and a column the
+tool does not know is ignored with a warning, so a typo like `industy` does not go unnoticed. A site that
+appears twice is scanned once, and the first occurrence wins. Two rows are the same site when they
+differ only in letter case, the scheme, a leading `www.`, a trailing `.` or `/`, or a port that is
+the default for the scheme: `x.example`, `https://www.x.example/` and `http://x.example:80` are one
+site, while `blog.x.example`, `x.example:8443` and `x.example/en` (another entry page) are not.
+Errors and warnings name the row, the way Excel numbers it.
 
 The output folder holds:
 
@@ -213,8 +226,9 @@ The output folder holds:
 | `report.json` | the whole run, for programs |
 | `snapshots/` | the raw data collected for each domain |
 
-`--format` chooses which of the first four are written (`html`, `csv`, `json`, default all three
-formats); snapshots are always written. `--lang en|sr` sets the language of the report and its
+`--format` chooses which of the first four are written (`html`, `csv`, `json` or several separated
+by commas, e.g. `--format html,json`; default all three formats). Case and spaces do not matter, and
+any other name is an error before anything runs. Snapshots are always written. `--lang en|sr` sets the language of the report and its
 sentences. Without it the tool uses `report.lang`: `en` by default, `sr` with the `rs` profile.
 `--csv-bom` writes the CSV files as UTF-8 with a BOM, for Excel.
 
@@ -279,7 +293,9 @@ difference in a second, without downloading two hundred sites again. Try thresho
 file that holds only what you change: `--config` overrides only what it sets.
 
 `scan` also takes `--level 1|2|auto`, `--max-level2 N` (the cap for level 2, default 60),
-`--snapshots DIR`, `--exclude FILE` and `--debug-domain DOMAIN` (DEBUG log for that domain only).
+`--snapshots DIR`, `--exclude FILE` and `--debug-domain DOMAIN` (DEBUG log for that domain only: every
+request with its status or error, time, redirect hops and whether the body was cut off, and on level
+2 the navigation, `load` and the measured requests and bytes).
 Run `sitetriage <command> --help` for the full list.
 
 ## How it works

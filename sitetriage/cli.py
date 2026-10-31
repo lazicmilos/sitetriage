@@ -109,6 +109,25 @@ def _int_at_least(minimum: int):
     return parse
 
 
+FORMATS = ("html", "csv", "json")
+
+
+def _formats(text: str) -> list[str]:
+    """argparse type for `--format`: a comma-separated, non-empty subset of `FORMATS`.
+
+    Spaces around a name and case do not matter. Anything else is an error: a typo used to write
+    no report at all and still end with "output in out/" (BUG-07).
+    """
+    names = [name.strip().lower() for name in text.split(",")]
+    unknown = [name for name in names if name not in FORMATS]
+    if unknown:
+        shown = ", ".join(repr(name) for name in unknown)
+        raise argparse.ArgumentTypeError(
+            f"unknown format {shown}; give one or more of {', '.join(FORMATS)}, separated by commas"
+        )
+    return list(dict.fromkeys(names))
+
+
 def read_domains(path: Path, only: Sequence[str] = ()) -> list[DomainInput]:
     """The list from a file (`sitetriage.inputs`); warnings go to the log, `--only` narrows the list."""
     rows, warnings = read_domain_list(Path(path).read_bytes(), str(path))
@@ -169,7 +188,7 @@ def _emit(result: ScanResult, config: dict, args: argparse.Namespace) -> None:
     reports = result.ranked + result.unreachable + result.not_scanned
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    formats = {f.strip() for f in args.format.split(",") if f.strip()}
+    formats = set(args.format)
     lang = args.lang or get(config, "report.lang")
 
     if "csv" in formats:
@@ -297,7 +316,11 @@ def build_parser() -> argparse.ArgumentParser:
         add_config(sub)
         sub.add_argument("--out", default="out", metavar="DIR", help="where reports go (default: out)")
         sub.add_argument(
-            "--format", default="html,csv,json", help="html, csv, json or several (default: all three)"
+            "--format",
+            type=_formats,
+            default=list(FORMATS),
+            metavar="LIST",
+            help="html, csv, json or several separated by commas (default: all three)",
         )
         sub.add_argument("--csv-bom", action="store_true", help="UTF-8 with a BOM, for Excel")
         sub.add_argument(

@@ -6,6 +6,45 @@ finding, the JSON) raises the major version.
 
 ## Unreleased
 
+Fixes from an independent test of 3.0.0. A config that 3.0.0 accepted can now fail: an unknown key
+or section, or a value of the wrong type or range, is an error that names the key, where 3.0.0
+silently ignored it or crashed later.
+
+### Fixed
+
+- When Chromium does not start (the `browser` extra without `playwright install chromium`), level 2
+  and light level 2 are skipped with one error that names the fix, and every report is written.
+  Before, the run crashed after level 1 and wrote no report.
+- The same site written two ways (`x.example`, `https://x.example/`, `www.x.example`, `x.example.`,
+  a default port) is scanned once; the first row wins and the warning names it. A path stays part
+  of the entry, so `x.example/en` and `x.example/sr` are still two rows.
+- Header names of the domain list ignore surrounding spaces and case (`domain, industry, note`,
+  `Domain,Industry` from Excel). Before, a space after the comma silently scored every row as
+  `other`. An unknown column is now a warning.
+- Two domain strings never share a snapshot folder any more, so `recheck` no longer loses a domain.
+  A name that has to be cleaned gets a short hash (`http_127.0.0.1_8123~1a2b3c4d`); clean names are
+  unchanged. A snapshot of another domain is never overwritten. When you reuse a 3.0.0 output
+  folder, such a domain can end up in two folders; use a new output folder.
+- A `sitetriage.toml` in the working directory is no longer read implicitly; the packaged defaults
+  are always the base, and `--config sitetriage.toml` is merged like any other file. Before, a
+  partial file there failed with `severity_points.critical is missing`, and a complete copy
+  replaced the defaults without a word.
+- Every config value is checked against the type and range of its default (numbers, `delay_ms` as
+  `[min, max]`, timeouts > 0, severity tiers in order), and a mistyped key or section fails with a
+  "did you mean". Before, `severity_points.high = "lots"` crashed, a negative value inverted the
+  ranking and `delay_ms = [500]` failed every domain with exit code 0.
+- The link probe before level 2 (`network_profile.probe_url`) goes through the same address check
+  as level 1, so it never opens a private address that is not in `[net] allowed_private`.
+- A host whose last label is a number (`0177.0.0.1`, `127.1`, `2130706433`) is refused as an IP
+  address, and a domain whose fetch crashed carries the cause in the report instead of an empty
+  `entry_missing`. A refused connection names `host:port`.
+- An unknown `--format` (`pdf`, an empty value) is an argument error; names are case-insensitive.
+  Before, nothing was written and the run exited with 0.
+- `recheck` of a missing folder, a file or a corrupt snapshot prints one line that names the path,
+  not a traceback.
+- `--debug-domain` now logs every request of that domain (URL, status or error, time, redirects)
+  and the level-2 milestones; before it logged nothing.
+
 ## 3.0.0 — 2026-10-31
 
 The first release as SiteTriage, open source under the MIT license. The interface, the code and
@@ -28,7 +67,7 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
   from PyPI finds its defaults; before, they were found only in the working directory or at the
   repository root. There is no `sitetriage.toml` at the repository root any more: change defaults
   in `sitetriage/sitetriage.toml`, or keep your changes in a `--config` file that is merged over
-  them. A complete `sitetriage.toml` in the working directory still replaces the defaults.
+  them. (Since the release after 3.0.0, a `sitetriage.toml` in the working directory is read only through `--config`.)
 - `[identitet]` with `naziv`, `kontakt` and `izuzeti` is now `[operator]` with `name`, `contact` and
   `exclude_file`. A config that still has `[identitet]` fails and names the new keys. The
   `http.user_agent` placeholders are `{version}`, `{contact}` and `{name}`.
