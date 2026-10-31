@@ -47,8 +47,8 @@ def _seconds_on_mobile(mb: float, ctx: Context) -> float:
     # low, not medium: the saving on the HTML alone is tenths of a second (docs/izvestaj-testiranja-100.md).
     base_severity="low",
     requires=["home"],
-    description="Server ne šalje HTML kompresovan.",
-    threshold="content-encoding ∉ {gzip, br, zstd, deflate} i HTML > 50 kB",
+    description="The server does not send the HTML compressed.",
+    threshold="content-encoding ∉ {gzip, br, zstd, deflate} and HTML > 50 kB",
 )
 def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
@@ -79,8 +79,8 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     category="perf",
     base_severity="low",
     requires=["entry_response"],
-    description="Početna se otvara kroz niz preusmerenja.",
-    threshold="broj skokova ≥ thresholds.perf.redirect_hops (3)",
+    description="The home page opens through a chain of redirects.",
+    threshold="number of hops ≥ thresholds.perf.redirect_hops (3)",
 )
 def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
     chain = snapshot.entry.redirect_chain
@@ -101,7 +101,7 @@ def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
     category="perf",
     base_severity="low",
     requires=["home"],
-    description="Sam HTML dokument je prevelik.",
+    description="The HTML document itself is too large.",
     threshold="html_bytes > thresholds.perf.html_size_kb (500 kB)",
 )
 def html_size(snapshot: SiteSnapshot, ctx: Context):
@@ -131,8 +131,8 @@ def html_size(snapshot: SiteSnapshot, ctx: Context):
     category="perf",
     base_severity="critical",
     requires=["network", "v2:network.bytes_at_load"],
-    description="Težina početne strane: šta se prenese za zahteve započete do događaja `load`.",
-    threshold="preneto do load, bez videa: > 2 MB medium · > 4 MB high · > 7 MB critical",
+    description="Weight of the home page: what is transferred for requests started before the `load` event.",
+    threshold="transferred until load, without video: > 2 MB medium · > 4 MB high · > 7 MB critical",
 )
 def page_weight(snapshot, ctx: Context):
     network = snapshot.network
@@ -185,8 +185,8 @@ def page_weight(snapshot, ctx: Context):
     category="perf",
     base_severity="high",
     requires=["network", "v2:network.requests_at_load"],
-    description="Broj mrežnih zahteva započetih do događaja `load` pri otvaranju početne.",
-    threshold="zahtevi do load: > 60 medium · > 90 high",
+    description="Number of network requests started before the `load` event when opening the home page.",
+    threshold="requests until load: > 60 medium · > 90 high",
 )
 def request_count(snapshot, ctx: Context):
     count = snapshot.network.requests_at_load
@@ -218,9 +218,9 @@ def request_count(snapshot, ctx: Context):
     # (ADR-018).
     requires=["browser", "level2_full", "network_profile", "link"],
     description=(
-        "Vreme do potpunog učitavanja početne, na simuliranoj vezi iz `[network_profile]`."
+        "Time until the home page has fully loaded, on the simulated connection from `[network_profile]`."
     ),
-    threshold="> 6 s medium · > 9 s high · prekid posle tvrdog limita = high",
+    threshold="> 6 s medium · > 9 s high · cut off after the hard limit = high",
 )
 def load_time(snapshot, ctx: Context):
     required = ctx.th("network_profile.min_link_ratio") * snapshot.network_profile.download_mbps
@@ -269,10 +269,10 @@ def load_time(snapshot, ctx: Context):
     category="perf",
     base_severity="medium",
     requires=["browser"],
-    description="Slike se šalju znatno veće nego što se prikazuju.",
+    description="Images are sent much larger than they are displayed.",
     threshold=(
-        "≥ 3 slike sa odnosom > 2,5 i izmerenim viškom, ili procenjen višak > 700 kB; "
-        "SVG i data: slike se ne broje"
+        "≥ 3 images with a ratio > 2.5 and measured waste, or estimated waste > 700 kB; "
+        "SVG and data: images do not count"
     ),
 )
 def img_oversized(snapshot, ctx: Context):
@@ -322,7 +322,7 @@ def img_oversized(snapshot, ctx: Context):
     category="qa",
     base_severity="low",
     requires=["browser"],
-    description="Greške u konzoli: skripte i delovi strane koji se nisu učitali.",
+    description="Console errors: scripts and parts of the page that did not load.",
     threshold="> thresholds.qa.console_errors (3)",
 )
 def console_errors(snapshot, ctx: Context):

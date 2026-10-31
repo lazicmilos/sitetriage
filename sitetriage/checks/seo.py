@@ -86,8 +86,8 @@ def _duplicates(
     category="seo",
     base_severity="high",
     requires=["home", "home_complete"],
-    description="Početna strana nema <link rel=canonical>.",
-    threshold="nema oznake na početnoj",
+    description="The home page has no <link rel=canonical>.",
+    threshold="no tag on the home page",
 )
 def canonical_missing(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
@@ -108,12 +108,12 @@ def canonical_missing(snapshot: SiteSnapshot, ctx: Context):
     base_severity="critical",
     requires=["home", "home_complete"],
     description=(
-        "Više stranica iz različitih delova sajta upućuje canonical-om na istu drugu adresu. "
-        "Stranica koja upućuje na sebe, ili na svoju `http` ili `www` verziju, se ne broji."
+        "Several pages from different parts of the site point their canonical to the same other URL. "
+        "A page that points to itself, or to its own `http` or `www` version, does not count."
     ),
     threshold=(
-        "≥ 2 stranice sa tuđim canonical-om ka istoj adresi, iz ≥ 2 grupe putanja; udeo u uzorku "
-        "≥ 0,4 high · ≥ 0,6 critical · inače medium"
+        "≥ 2 pages with a foreign canonical to the same URL, from ≥ 2 path groups; share of the sample "
+        "≥ 0.4 high · ≥ 0.6 critical · otherwise medium"
     ),
 )
 def canonical_duplicate(snapshot: SiteSnapshot, ctx: Context):
@@ -160,8 +160,8 @@ def canonical_duplicate(snapshot: SiteSnapshot, ctx: Context):
     category="seo",
     base_severity="high",
     requires=["home", "home_complete"],
-    description="Početna strana nema <title> ili je prazan.",
-    threshold="prazan ili nepostojeći <title>",
+    description="The home page has no <title>, or it is empty.",
+    threshold="empty or missing <title>",
 )
 def title_missing(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
@@ -182,8 +182,8 @@ def title_missing(snapshot: SiteSnapshot, ctx: Context):
     category="seo",
     base_severity="high",
     requires=["home", "home_complete"],
-    description="Više stranica iz različitih delova sajta ima identičan naslov.",
-    threshold="≥ 3 stranice iz ≥ 3 različite grupe putanja sa istim naslovom",
+    description="Several pages from different parts of the site have an identical title.",
+    threshold="≥ 3 pages from ≥ 3 different path groups with the same title",
 )
 def title_duplicate(snapshot: SiteSnapshot, ctx: Context):
     if few := _too_few_pages(snapshot, ctx, title_duplicate.spec):
@@ -214,8 +214,8 @@ def title_duplicate(snapshot: SiteSnapshot, ctx: Context):
     category="seo",
     base_severity="medium",
     requires=["home", "home_complete"],
-    description="Početna strana nema <meta name=description>.",
-    threshold="prazan ili nepostojeći meta opis",
+    description="The home page has no <meta name=description>.",
+    threshold="empty or missing meta description",
 )
 def description_missing(snapshot: SiteSnapshot, ctx: Context):
     home = snapshot.home
@@ -235,8 +235,8 @@ def description_missing(snapshot: SiteSnapshot, ctx: Context):
     category="seo",
     base_severity="medium",
     requires=["home", "home_complete"],
-    description="Više stranica iz različitih delova sajta ima identičan meta opis.",
-    threshold="≥ 3 stranice iz ≥ 3 različite grupe putanja sa istim opisom",
+    description="Several pages from different parts of the site have an identical meta description.",
+    threshold="≥ 3 pages from ≥ 3 different path groups with the same description",
 )
 def description_duplicate(snapshot: SiteSnapshot, ctx: Context):
     if few := _too_few_pages(snapshot, ctx, description_duplicate.spec):
@@ -269,8 +269,8 @@ def description_duplicate(snapshot: SiteSnapshot, ctx: Context):
     category="seo",
     base_severity="high",
     requires=["browser"],
-    description="Nacrtana stranica nema nijedan <h1>.",
-    threshold="h1_count == 0 posle učitavanja u browseru",
+    description="The rendered page has no <h1>.",
+    threshold="h1_count == 0 after loading in the browser",
 )
 def h1_missing(snapshot, ctx: Context):
     if snapshot.dom.h1_count > 0:
@@ -291,7 +291,7 @@ def h1_missing(snapshot, ctx: Context):
     category="seo",
     base_severity="low",
     requires=["browser"],
-    description="Stranica ima previše <h1> naslova.",
+    description="The page has too many <h1> headings.",
     threshold="h1_count > thresholds.seo.h1_multiple (3)",
 )
 def h1_multiple(snapshot, ctx: Context):

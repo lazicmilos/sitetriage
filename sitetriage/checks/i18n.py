@@ -81,8 +81,8 @@ def _lang_usable(lang: str | None) -> bool:
     category="i18n",
     base_severity="medium",
     requires=["home"],
-    description="<html> nema atribut lang.",
-    threshold="atribut lang ne postoji",
+    description="<html> has no lang attribute.",
+    threshold="the lang attribute does not exist",
 )
 def lang_missing(snapshot: SiteSnapshot, ctx: Context):
     lang, _, _, source = _page_state(snapshot, ctx)
@@ -108,8 +108,8 @@ def lang_missing(snapshot: SiteSnapshot, ctx: Context):
     category="i18n",
     base_severity="medium",
     requires=["home"],
-    description="Atribut lang postoji ali ne označava nijedan jezik.",
-    threshold="lang ∈ {zxx, und, prazno} ili ne parsira kao BCP-47",
+    description="The lang attribute exists but names no language.",
+    threshold="lang ∈ {zxx, und, empty} or does not parse as BCP-47",
 )
 def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
     lang, _, _, source = _page_state(snapshot, ctx)
@@ -138,10 +138,10 @@ def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
     # so the consequence is accessibility, not search ranking (ADR-022).
     base_severity="medium",
     requires=["home"],
-    description="Sadržaj je pouzdano srpski, a lang oznaka govori drugo.",
+    description="The content is reliably Serbian, but the lang tag says otherwise.",
     threshold=(
-        "sadržaj prepoznat kao sr (ćirilica > 30 % ili dijakritici > 0,5 %) "
-        "uz lang jezika koji se ne piše ćirilicom ni sa č/ć/š/ž/đ (nije sr, hr, bs, ru, mk, bg…)"
+        "content detected as sr (Cyrillic > 30 % or diacritics > 0.5 %) "
+        "with the lang of a language not written in Cyrillic or with č/ć/š/ž/đ (not sr, hr, bs, ru, mk, bg…)"
     ),
 )
 def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
