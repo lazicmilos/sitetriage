@@ -2,6 +2,11 @@
 # This file is also the default configuration: `--config` is merged over it,
 # so a partial user configuration keeps all the other thresholds.
 
+# A profile shipped with the package (sitetriage/profiles/<name>.toml) is merged between these
+# defaults and your --config file (ADR-023). Choose it here, in your own --config file, or with
+# `--profile NAME`, which wins. Empty = no profile. `rs` turns on Serbian content detection.
+profile = ""
+
 [operator]
 # Who is scanning. Every administrator sees this in their server log, so it must be
 # the operator (whoever runs the tool), not the author of the tool. Without both fields
@@ -113,7 +118,11 @@ compression_min_kb = 50
 redirect_hops = 3
 
 [thresholds.i18n]
+# Content languages `i18n.lang.mismatch` detects; empty = the check is not applicable (ADR-023).
+# Known: "sr". A profile turns detection on, e.g. `--profile rs`.
+content_languages = []
 min_text_length = 400
+# The two ratios below are used only by the `sr` detector, so they matter only with "sr" above.
 cyrillic_ratio = 0.30
 diacritic_ratio = 0.005         # Serbian in Latin script has 2–5 %, English 0 %
 

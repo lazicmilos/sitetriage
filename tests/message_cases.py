@@ -54,7 +54,8 @@ def _findings(level: int, snapshot: Any, industry: str = "other") -> list[Findin
 
 def finding_cases() -> Iterator[tuple[str, Finding]]:
     registry.load_all()
-    for name, config in (("spec", spec_config()), ("toml", load_config())):
+    # "toml" is the shipped config with the `rs` profile: the fixtures are Serbian sites (ADR-023).
+    for name, config in (("spec", spec_config()), ("toml", load_config(profile="rs"))):
         for site, browser in store.read_all(FIXTURES):
             for f in analyze(site, config, browser=browser).findings:
                 yield f"ispitni/{name}/{site.domain}", f

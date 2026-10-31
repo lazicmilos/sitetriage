@@ -17,7 +17,7 @@ from pathlib import Path
 
 from sitetriage import __version__, pipeline
 from sitetriage.checks import registry
-from sitetriage.config import ConfigError, get, load_config
+from sitetriage.config import ConfigError, available_profiles, get, load_config
 from sitetriage.inputs import InputError, read_domain_list, read_exclusions
 from sitetriage.messages import LANGS, catalog, templates
 from sitetriage.models import DomainInput, Event, ScanResult
@@ -29,6 +29,7 @@ EXAMPLES = """
 examples:
   sitetriage scan domains.example.csv --out report/
   sitetriage scan domains.csv --level 1 --concurrency 4 --only institution.example
+  sitetriage scan domains.csv --profile rs --out report/   # sites in Serbia: Serbian content detection
   sitetriage recheck snapshots/ --out report/          # no network, for calibrating thresholds
   sitetriage record my-domains.csv --out snapshots/
   sitetriage explain seo.canonical.duplicate
@@ -138,7 +139,7 @@ def read_excluded(config: dict, args: argparse.Namespace) -> list[str]:
 # scan
 # --------------------------------------------------------------------------- #
 def cmd_scan(args: argparse.Namespace) -> int:
-    config = load_config(args.config)
+    config = load_config(args.config, profile=args.profile)
     if args.concurrency:
         # Both together: more domains in progress than slots would mean a domain's budget
         # runs again while it waits in the queue.
@@ -186,7 +187,8 @@ def _emit(result: ScanResult, config: dict, args: argparse.Namespace) -> None:
         json_out.write(out / "report.json", result)
 
     findings = sum(len(r.findings) for r in reports)
-    print(f"\n{len(reports)} domains · {findings} findings · output in {out}/", file=sys.stderr)
+    profile = f"profile {result.profile}" if result.profile else "no profile"
+    print(f"\n{len(reports)} domains · {findings} findings · {profile} · output in {out}/", file=sys.stderr)
     for report in result.ranked[:10]:
         top = report.findings[0].check_id if report.findings else "—"
         print(
@@ -200,7 +202,7 @@ def _emit(result: ScanResult, config: dict, args: argparse.Namespace) -> None:
 # recheck: the main calibration tool
 # --------------------------------------------------------------------------- #
 def cmd_recheck(args: argparse.Namespace) -> int:
-    config = load_config(args.config)
+    config = load_config(args.config, profile=args.profile)
     _emit(pipeline.recheck(Path(args.snapshots), config, on_event=log_event), config, args)
     return 0
 
@@ -209,7 +211,7 @@ def cmd_recheck(args: argparse.Namespace) -> int:
 # record: records fixtures (tests/fixtures/README.md)
 # --------------------------------------------------------------------------- #
 def cmd_record(args: argparse.Namespace) -> int:
-    config = load_config(args.config)
+    config = load_config(args.config, profile=args.profile)
     targets = read_domains(Path(args.domains), args.only)
     out = Path(args.out)
     excluded = read_excluded(config, args)
@@ -276,10 +278,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"sitetriage {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    def add_common(sub: argparse.ArgumentParser) -> None:
+    def add_config(sub: argparse.ArgumentParser) -> None:
         sub.add_argument(
             "--config", metavar="FILE", help="TOML merged over the default config (sitetriage.toml)"
         )
+        sub.add_argument(
+            "--profile",
+            metavar="NAME",
+            help=(
+                "profile merged between the defaults and --config, e.g. rs (Serbian content detection); "
+                "wins over `profile` in --config, an empty NAME means none; "
+                f"available: {', '.join(available_profiles())}"
+            ),
+        )
+
+    def add_common(sub: argparse.ArgumentParser) -> None:
+        add_config(sub)
         sub.add_argument("--out", default="out", metavar="DIR", help="where reports go (default: out)")
         sub.add_argument(
             "--format", default="html,csv,json", help="html, csv, json or several (default: all three)"
@@ -325,7 +339,7 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--level", choices=["1", "2", "auto"], default="auto")
     record.add_argument("--only", action="append", default=[], metavar="DOMAIN")
     record.add_argument("--exclude", metavar="FILE")
-    record.add_argument("--config", metavar="FILE")
+    add_config(record)
     record.add_argument("--debug-domain", metavar="DOMAIN")
     record.set_defaults(func=cmd_record)
 

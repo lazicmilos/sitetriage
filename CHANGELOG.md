@@ -58,9 +58,29 @@ mapping is in [ADR-012](docs/adr/ADR-012-english-public-interface.md).
 - The User-Agent starts with `SiteTriage/` instead of `MlazicSiteScanner/`, on level 1 and at the
   end of the browser UA on level 2. If you filter logs or make exceptions by the old name, change
   them.
+- `i18n.lang.mismatch` is off unless a profile turns it on. Its content detector only recognises
+  Serbian, so on sites from other countries it could report false findings: Croatian content with
+  `lang="en"`, for example, came out as Serbian. Without a profile the check is `not_applicable` with the reason
+  `no_content_language`, so it no longer makes a domain `partial` and it is left out of
+  `unknown_share`. To keep the old behaviour, run with `--profile rs`
+  ([ADR-023](docs/adr/ADR-023-profiles.md)).
+- Profiles: settings for one market that ship with the package in `sitetriage/profiles/`, merged
+  between the defaults and `--config`. Choose one with `--profile NAME` on `scan`, `recheck` and
+  `record`, or with a top-level `profile = "NAME"` in your `--config` file; the flag wins. An
+  unknown name fails and lists the available profiles. The first profile, `rs`, turns on Serbian
+  content detection with the new key `thresholds.i18n.content_languages = ["sr"]`, which is `[]` in
+  the defaults.
+- `report.json` has a new required field `profile`, the profile the run used (`"rs"` or `null`),
+  after `config_digest`. It was added to `report-3.json` directly, because 3.0 is not released;
+  `schema_version` stays `3.0`. The HTML report header and the summary line at the end of a run name
+  the profile too.
+- `config_digest` changes, because of the new key `thresholds.i18n.content_languages`. It depends on
+  the values a profile sets, not on the profile's name.
 
 ### Changed
 
+- The live tests take a profile from `SITETRIAGE_LIVE_PROFILE`, and `scripts/metrics.py` takes
+  `--profile NAME`, so runs over Serbian lists keep `i18n.lang.mismatch`.
 - In the report, the text that comes with each site is a "suggested text", not a "draft email": it
   can serve for a message, a call or a contact form. The text itself is the same.
 - The documentation is in English. The Serbian test reports, calibration log, test plan and quality
