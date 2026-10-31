@@ -10,12 +10,18 @@ jobs:
     # Samo offline sloj: `live` testovi bi padali kad nekom sajtu istekne
     # sertifikat, a to nije greška u alatu (§12.1).
     runs-on: ubuntu-latest
+    strategy:
+      # A failure on one version does not cancel the others, so it shows whether it is version-specific.
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    name: offline (Python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Instaliraj
@@ -32,6 +38,8 @@ jobs:
         run: pytest -q --cov=skener --cov-branch --cov-report=term --cov-fail-under=95
 
       - name: Tabela provera se ne razilazi sa README-om
+        # The registry does not depend on the Python version, so one run is enough.
+        if: matrix.python-version == '3.11'
         run: |
           skener explain --all --markdown > /tmp/registar.md
           while IFS= read -r red; do
