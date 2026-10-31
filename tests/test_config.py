@@ -208,7 +208,7 @@ def test_neispravan_toml_puca_i_imenuje_fajl(tmp_path):
 
 
 def test_nepostojeci_config_fajl_puca(tmp_path):
-    with pytest.raises(ConfigError, match="ne postoji"):
+    with pytest.raises(ConfigError, match="does not exist"):
         load_config(tmp_path / "nema.toml")
 
 

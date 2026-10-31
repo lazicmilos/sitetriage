@@ -23,7 +23,7 @@ def test_cita_csv_sa_zaglavljem():
 
 
 def test_csv_bez_kolone_domain_puca_razumljivo():
-    with pytest.raises(InputError, match="red 1: nedostaje kolona `domain`"):
+    with pytest.raises(InputError, match="row 1: the header has no `domain` column"):
         procitaj("sajt,industry\na.rs,hotel\n")
 
 

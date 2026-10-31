@@ -103,7 +103,7 @@ def test_ne_primenjuje_se_ne_pravi_partial():
 
 
 def test_not_applicable_bez_razloga_je_bug():
-    with pytest.raises(ValueError, match="bez `reason`"):
+    with pytest.raises(ValueError, match="without a `reason`"):
         CheckResult(check_id="seo.title.duplicate", status="not_applicable")
 
 

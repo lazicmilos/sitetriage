@@ -54,7 +54,7 @@ def test_unknown_bez_razloga_je_bug():
 
 
 def test_finding_bez_nalaza_je_bug():
-    with pytest.raises(ValueError, match="bez ijednog nalaza"):
+    with pytest.raises(ValueError, match="without a single finding"):
         CheckResult(check_id="seo.title.missing", status="finding")
 
 
@@ -66,7 +66,7 @@ def test_ok_sa_nalazom_je_bug():
         category="seo",
         severity="high",
     )
-    with pytest.raises(ValueError, match="status nije"):
+    with pytest.raises(ValueError, match="status is not"):
         CheckResult(check_id="seo.title.missing", status="ok", findings=[finding])
 
 

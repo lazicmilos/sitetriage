@@ -1,8 +1,8 @@
-"""Šeme podataka (§3) i serijalizacija bez gubitka.
+"""Data schemas and lossless serialization.
 
-Modul je čist: bez mreže, bez diska. Sve šeme su `dataclass`-ovi, a `to_jsonable`
-i `from_dict` rade generički nad anotacijama tipova, pa dodavanje polja u šemu ne
-traži ručno pisanje (de)serijalizacije.
+The module is pure: no network, no disk. Every schema is a `dataclass`, and `to_jsonable`
+and `from_dict` work generically over the type annotations, so adding a field to a schema
+needs no hand-written (de)serialization.
 """
 
 from __future__ import annotations
@@ -17,16 +17,18 @@ from sitetriage import __version__
 
 Severity = Literal["critical", "high", "medium", "low"]
 Category = Literal["seo", "social", "i18n", "infra", "perf", "a11y", "qa"]
-# `not_applicable`: provera nema šta da proveri na ovom sajtu (Z-21); razlog je obavezan.
+# `not_applicable`: the check has nothing to check on this site; a reason is required (ADR-015).
 CheckStatus = Literal["ok", "finding", "unknown", "not_applicable"]
 Industry = Literal[
     "hotel", "restaurant", "healthcare", "ecommerce", "b2b", "institution", "other"
 ]
-# `unreachable`: sajt se ne otvara ni posle drugog pokušaja, pa ide u listu „Ne rade" (Z-20).
-# `excluded`: administrator je tražio da se sajt ne skenira; u izveštaju je samo njihov broj.
+# `unreachable`: the site does not open even after a second attempt, so it goes to the
+# "unreachable" list (ADR-013).
+# `excluded`: the administrator asked for the site not to be scanned; the report shows only
+# how many there are.
 DomainStatus = Literal["scanned", "partial", "failed", "unreachable", "excluded"]
 
-# JSON izveštaj: dodato polje podiže drugi broj, a obrisano ili promenjeno prvi (README).
+# JSON report: an added field raises the minor number, a removed or changed one the major (ADR-011).
 SCHEMA_VERSION = "3.0"
 SEVERITY_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 INDUSTRIES: tuple[str, ...] = typing.get_args(Industry)
@@ -34,10 +36,10 @@ CATEGORIES: tuple[str, ...] = typing.get_args(Category)
 
 
 # --------------------------------------------------------------------------- #
-# Generička (de)serijalizacija
+# Generic (de)serialization
 # --------------------------------------------------------------------------- #
 def to_jsonable(obj: Any) -> Any:
-    """Pretvara dataclass stablo u strukturu koju `json.dump` ume da zapiše."""
+    """Turns a dataclass tree into a structure that `json.dump` can write."""
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return {f.name: to_jsonable(getattr(obj, f.name)) for f in dataclasses.fields(obj)}
     if isinstance(obj, dict):
@@ -73,7 +75,7 @@ def _coerce(tp: Any, value: Any) -> Any:
 
 
 def from_dict(cls: Any, data: dict[str, Any]) -> Any:
-    """Rekonstruiše dataclass iz rečnika; nepoznata polja se ignorišu."""
+    """Rebuilds a dataclass from a dict; unknown fields are ignored."""
     hints = typing.get_type_hints(cls)
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(cls):
@@ -84,7 +86,7 @@ def from_dict(cls: Any, data: dict[str, Any]) -> Any:
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 1 — SiteSnapshot (§3.1, §3.2)
+# Level 1: SiteSnapshot
 # --------------------------------------------------------------------------- #
 @dataclass
 class Tls:
@@ -94,7 +96,7 @@ class Tls:
 
 @dataclass
 class Entry:
-    """Dohvatanje početne strane: ono što se zna i kad stranica nije stigla."""
+    """The fetch of the home page: what is known even when the page did not arrive."""
 
     requested_url: str
     final_url: str | None = None
@@ -108,7 +110,7 @@ class Entry:
 
 @dataclass
 class HostVariant:
-    """Jedna od preostale tri adrese konačnog porekla (http/https × www/bez www), Z-26."""
+    """One of the other three URLs of the final origin (http/https × www/without www), ADR-014."""
 
     url: str
     status: int | None = None
@@ -158,8 +160,8 @@ class PageSnapshot:
     elapsed_ms: int | None = None
     headers: dict[str, str] = field(default_factory=dict)
     html_bytes: int = 0
-    # Telo duže od `http.max_body_kb`: pročitan je samo početak, pa je `html_bytes` donja granica,
-    # a provera koja čita ceo HTML ne zna šta je posle granice.
+    # Body longer than `http.max_body_kb`: only the start was read, so `html_bytes` is a lower bound,
+    # and a check that reads the whole HTML does not know what comes after the limit.
     truncated: bool = False
     title: str | None = None
     meta_description: str | None = None
@@ -171,7 +173,7 @@ class PageSnapshot:
     h1_count_raw: int = 0
     text_sample: str = ""
     text_length: int = 0
-    raw_html: str | None = None  # samo za početnu stranu (§3.2)
+    raw_html: str | None = None  # home page only; otherwise snapshots grow
     error_kind: str | None = None
     error_detail: str | None = None
 
@@ -203,7 +205,7 @@ class SnapshotError:
 
 @dataclass
 class Budget:
-    """Potrošnja tvrdog budžeta po domenu (§4.2)."""
+    """Use of the hard per-domain budget (requests and seconds from `[http]`)."""
 
     max_requests: int = 0
     requests_made: int = 0
@@ -226,44 +228,45 @@ class SiteSnapshot:
     sample_source: Literal["sitemap", "links", "none"] = "none"
     budget: Budget = field(default_factory=Budget)
     errors: list[SnapshotError] = field(default_factory=list)
-    # Kad je ulaz pokušan, u UTC-u. Drugi pokušaj postoji samo kad je prvi izgledao kao da sajt
-    # ne radi (Z-20); snapshot je tada iz drugog.
+    # When the entry was attempted, in UTC. A second attempt exists only when the first looked
+    # like the site is unreachable (ADR-013); the snapshot then comes from the second.
     entry_attempts: list[str] = field(default_factory=list)
-    # Interne veze iz sirovog HTML-a početne (do 200); provera duplikata broji adrese sajta (Z-21).
+    # Internal links from the raw HTML of the home page (up to 200); the duplicate checks count
+    # the site's URLs (ADR-015).
     home_links: list[str] = field(default_factory=list)
-    # `None` = nisu dohvatane: snimak iz vremena pre Z-26, ulaz sa IP adresom ili portom, ili
-    # početna nije stigla.
+    # `None` = not fetched: a snapshot from before host canonicalization (ADR-014), an entry with
+    # an IP address or a port, or the home page did not arrive.
     host_variants: list[HostVariant] | None = None
 
     @property
     def home(self) -> PageSnapshot | None:
-        """Početna strana je po konstrukciji prva u uzorku."""
+        """The home page is first in the sample by construction."""
         return self.pages[0] if self.pages else None
 
     def entry_unreachable(self) -> str | None:
-        """`dns` ili `no_response` kad ovaj pokušaj ulaza pokazuje da sajt ne radi, inače `None`.
+        """`dns` or `no_response` when this entry attempt shows the site is unreachable, else `None`.
 
-        Sigurno je samo ovo: ime ne postoji u DNS-u ili nema adresu, ili TCP veza nije
-        uspostavljena ni na https ni na http. Privremen DNS, prekinuto TLS rukovanje, bilo kakav
-        HTTP odgovor i blokada privatne adrese to nisu, jer sajt možda radi, samo ga mi nismo
-        videli (Z-20).
+        Only this is certain: the name does not exist in DNS or has no address, or no TCP
+        connection was established over either https or http. A temporary DNS failure, a broken
+        TLS handshake, any HTTP response and a blocked private address are not, because the site
+        may be working and we just did not see it (ADR-013).
         """
         entry = self.entry
         if entry is None or entry.status is not None:
             return None
         if entry.error_kind in ("dns_nxdomain", "dns_nodata"):
             return "dns"
-        sheme = [e.kind for e in self.errors if e.stage == "entry"]
-        return "no_response" if sheme == ["no_connection", "no_connection"] else None
+        schemes = [e.kind for e in self.errors if e.stage == "entry"]
+        return "no_response" if schemes == ["no_connection", "no_connection"] else None
 
 
 # --------------------------------------------------------------------------- #
-# Nivo 2 — BrowserSnapshot (§3.3)
+# Level 2: BrowserSnapshot
 # --------------------------------------------------------------------------- #
 @dataclass
 class NetworkStats:
-    """Mrežni saobraćaj početne. Prag i rečenica za klijenta gledaju samo zahteve započete
-    pre `load` glavnog dokumenta (Z-24); ukupne vrednosti su informativne.
+    """Network traffic of the home page. The threshold and the client sentence look only at
+    requests started before the main document's `load` (ADR-016); the totals are informative.
     """
 
     request_count: int = 0
@@ -300,16 +303,17 @@ class DomStats:
     images_empty_alt: int = 0
     oversized_images: list[OversizedImage] = field(default_factory=list)
     images_unmeasured: int = 0
-    # Interne veze iz renderovanog DOM-a (do 200) i koliko ih ima; `None` = nisu beležene (1.x).
+    # Internal links from the rendered DOM (up to 200) and how many there are; `None` = not recorded (1.x).
     internal_links: list[str] = field(default_factory=list)
     internal_links_total: int | None = None
-    # Stranica kakvu čita čitač ekrana (Z-25): `lang` i vidljiv tekst posle JS-a, do 4000 znakova.
-    # `text_length` je `None` kad nisu beleženi (1.x).
+    # The page as a screen reader reads it (ADR-017): `lang` and the visible text after JS, up to
+    # 4000 characters. `text_length` is `None` when they were not recorded (1.x).
     lang: str | None = None
     text_sample: str = ""
     text_length: int | None = None
-    # `<head>` posle JS-a; nivo 1 ih čita iz sirovog HTML-a. Za sada samo beleženje: koliko sajtova
-    # ih postavlja JavaScript-om, pa bi seo.*.missing bio lažan. `None` = nisu beleženi, "" = nema ih.
+    # `<head>` after JS; level 1 reads these from the raw HTML. Recorded only, for now: to see how
+    # many sites set them with JavaScript, which would make seo.*.missing false. `None` = not
+    # recorded, "" = absent.
     title: str | None = None
     meta_description: str | None = None
     canonical: str | None = None
@@ -324,7 +328,7 @@ class ConsoleStats:
 
 @dataclass
 class NetworkProfile:
-    """Simulirana veza pod kojom nivo 2 meri (Z-30): isti broj na svakoj mašini."""
+    """The simulated connection level 2 measures under (ADR-010): the same number on every machine."""
 
     download_mbps: float
     upload_mbps: float
@@ -344,19 +348,21 @@ class BrowserSnapshot:
     dom: DomStats = field(default_factory=DomStats)
     console: ConsoleStats = field(default_factory=ConsoleStats)
     errors: list[SnapshotError] = field(default_factory=list)
-    # `None`: snimak pre Z-30, meren na stvarnoj vezi
+    # `None`: a snapshot from before the network profile (ADR-010), measured on the real connection
     network_profile: NetworkProfile | None = None
-    # Stvarna veza izmerena pre nivoa 2, u Mb/s (Z-33); `None`: merenje nije uspelo ili nije rađeno
+    # The real connection measured before level 2, in Mb/s (ADR-018); `None`: the measurement
+    # failed or was not done
     link_mbps: float | None = None
-    # Trajanje nivoa 2 bez čekanja u redu za učitavanje, isto što meri tvrdi limit (Z-50);
-    # `None`: snimak pre Z-50
+    # Level 2 duration without waiting in the loading queue, the same as the hard limit measures
+    # (ADR-020); `None`: a snapshot from before this field was recorded
     elapsed_ms: int | None = None
-    # Sajt van `max_level2`: meren bez profila i bez reda za učitavanje, pa vreme nije mereno (BUG-020)
+    # A site beyond `max_level2`: measured without the profile and without the loading queue, so
+    # load time was not measured (BUG-020)
     light: bool = False
 
 
 # --------------------------------------------------------------------------- #
-# Rezultati provera (§3.4, §3.5, §3.6)
+# Check results
 # --------------------------------------------------------------------------- #
 @dataclass
 class Finding:
@@ -365,20 +371,20 @@ class Finding:
     level: int
     category: str
     severity: str
-    # Samo podaci: brojevi, logičke vrednosti, URL-ovi, tehnički kodovi, sirove greške i
-    # tekst sa sajta. Rečenicu pravi `sitetriage.messages` pri prikazu, na jeziku izveštaja.
+    # Data only: numbers, booleans, URLs, technical codes, raw errors and text from the site.
+    # `sitetriage.messages` builds the sentence at display time, in the report language (ADR-009).
     evidence: dict[str, Any] = field(default_factory=dict)
     evidence_urls: list[str] = field(default_factory=list)
     weight: float = 0.0
-    # Kad provera ima više oblika rečenice, npr. težina sa videom i bez njega.
+    # When a check has several forms of the sentence, e.g. page weight with video and without.
     variant: str | None = None
 
 
 @dataclass
 class Reason:
-    """Zašto nešto nije provereno ili zašto domen ide na nivo 2: kod i podaci, bez rečenice.
+    """Why something was not checked or why a domain goes to level 2: a code and data, no sentence.
 
-    Rečenicu pravi `sitetriage.messages.reason` na jeziku izveštaja, isto kao za nalaz.
+    `sitetriage.messages.reason` builds the sentence in the report language, as for a finding.
     """
 
     code: str
@@ -394,11 +400,11 @@ class CheckResult:
 
     def __post_init__(self) -> None:
         if self.status in ("unknown", "not_applicable") and not self.reason:
-            raise ValueError(f"{self.check_id}: `{self.status}` bez `reason` je bug (§3.4)")
+            raise ValueError(f"{self.check_id}: `{self.status}` without a `reason` is a bug")
         if self.status != "finding" and self.findings:
-            raise ValueError(f"{self.check_id}: nalazi postoje a status nije `finding`")
+            raise ValueError(f"{self.check_id}: there are findings but the status is not `finding`")
         if self.status == "finding" and not self.findings:
-            raise ValueError(f"{self.check_id}: status `finding` bez ijednog nalaza")
+            raise ValueError(f"{self.check_id}: status `finding` without a single finding")
 
 
 @dataclass
@@ -413,38 +419,43 @@ class DomainReport:
     industry: str = "other"
     final_url: str | None = None
     status: DomainStatus = "scanned"
-    # Zašto je `partial`: `budget`, `unknown` ili oba (Z-22). Prazno za ostale statuse.
+    # Why it is `partial`: `budget`, `unknown` or both (ADR-015). Empty for the other statuses.
     partial_causes: list[Literal["budget", "unknown"]] = field(default_factory=list)
     level2_ran: bool = False
     escalation_reasons: list[Reason] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     unknowns: list[Unknown] = field(default_factory=list)
-    # Isti oblik kao `unknowns`, ali ne pravi `partial`: provera nema šta da proveri (Z-21).
+    # Same shape as `unknowns`, but does not make the domain `partial`: the check has nothing to
+    # check (ADR-015).
     not_applicable: list[Unknown] = field(default_factory=list)
     total_score: float = 0.0
     max_finding_weight: float = 0.0
-    rank: int = 0  # 0 = nije rangiran (`unreachable`, `failed`)
+    rank: int = 0  # 0 = not ranked (`unreachable`, `failed`)
     scanned_at: str = ""
-    # Zašto je `failed`, za listu „Nije skenirano". Za `unreachable` razlog je nalaz `infra.unreachable`.
+    # Why it is `failed`, for the "not scanned" list. For `unreachable` the reason is the
+    # `infra.unreachable` finding.
     reason: Reason | None = None
 
     @property
     def rank_key(self) -> tuple[float, float]:
-        """§9.4: prvo najteži pojedinačni nalaz, pa tek onda zbir."""
+        """The heaviest single finding first; the total only breaks ties.
+
+        A site with one disaster is a better lead than one with ten trifles.
+        """
         return (self.max_finding_weight, self.total_score)
 
     @property
     def top_findings(self) -> list[Finding]:
-        """Tri nalaza koja staju u mejl (§9.4)."""
+        """The three findings that fit in the suggested email."""
         return self.findings[:3]
 
 
 # --------------------------------------------------------------------------- #
-# Prolaz kao celina: rezultat i događaji napretka (sitetriage.pipeline)
+# The run as a whole: the result and progress events (sitetriage.pipeline)
 # --------------------------------------------------------------------------- #
 @dataclass
 class Event:
-    """Napredak prolaza. Web worker iz njega pravi traku napretka, a CLI ga loguje."""
+    """Progress of a run. The web worker turns it into a progress bar, the CLI logs it."""
 
     kind: Literal["phase_started", "phase_finished", "domain_finished"]
     phase: Literal["level1", "level2", "level2_light", "recheck"]
@@ -456,10 +467,10 @@ class Event:
 
 @dataclass
 class ScanResult:
-    """Ceo prolaz: metapodaci, zbir po statusu i rangirani izveštaji.
+    """The whole run: metadata, a summary by status and the ranked reports.
 
-    Serijalizovan je to JSON izveštaj, pa redosled polja određuje i redosled ključeva, a
-    šema je u `sitetriage/schema/report-3.json`.
+    Serialized, it is the JSON report, so the field order is also the key order; the schema is
+    `sitetriage/schema/report-3.json`.
     """
 
     schema_version: str = SCHEMA_VERSION
@@ -467,21 +478,21 @@ class ScanResult:
     started_at: str = ""
     finished_at: str = ""
     duration_s: dict[str, float] = field(default_factory=dict)
-    # sha256 konfiguracije koja utiče na rezultat; isti otisak = isti pragovi
+    # sha256 of the configuration that affects the result; same digest = same thresholds
     config_digest: str = ""
     environment: dict[str, Any] = field(default_factory=dict)
     summary: dict[str, int] = field(default_factory=dict)
-    # Izlazni kriterijumi (§7, Z-22): udeo domena koji rade sa potrošenim budžetom, i za svaku
-    # proveru udeo `unknown`-a među domenima koji rade i na kojima je pokrenuta.
+    # Exit criteria (ADR-015): the share of working domains that exhausted their budget, and for
+    # each check the share of `unknown` among the working domains it ran on.
     budget_share: float = 0.0
     unknown_share: dict[str, float] = field(default_factory=dict)
     ranked: list[DomainReport] = field(default_factory=list)
     unreachable: list[DomainReport] = field(default_factory=list)
-    not_scanned: list[DomainReport] = field(default_factory=list)  # `failed`; izuzeti su samo broj
+    not_scanned: list[DomainReport] = field(default_factory=list)  # `failed`; excluded ones are only a count
 
 
 # --------------------------------------------------------------------------- #
-# Ulazni red iz domains.csv (§4.1)
+# An input row from domains.csv
 # --------------------------------------------------------------------------- #
 @dataclass
 class DomainInput:

@@ -34,7 +34,7 @@ def test_upozorenja_iz_liste_idu_u_log_sa_brojem_reda(tmp_path, caplog):
         "domain,industry\ninstitucija.example,institution\nINSTITUCIJA.EXAMPLE,hotel\n", encoding="utf-8"
     )
     cli.read_domains(path)
-    assert "red 3: domen se ponavlja" in caplog.text
+    assert "row 3: domain is repeated" in caplog.text
 
 
 def test_izuzeti_iz_konfiguracije_i_sa_komandne_linije(tmp_path):
@@ -61,14 +61,14 @@ def test_izuzeti_iz_konfiguracije_i_sa_komandne_linije(tmp_path):
 def test_nepostojeci_fajl_sa_izuzetima_puca_razumljivo(tmp_path):
     domains = tmp_path / "d.csv"
     domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="fajl sa izuzetim domenima ne postoji"):
+    with pytest.raises(SystemExit, match="the file of excluded domains does not exist"):
         cli.main(["scan", str(domains), "--out", str(tmp_path / "izlaz"), "--exclude", "nema.txt"])
 
 
 def test_greska_u_listi_je_poruka_a_ne_traceback(tmp_path):
     path = tmp_path / "d.csv"
     path.write_text("sajt,industry\na.rs,hotel\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="red 1: nedostaje kolona `domain`"):
+    with pytest.raises(SystemExit, match="row 1: the header has no `domain` column"):
         cli.main(["scan", str(path), "--out", str(tmp_path / "izlaz")])
 
 
@@ -287,14 +287,14 @@ def test_explain_ispisuje_prag_i_recenicu(capsys):
     assert cli.main(["explain", "seo.canonical.duplicate"]) == 0
     ispis = capsys.readouterr().out
     assert "critical" in ispis and "≥ 2 stranice" in ispis
-    assert "rečenica za klijenta" in ispis
+    assert "client sentence" in ispis
 
 
 def test_explain_ispisuje_oba_jezika_i_varijante(capsys):
     assert cli.main(["explain", "perf.page.weight"]) == 0
     ispis = capsys.readouterr().out
-    assert "rečenica za klijenta (sr)" in ispis and "rečenica za klijenta (en)" in ispis
-    assert "varijanta video (sr)" in ispis and "varijanta video (en)" in ispis
+    assert "client sentence (sr)" in ispis and "client sentence (en)" in ispis
+    assert "variant video (sr)" in ispis and "variant video (en)" in ispis
 
 
 def test_explain_all_bez_markdown_a(capsys):
@@ -508,7 +508,7 @@ def test_prekid_sa_tastature_vraca_130(monkeypatch, tmp_path):
 def test_greska_u_konfiguraciji_je_poruka_a_ne_traceback(tmp_path):
     pokvaren = tmp_path / "pokvaren.toml"
     pokvaren.write_text("[http\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="greška u konfiguraciji"):
+    with pytest.raises(SystemExit, match="configuration error"):
         cli.main(["recheck", str(tmp_path), "--config", str(pokvaren)])
 
 
