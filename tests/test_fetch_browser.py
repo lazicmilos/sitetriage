@@ -1,7 +1,7 @@
-"""Nivo 2 protiv lokalnog servera i pravog Chromiuma (§7).
+"""Level 2 against a local server and a real Chromium.
 
-Označeno `browser`: preskače se ako Playwright ili Chromium nisu instalirani
-(`chromium_se_pokrece` u `conftest.py`).
+Marked `browser`: skipped when Playwright or Chromium is not installed
+(`chromium_se_pokrece` in `conftest.py`).
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ pytestmark = pytest.mark.browser
 
 
 def png(width: int, height: int) -> bytes:
-    """Minimalan validan PNG — da `naturalWidth` bude stvaran, bez nove zavisnosti."""
+    """A minimal valid PNG, so `naturalWidth` is real, without a new dependency."""
     raw = b"".join(b"\x00" + b"\xc8\x32\x32" * width for _ in range(height))
 
     def chunk(tag: bytes, data: bytes) -> bytes:
@@ -48,14 +48,14 @@ def png(width: int, height: int) -> bytes:
     )
 
 
-TESKA_STRANA = """<!doctype html><html lang="sr"><head><title>Teška strana</title>
+HEAVY_PAGE = """<!doctype html><html lang="sr"><head><title>Teška strana</title>
 <style>img{{width:100px}} .daleko{{margin-top:4000px}}</style></head>
 <body>
   <h2>Nema h1 na ovoj strani</h2>
   <img src="/velika.png">
   <img src="/velika.png" alt="">
   <img src="/velika.png" alt="opisana slika">
-  {bez_alta}
+  {without_alt}
   <div class="daleko"><img src="/lenja.png" loading="lazy"></div>
   <script src="/tezak.js"></script>
   <script>null.x = 1;</script>
@@ -64,11 +64,11 @@ TESKA_STRANA = """<!doctype html><html lang="sr"><head><title>Teška strana</tit
 </body></html>"""
 
 
-def teski_sajt() -> FakeSite:
-    bez_alta = "".join('<img src="/velika.png">' for _ in range(7))
+def heavy_site() -> FakeSite:
+    without_alt = "".join('<img src="/velika.png">' for _ in range(7))
     return FakeSite(
         extra={
-            "/": Response(TESKA_STRANA.format(bez_alta=bez_alta).encode()),
+            "/": Response(HEAVY_PAGE.format(without_alt=without_alt).encode()),
             "/velika.png": Response(png(800, 600), headers={"content-type": "image/png"}),
             "/lenja.png": Response(png(900, 600), headers={"content-type": "image/png"}),
             "/tezak.js": Response(
@@ -79,7 +79,7 @@ def teski_sajt() -> FakeSite:
     )
 
 
-def snimi(site: FakeSite, config: dict | None = None):
+def capture_one(site: FakeSite, config: dict | None = None):
     from sitetriage.fetch.browser import capture_all
 
     fake = SiteSnapshot(
@@ -91,12 +91,12 @@ def snimi(site: FakeSite, config: dict | None = None):
 
 
 @pytest.fixture(scope="module")
-def snimak():
-    with teski_sajt() as site:
-        yield snimi(site)
+def snapshot():
+    with heavy_site() as site:
+        yield capture_one(site)
 
 
-SAOBRACAJ_OKO_LOAD = b"""<!doctype html><html><body><h1>Strana</h1>
+TRAFFIC_AROUND_LOAD = b"""<!doctype html><html><body><h1>Strana</h1>
 <script>
 fetch('/sporo.bin');
 window.addEventListener('load', () => setTimeout(() => fetch('/posle.bin'), 100));
@@ -104,349 +104,353 @@ window.addEventListener('load', () => setTimeout(() => fetch('/posle.bin'), 100)
 
 
 @pytest.fixture(scope="module")
-def oko_load():
-    """Z-24: zahtev pre `load` čije telo stiže posle njega, i zahtev koji počne tek posle `load`."""
+def around_load():
+    """ADR-016: a request before `load` whose body arrives after it, and a request started after `load`."""
     extra = {
-        "/": Response(SAOBRACAJ_OKO_LOAD),
-        # `load` čeka sliku. Bez nje stiže odmah posle skripte, a Playwright uz `route` javlja
-        # `request` tek kad zahtev stigne do mreže, pa je pod opterećenjem fetch viđen posle `load`.
+        "/": Response(TRAFFIC_AROUND_LOAD),
+        # `load` waits for the image. Without it `load` comes right after the script, and with `route`
+        # Playwright reports `request` only when the request reaches the network, so under load the
+        # fetch was seen after `load`.
         "/drzi.png": Response(png(1, 1), headers={"content-type": "image/png"}, delay=0.5),
-        # Zaglavlja odmah, telo posle 3 s: odgovor je viđen pre `drain`, a telo stiže posle `load`.
+        # Headers at once, body after 3 s: the response is seen before `drain`, the body arrives after `load`.
         "/sporo.bin": Response(b"s" * 150_000, stall=3.0),
         "/posle.bin": Response(b"p" * 200_000),
     }
     with FakeSite(extra=extra) as site:
-        yield snimi(site)
+        yield capture_one(site)
 
 
-def test_zahtev_posle_load_ne_ulazi_u_tezinu(oko_load):
-    mreza = oko_load.network
-    assert mreza.bytes_at_load < 200_000, "posle.bin (200 kB) ne ulazi u težinu"
-    assert mreza.total_bytes - mreza.bytes_at_load >= 200_000, "ali je u ukupnom, informativno"
-    assert mreza.request_count > mreza.requests_at_load
+def test_request_after_load_is_not_in_the_weight(around_load):
+    network = around_load.network
+    assert network.bytes_at_load < 200_000, "posle.bin (200 kB) is not in the weight"
+    assert network.total_bytes - network.bytes_at_load >= 200_000, "but it is in the total, for information"
+    assert network.request_count > network.requests_at_load
 
 
-def test_telo_koje_stigne_posle_load_za_zahtev_pre_load_se_broji(oko_load):
-    assert oko_load.timing.load_ms < 3000, "telo sporo.bin mora da stigne posle `load`"
-    assert oko_load.network.bytes_at_load >= 150_000
+def test_body_arriving_after_load_for_a_request_before_load_counts(around_load):
+    assert around_load.timing.load_ms < 3000, "the body of sporo.bin must arrive after `load`"
+    assert around_load.network.bytes_at_load >= 150_000
 
 
-# Z-30: 600 kB na simuliranoj vezi od 4,8 Mb/s (600 000 B/s) traje oko 1 s.
-TEZAK_JS = b"//" + b"x" * 600_000
+# ADR-010: 600 kB on an emulated 4.8 Mb/s link (600 000 B/s) takes about 1 s.
+HEAVY_JS = b"//" + b"x" * 600_000
 
 
-def sa_teskim_skriptom() -> dict[str, Response]:
+def with_heavy_script() -> dict[str, Response]:
     return {
         "/": Response(b"<!doctype html><h1>Strana</h1><script src='/tezak.js'></script>"),
-        "/tezak.js": Response(TEZAK_JS),
+        "/tezak.js": Response(HEAVY_JS),
     }
 
 
-def test_profil_usporava_ucitavanje():
-    """Proverava se samo donja granica, da test ne bi bio nestabilan."""
-    with FakeSite(extra=sa_teskim_skriptom()) as site:
-        assert snimi(site).timing.load_ms >= 1000
+def test_profile_slows_down_loading():
+    """Only the lower bound is checked, so the test is not flaky."""
+    with FakeSite(extra=with_heavy_script()) as site:
+        assert capture_one(site).timing.load_ms >= 1000
 
 
-def test_profil_vazi_i_za_iframe_sa_drugog_porekla(monkeypatch):
-    """Pun Chromium, kao sistemski, učitava iframe sa drugog sajta u poseban proces (OOPIF), a
-    profil postavljen na stranicu taj proces ne usporava. `localhost` i `127.0.0.1` su dva sajta."""
+def test_profile_also_applies_to_a_cross_origin_iframe(monkeypatch):
+    """Full Chromium, like a system one, loads an iframe from another site in a separate process (OOPIF),
+    and the profile set on the page does not slow that process down. `localhost` and `127.0.0.1` are
+    two sites."""
     from sitetriage.fetch import browser
 
-    pokretanje = browser._launch_options
-    monkeypatch.setattr(browser, "_launch_options", lambda cfg: {**pokretanje(cfg), "channel": "chromium"})
-    with FakeSite(extra=sa_teskim_skriptom()) as okvir:
-        port = okvir.address[1]
-        # conftest dozvoljava `127.0.0.1:port`, a `localhost` se razrešava i na `::1`
-        dozvoljene = addresses.allowlist
-        monkeypatch.setattr(addresses, "allowlist", lambda cfg: dozvoljene(cfg) | {("localhost", port)})
-        strana = f"<!doctype html><h1>Strana</h1><iframe src='http://localhost:{port}/'></iframe>"
-        with FakeSite(extra={"/": Response(strana.encode())}) as site:
-            assert snimi(site).timing.load_ms >= 1000
+    launch_options = browser._launch_options
+    monkeypatch.setattr(browser, "_launch_options", lambda c: {**launch_options(c), "channel": "chromium"})
+    with FakeSite(extra=with_heavy_script()) as frame:
+        port = frame.address[1]
+        # conftest allows `127.0.0.1:port`, and `localhost` also resolves to `::1`
+        allowlist = addresses.allowlist
+        monkeypatch.setattr(addresses, "allowlist", lambda cfg: allowlist(cfg) | {("localhost", port)})
+        page = f"<!doctype html><h1>Strana</h1><iframe src='http://localhost:{port}/'></iframe>"
+        with FakeSite(extra={"/": Response(page.encode())}) as site:
+            assert capture_one(site).timing.load_ms >= 1000
 
 
-def test_lagano_merenje_je_bez_profila_i_bez_merenja_veze(monkeypatch):
-    """BUG-020: sajt van limita meri težinu, zahteve i DOM bez profila; vreme ostaje za pun nivo 2."""
-    from sitetriage.fetch import browser as modul
+def test_light_measurement_has_no_profile_and_no_link_measurement(monkeypatch):
+    """BUG-020: a site over the cap measures weight, requests and the DOM without the profile; time is left
+    to full level 2."""
+    from sitetriage.fetch import browser as module
 
-    async def ne_sme(_config):
-        raise AssertionError("lagano merenje ne meri vezu")
+    async def must_not(_config):
+        raise AssertionError("the light measurement does not measure the link")
 
-    monkeypatch.setattr(modul, "measure_link", ne_sme)
-    with teski_sajt() as site:
+    monkeypatch.setattr(module, "measure_link", must_not)
+    with heavy_site() as site:
         fake = SiteSnapshot(
             domain=site.base_url,
             pages=[PageSnapshot(url=site.base_url + "/", final_url=site.base_url + "/", status=200)],
         )
-        snimljeno = asyncio.run(modul.capture_all([fake], load_config(), light=True))[site.base_url]
-    assert (snimljeno.light, snimljeno.network_profile, snimljeno.link_mbps) == (True, None, None)
-    assert snimljeno.status == "ok" and snimljeno.network.bytes_at_load > 300_000
-    assert snimljeno.dom.h1_count == 0 and len(snimljeno.dom.oversized_images) > 0
+        captured = asyncio.run(module.capture_all([fake], load_config(), light=True))[site.base_url]
+    assert (captured.light, captured.network_profile, captured.link_mbps) == (True, None, None)
+    assert captured.status == "ok" and captured.network.bytes_at_load > 300_000
+    assert captured.dom.h1_count == 0 and len(captured.dom.oversized_images) > 0
 
 
 @pytest.mark.parametrize(
-    "slobodno_gb, jezgara, zadato, ocekivano",
+    "free_gb, cores, configured, expected",
     [
-        pytest.param(3.5, 4, 0, 3, id="ke-masina-sa-8-gb"),
-        pytest.param(0.5, 4, 0, 1, id="gv-najmanje-1"),
-        pytest.param(20, 16, 0, 8, id="gv-najvise-8"),
-        pytest.param(16, 2, 0, 4, id="gv-dva-po-jezgru"),
-        pytest.param(None, 4, 0, 3, id="nv-bez-meminfo"),
-        pytest.param(20, 16, 5, 5, id="tab-fiksirano"),
+        pytest.param(3.5, 4, 0, 3, id="ke-machine-with-8-gb"),
+        pytest.param(0.5, 4, 0, 1, id="gv-at-least-1"),
+        pytest.param(20, 16, 0, 8, id="gv-at-most-8"),
+        pytest.param(16, 2, 0, 4, id="gv-two-per-core"),
+        pytest.param(None, 4, 0, 3, id="nv-no-meminfo"),
+        pytest.param(20, 16, 5, 5, id="tab-fixed"),
     ],
 )
-def test_lagani_nivo_2_bira_broj_konteksta_po_masini(monkeypatch, slobodno_gb, jezgara, zadato, ocekivano):
-    """Z-32: lagani nivo 2 ne meri vreme, pa ide brzinom mašine; pun ostaje na `browser.concurrency`."""
-    from sitetriage.fetch import browser as modul
+def test_light_level_2_picks_context_count_by_machine(monkeypatch, free_gb, cores, configured, expected):
+    """ADR-019: light level 2 does not measure time, so it runs at the machine's speed; full level 2 stays
+    on `browser.concurrency`."""
+    from sitetriage.fetch import browser as module
 
     config = load_config()
-    config["browser"]["light_concurrency"] = zadato
-    kb = None if slobodno_gb is None else int(slobodno_gb * 1_048_576)
-    monkeypatch.setattr(modul, "_available_kb", lambda: kb)
-    monkeypatch.setattr(modul.os, "cpu_count", lambda: jezgara)
-    assert modul._context_count(config, light=True) == ocekivano
-    assert modul._context_count(config, light=False) == 3
+    config["browser"]["light_concurrency"] = configured
+    kb = None if free_gb is None else int(free_gb * 1_048_576)
+    monkeypatch.setattr(module, "_available_kb", lambda: kb)
+    monkeypatch.setattr(module.os, "cpu_count", lambda: cores)
+    assert module._context_count(config, light=True) == expected
+    assert module._context_count(config, light=False) == 3
 
 
-def test_slobodna_memorija_se_cita_iz_proc_meminfo():
-    from sitetriage.fetch import browser as modul
+def test_free_memory_is_read_from_proc_meminfo():
+    from sitetriage.fetch import browser as module
 
-    kb = modul._available_kb()
+    kb = module._available_kb()
     assert kb is None if not Path("/proc/meminfo").exists() else kb > 0
 
 
-def test_profil_je_u_snapshotu_i_jsonu(snimak):
-    profil = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
-    assert snimak.network_profile == profil
-    assert from_dict(BrowserSnapshot, to_jsonable(snimak)).network_profile == profil
-    assert pipeline._environment([snimak])["network_profile"] == profil
-    assert snimak.link_mbps == pipeline._environment([snimak])["link_mbps"] == 100.0
+def test_profile_is_in_the_snapshot_and_the_json(snapshot):
+    profile = NetworkProfile(download_mbps=4.8, upload_mbps=1.5, latency_ms=150)
+    assert snapshot.network_profile == profile
+    assert from_dict(BrowserSnapshot, to_jsonable(snapshot)).network_profile == profile
+    assert pipeline._environment([snapshot])["network_profile"] == profile
+    assert snapshot.link_mbps == pipeline._environment([snapshot])["link_mbps"] == 100.0
 
 
-def test_spora_veza_je_u_snapshotu_i_upozorava_jednom(monkeypatch, caplog):
-    """Z-33: veza se meri jednom po prolazu, pre nivoa 2."""
+def test_slow_link_is_in_the_snapshot_and_warns_once(monkeypatch, caplog):
+    """ADR-018: the link is measured once per run, before level 2."""
     from sitetriage.fetch import browser
 
-    async def spora(config: dict) -> float:
+    async def slow(config: dict) -> float:
         return 3.2
 
-    monkeypatch.setattr(browser, "measure_link", spora)
+    monkeypatch.setattr(browser, "measure_link", slow)
     with FakeSite() as site:
-        snimak = snimi(site)
-    assert snimak.link_mbps == 3.2
-    upozorenja = [r for r in caplog.records if r.levelname == "WARNING" and "3.2 Mb/s" in r.getMessage()]
-    assert len(upozorenja) == 1
+        captured = capture_one(site)
+    assert captured.link_mbps == 3.2
+    warnings = [r for r in caplog.records if r.levelname == "WARNING" and "3.2 Mb/s" in r.getMessage()]
+    assert len(warnings) == 1
 
 
-def test_browser_belezi_tekst_i_lang_posle_javascript_a():
-    """Z-25: sirovi HTML nema ni `lang` ni tekst; oba postavlja JavaScript."""
-    strana = (
+def test_browser_records_text_and_lang_after_javascript():
+    """ADR-017: the raw HTML has neither `lang` nor text; JavaScript sets both."""
+    page = (
         "<!doctype html><html><body><script>"
         "document.documentElement.lang = 'sr';"
         "document.body.insertAdjacentHTML("
         "'beforeend', '<p>Dobrodošli   u   ordinaciju. Zakažite pregled.</p>');"
         "</script></body></html>"
     ).encode()
-    with FakeSite(extra={"/": Response(strana)}) as site:
-        snimljeno = snimi(site)
-    assert snimljeno.dom.lang == "sr"
-    assert snimljeno.dom.text_sample == "Dobrodošli u ordinaciju. Zakažite pregled."
-    assert snimljeno.dom.text_length == len(snimljeno.dom.text_sample)
+    with FakeSite(extra={"/": Response(page)}) as site:
+        captured = capture_one(site)
+    assert captured.dom.lang == "sr"
+    assert captured.dom.text_sample == "Dobrodošli u ordinaciju. Zakažite pregled."
+    assert captured.dom.text_length == len(captured.dom.text_sample)
 
 
-def test_browser_belezi_naslov_opis_i_canonical_posle_javascript_a():
-    """Nivo 1 ih čita iz sirovog HTML-a; SPA ih postavlja JavaScript-om, a Google izvršava JS."""
-    strana = (
+def test_browser_records_title_description_and_canonical_after_javascript():
+    """Level 1 reads them from the raw HTML; an SPA sets them with JavaScript, and Google runs JS."""
+    page = (
         b"<!doctype html><html><head></head><body><script>"
         b"document.title = 'Iz JS-a';"
         b"document.head.insertAdjacentHTML('beforeend', '<meta name=\"Description\" content=\"Opis iz JS-a\">"
         b"<link rel=\"canonical\" href=\"/zvanicna\">');"
         b"</script></body></html>"
     )
-    with FakeSite(extra={"/": Response(strana)}) as site:
-        dom = snimi(site).dom
+    with FakeSite(extra={"/": Response(page)}) as site:
+        dom = capture_one(site).dom
     assert (dom.title, dom.meta_description, dom.canonical) == ("Iz JS-a", "Opis iz JS-a", "/zvanicna")
 
     with FakeSite(extra={"/": Response(b"<!doctype html><html><body>prazno</body></html>")}) as site:
-        dom = snimi(site).dom
+        dom = capture_one(site).dom
     assert (dom.title, dom.meta_description, dom.canonical) == ("", "", "")
 
 
-def test_browser_se_predstavlja_svojim_user_agentom_uz_identitet_operatera():
-    """BUG-019: sa UA koji nije browser reklame su pokretale dodatne aukcije, a Google Fonts je slao
-    veći format, pa su težina, zahtevi i vreme bili veći nego kod posetioca u Chrome-u."""
-    strana = (
+def test_browser_identifies_with_its_own_user_agent_plus_operator_identity():
+    """BUG-019: with a UA that is not a browser, ads ran extra auctions and Google Fonts sent a larger
+    format, so weight, requests and time were higher than for a visitor in Chrome."""
+    page = (
         b"<!doctype html><html><body><p id='u'></p>"
         b"<script>u.textContent = navigator.userAgent</script></body></html>"
     )
-    with FakeSite(extra={"/": Response(strana)}) as site:
-        ua = snimi(site).dom.text_sample
+    with FakeSite(extra={"/": Response(page)}) as site:
+        ua = capture_one(site).dom.text_sample
     assert ua.startswith("Mozilla/5.0 ") and "Chrome/" in ua, ua
     assert ua.endswith(" " + user_agent(load_config())), ua
-    # BUG-021: zaštite od botova odbijaju „HeadlessChrome” sa 403.
+    # BUG-021: bot protection refuses "HeadlessChrome" with a 403.
     assert "Headless" not in ua, ua
 
 
-def test_strana_greske_na_nivou_2_je_neuspelo_snimanje():
-    """BUG-021: 403 strana zaštite od botova merena je kao početna (1 zahtev, 358 B)."""
+def test_error_page_on_level_2_is_a_failed_capture():
+    """BUG-021: a 403 bot protection page was measured as the home page (1 request, 358 B)."""
     with FakeSite(extra={"/": Response(b"<h1>Forbidden</h1>", status=403)}) as site:
-        snimljeno = snimi(site)
-    assert snimljeno.status == "failed"
-    assert [(e.stage, e.kind) for e in snimljeno.errors] == [("http_status", "403")]
+        captured = capture_one(site)
+    assert captured.status == "failed"
+    assert [(e.stage, e.kind) for e in captured.errors] == [("http_status", "403")]
 
 
-def test_browser_belezi_interne_veze_iz_renderovanog_doma():
-    """Z-21: vezu koju crta JavaScript vidi samo nivo 2; spoljna veza nije interna."""
-    strana = (
+def test_browser_records_internal_links_from_the_rendered_dom():
+    """ADR-015: only level 2 sees a link drawn by JavaScript; an external link is not internal."""
+    page = (
         b"<!doctype html><html><body><a href='/o-nama'>o nama</a><a href='https://drugi.rs/'>x</a>"
         b"<script>document.body.insertAdjacentHTML('beforeend', \"<a href='/iz-js'>js</a>\")</script>"
         b"</body></html>"
     )
-    with FakeSite(extra={"/": Response(strana)}) as site:
-        snimljeno = snimi(site)
-    assert snimljeno.dom.internal_links == [f"{site.base_url}/o-nama", f"{site.base_url}/iz-js"]
-    assert snimljeno.dom.internal_links_total == 2
+    with FakeSite(extra={"/": Response(page)}) as site:
+        captured = capture_one(site)
+    assert captured.dom.internal_links == [f"{site.base_url}/o-nama", f"{site.base_url}/iz-js"]
+    assert captured.dom.internal_links_total == 2
 
 
 # --------------------------------------------------------------------------- #
-# Merenje težine (§7.2) — najozbiljnija zamka u projektu
+# Weight measurement (ADR-016): the most serious pitfall in the project
 # --------------------------------------------------------------------------- #
-def test_tezina_se_meri_iz_mreznog_saobracaja(snimak):
-    """Performance API bi ovde vratio skoro nulu za resurse sa drugog porekla."""
-    assert snimak.status == "ok"
-    assert snimak.network.total_bytes > 300_000, "skripta od 300 kB mora da se vidi u zbiru"
-    # Deset `<img>` sa istim URL-om je jedan zahtev — browser ih sam sažima.
-    assert snimak.network.request_count >= 4
-    assert snimak.network.bytes_by_type.get("script", 0) > 250_000
-    assert snimak.network.bytes_by_type.get("image", 0) > 0
+def test_weight_is_measured_from_network_traffic(snapshot):
+    """The Performance API would return almost zero here for cross-origin resources."""
+    assert snapshot.status == "ok"
+    assert snapshot.network.total_bytes > 300_000, "the 300 kB script must show in the total"
+    # Ten `<img>` with the same URL are one request: the browser merges them itself.
+    assert snapshot.network.request_count >= 4
+    assert snapshot.network.bytes_by_type.get("script", 0) > 250_000
+    assert snapshot.network.bytes_by_type.get("image", 0) > 0
 
 
-def test_tezina_broji_prenete_bajtove_a_ne_raspakovane():
-    """BUG-016: rečenica kaže „prenosi X MB", pa se broji ono što je stvarno preneto.
+def test_weight_counts_transferred_bytes_not_decompressed():
+    """BUG-016: the sentence says "transfers X MB", so what was really transferred is counted.
 
-    `response.body()` vraća raspakovano telo. JS i CSS putuju sažeti, pa je zbir za
-    sajtove sa mnogo skripti bio i nekoliko puta veći od stvarnog prenosa.
+    `response.body()` returns the decompressed body. JS and CSS travel compressed, so for sites
+    with many scripts the total was even several times the real transfer.
     """
-    skripta = b"window.__x = '" + b"y" * 300_000 + b"';"
-    strana = b"<html><head><title>S</title></head><body><h1>S</h1><script src='/s.js'></script></body></html>"
+    script = b"window.__x = '" + b"y" * 300_000 + b"';"
+    page = b"<html><head><title>S</title></head><body><h1>S</h1><script src='/s.js'></script></body></html>"
     with FakeSite(
         extra={
-            "/": Response(strana),
+            "/": Response(page),
             "/s.js": Response(
-                skripta, headers={"content-type": "application/javascript", "content-encoding": "gzip"}
+                script, headers={"content-type": "application/javascript", "content-encoding": "gzip"}
             ),
         }
     ) as site:
-        snimak = snimi(site)
-    assert snimak.network.bytes_by_type["script"] == len(gzip.compress(skripta))
+        captured = capture_one(site)
+    assert captured.network.bytes_by_type["script"] == len(gzip.compress(script))
 
 
-def test_nemereni_odgovori_se_broje_a_ne_prećutkuju(snimak):
-    assert snimak.network.unmeasured_responses == 0
+def test_unmeasured_responses_are_counted_not_hidden(snapshot):
+    assert snapshot.network.unmeasured_responses == 0
 
 
-def test_preusmerenja_se_ne_broje_kao_nemerena():
+def test_redirects_are_not_counted_as_unmeasured():
     with FakeSite(
         extra={
             "/": Response(b"", status=302, headers={"Location": "/kraj"}),
             "/kraj": Response(b"<html><h1>Kraj</h1></html>"),
         }
     ) as site:
-        snimak = snimi(site)
-    assert snimak.network.unmeasured_responses == 0
-    assert snimak.dom.h1_count == 1
+        captured = capture_one(site)
+    assert captured.network.unmeasured_responses == 0
+    assert captured.dom.h1_count == 1
 
 
-def test_timing_se_belezi(snimak):
-    assert snimak.timing.reached == "load"
-    assert snimak.timing.load_ms is not None and snimak.timing.load_ms > 0
-
-
-# --------------------------------------------------------------------------- #
-# DOM (§7.4, §7.5)
-# --------------------------------------------------------------------------- #
-def test_h1_se_broji_iz_nacrtane_strane(snimak):
-    assert snimak.dom.h1_count == 0
-    assert run_level(2, snimak)["seo.h1.missing"].status == "finding"
-
-
-def test_alt_stanja_se_broje_odvojeno(snimak):
-    """Tri stanja, ne dva (§7.4)."""
-    assert snimak.dom.images_total == 11
-    assert snimak.dom.images_without_alt_attr == 9
-    assert snimak.dom.images_empty_alt == 1
-
-
-def test_lenja_slika_se_meri_jer_se_skroluje_do_dna(snimak):
-    """Bez skrola bi imala naturalWidth == 0 i tiho ispala iz merenja (§15, zamka 2)."""
-    assert snimak.dom.images_unmeasured == 0
-    assert any("lenja.png" in image.src for image in snimak.dom.oversized_images)
-
-
-def test_predimenzionirane_slike_sa_procenjenim_viskom(snimak):
-    assert len(snimak.dom.oversized_images) >= 4
-    najgora = snimak.dom.oversized_images[0]
-    assert najgora.ratio > 2.5
-    assert najgora.natural[0] in (800, 900) and najgora.client[0] == 100
-    assert najgora.est_waste_kb > 0
-
-
-def test_ista_slika_ponovljena_na_strani_je_jedna_slika(snimak):
-    """BUG-030: deset puta /velika.png i jednom /lenja.png su dve slike, ispod praga od tri."""
-    assert len({image.src for image in snimak.dom.oversized_images}) == 2
-    assert run_level(2, snimak)["perf.img.oversized"].status == "ok"
-
-
-def test_console_greske_se_broje(snimak):
-    assert snimak.console.errors >= 4  # dva pageerror-a i dva console.error
-    assert snimak.console.warnings >= 1
-    assert snimak.console.samples
+def test_timing_is_recorded(snapshot):
+    assert snapshot.timing.reached == "load"
+    assert snapshot.timing.load_ms is not None and snapshot.timing.load_ms > 0
 
 
 # --------------------------------------------------------------------------- #
-# Prazan keš po domenu (§15, zamka 10)
+# DOM: accessibility and oversized images
 # --------------------------------------------------------------------------- #
-def test_drugi_prolaz_meri_isto_jer_je_kes_prazan():
-    """Nov kontekst po domenu; inače drugi sajt sa istog CDN-a ispadne lakši."""
-    with teski_sajt() as site:
-        prvi = snimi(site)
-        drugi = snimi(site)
-    assert drugi.network.total_bytes == pytest.approx(prvi.network.total_bytes, rel=0.02)
-    assert drugi.network.unmeasured_responses == 0
+def test_h1_is_counted_from_the_rendered_page(snapshot):
+    assert snapshot.dom.h1_count == 0
+    assert run_level(2, snapshot)["seo.h1.missing"].status == "finding"
+
+
+def test_alt_states_are_counted_separately(snapshot):
+    """Three states, not two: missing, empty (decorative) and present."""
+    assert snapshot.dom.images_total == 11
+    assert snapshot.dom.images_without_alt_attr == 9
+    assert snapshot.dom.images_empty_alt == 1
+
+
+def test_lazy_image_is_measured_because_the_page_is_scrolled_to_the_bottom(snapshot):
+    """Without scrolling it would have naturalWidth == 0 and silently drop out of the measurement."""
+    assert snapshot.dom.images_unmeasured == 0
+    assert any("lenja.png" in image.src for image in snapshot.dom.oversized_images)
+
+
+def test_oversized_images_with_estimated_waste(snapshot):
+    assert len(snapshot.dom.oversized_images) >= 4
+    worst = snapshot.dom.oversized_images[0]
+    assert worst.ratio > 2.5
+    assert worst.natural[0] in (800, 900) and worst.client[0] == 100
+    assert worst.est_waste_kb > 0
+
+
+def test_the_same_image_repeated_on_the_page_is_one_image(snapshot):
+    """BUG-030: /velika.png ten times and /lenja.png once are two images, below the threshold of three."""
+    assert len({image.src for image in snapshot.dom.oversized_images}) == 2
+    assert run_level(2, snapshot)["perf.img.oversized"].status == "ok"
+
+
+def test_console_errors_are_counted(snapshot):
+    assert snapshot.console.errors >= 4  # two pageerrors and two console.error calls
+    assert snapshot.console.warnings >= 1
+    assert snapshot.console.samples
 
 
 # --------------------------------------------------------------------------- #
-# Zastoji — snimljeno na klinika.example: jedan odgovor čije telo nikad ne stigne
-# je zauvek blokirao ceo prolaz. Sve ovde mora da se završi u roku.
+# An empty cache per domain
 # --------------------------------------------------------------------------- #
-STRIM_STRANA = b"""<!doctype html><html lang="sr"><head><title>Strim</title></head>
+def test_second_run_measures_the_same_because_the_cache_is_empty():
+    """A new context per domain; otherwise a second site on the same CDN comes out lighter."""
+    with heavy_site() as site:
+        first = capture_one(site)
+        second = capture_one(site)
+    assert second.network.total_bytes == pytest.approx(first.network.total_bytes, rel=0.02)
+    assert second.network.unmeasured_responses == 0
+
+
+# --------------------------------------------------------------------------- #
+# Hangs, recorded on klinika.example: one response whose body never arrived blocked the
+# whole run forever (BUG-002). Everything here must finish in time.
+# --------------------------------------------------------------------------- #
+STREAM_PAGE = b"""<!doctype html><html lang="sr"><head><title>Strim</title></head>
 <body><h1>Strana sa strimom</h1><script>fetch('/strim').then(r => r.text())</script></body></html>"""
 
 
-def test_telo_koje_ne_stigne_je_nemereno_a_ne_zastoj():
-    """Strim ili video koji se ne završi: `load` stigne, telo odgovora nikad."""
+def test_body_that_never_arrives_is_unmeasured_not_a_hang():
+    """A stream or video that never ends: `load` arrives, the response body never does."""
     import time
 
     cfg = load_config()
     cfg["browser"]["drain_timeout_s"] = 2
     with FakeSite(
         extra={
-            "/": Response(STRIM_STRANA),
+            "/": Response(STREAM_PAGE),
             "/strim": Response(b"x" * 10_000, headers={"content-type": "text/plain"}, stall=120),
         }
     ) as site:
         started = time.monotonic()
-        snimak = snimi(site, cfg)
-        trajanje = time.monotonic() - started
+        captured = capture_one(site, cfg)
+        duration = time.monotonic() - started
 
-    assert trajanje < 20, f"nivo 2 je čekao telo strima {trajanje:.0f} s"
-    assert snimak.status == "ok"
-    assert snimak.dom.h1_count == 1, "ostatak merenja mora da preživi"
-    assert snimak.network.unmeasured_responses >= 1, "strim je nemeren, ne nula bajtova"
+    assert duration < 20, f"level 2 waited {duration:.0f} s for the stream body"
+    assert captured.status == "ok"
+    assert captured.dom.h1_count == 1, "the rest of the measurement must survive"
+    assert captured.network.unmeasured_responses >= 1, "the stream is unmeasured, not zero bytes"
 
 
-def test_tvrdi_limit_po_domenu_prekida_nivo_2():
-    """Poslednja odbrana: bilo koji zastoj koji još ne znamo ne sme da zaustavi prolaz."""
+def test_hard_per_domain_limit_aborts_level_2():
+    """The last defence: any hang we do not know about yet must not stop the run."""
     import time
 
     cfg = load_config()
@@ -458,17 +462,17 @@ def test_tvrdi_limit_po_domenu_prekida_nivo_2():
         }
     ) as site:
         started = time.monotonic()
-        snimak = snimi(site, cfg)
-        trajanje = time.monotonic() - started
+        captured = capture_one(site, cfg)
+        duration = time.monotonic() - started
 
-    assert trajanje < 15, f"tvrdi limit od 3 s nije poštovan: {trajanje:.0f} s"
-    assert snimak.status == "failed"
-    assert any("hard limit" in e.detail for e in snimak.errors), snimak.errors
-    assert snimak.elapsed_ms >= 3000
+    assert duration < 15, f"the 3 s hard limit was not respected: {duration:.0f} s"
+    assert captured.status == "failed"
+    assert any("hard limit" in e.detail for e in captured.errors), captured.errors
+    assert captured.elapsed_ms >= 3000
 
 
-def test_trajanje_nivoa_2_je_u_snimku():
-    """Z-50: granica `browser.max_seconds_per_domain` se određuje iz raspodele trajanja."""
+def test_level_2_duration_is_in_the_snapshot():
+    """ADR-020: the `browser.max_seconds_per_domain` limit is set from the duration distribution."""
     import time
 
     with FakeSite(
@@ -478,60 +482,60 @@ def test_trajanje_nivoa_2_je_u_snimku():
         }
     ) as site:
         started = time.monotonic()
-        snimak = snimi(site)
-        trajanje_ms = (time.monotonic() - started) * 1000
+        captured = capture_one(site)
+        duration_ms = (time.monotonic() - started) * 1000
 
-    assert 1000 <= snimak.elapsed_ms <= trajanje_ms
+    assert 1000 <= captured.elapsed_ms <= duration_ms
 
 
 # --------------------------------------------------------------------------- #
-# Formula za procenu viška (§7.5) — čista funkcija, bez browsera
+# The waste estimate formula: a pure function, no browser
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
     "transfer_kb, natural, client, expected",
     [
-        (2150, [4000, 2667], [760, 507], 1838.0),  # primer iz §3.3: ≈ 1840 kB
-        (100, [100, 100], [100, 100], 0.0),  # slika tačne veličine nema višak
-        (0, [4000, 2667], [760, 507], 0.0),  # bez izmerenog prenosa nema procene
+        (2150, [4000, 2667], [760, 507], 1838.0),  # the worked example from the specification: ≈ 1840 kB
+        (100, [100, 100], [100, 100], 0.0),  # an image of the right size has no waste
+        (0, [4000, 2667], [760, 507], 0.0),  # no estimate without a measured transfer
     ],
 )
-def test_procena_viska(transfer_kb, natural, client, expected):
+def test_waste_estimate(transfer_kb, natural, client, expected):
     assert est_waste_kb(transfer_kb * 1024, natural, client) == pytest.approx(expected, abs=2.0)
 
 
-def test_neizmerena_slika_ne_daje_negativan_visak():
+def test_unmeasured_image_gives_no_negative_waste():
     assert est_waste_kb(1000, [10, 10], [500, 500]) == 0.0
 
 
 # --------------------------------------------------------------------------- #
-# BUG-006: vreme učitavanja se meri dok niko drugi ne učitava
+# BUG-006: load time is measured while nobody else is loading
 # --------------------------------------------------------------------------- #
-def dva_ucitavanja(serial_load: bool) -> tuple[dict[str, float], dict[str, float]]:
-    """Trenuci kad su dva sajta tražila HTML i sliku; slika kasni 1 s i drži `load`."""
+def two_loads(serial_load: bool) -> tuple[dict[str, float], dict[str, float]]:
+    """The moments two sites requested their HTML and image; the image is 1 s late and holds `load`."""
     import time
 
     from sitetriage.fetch.browser import capture_all
 
-    trenuci: dict[str, dict[str, float]] = {}
+    moments: dict[str, dict[str, float]] = {}
 
-    def strana(ime: str):
-        def odgovor() -> Response:
-            trenuci.setdefault(ime, {})["html"] = time.monotonic()
+    def page(name: str):
+        def response() -> Response:
+            moments.setdefault(name, {})["html"] = time.monotonic()
             return Response(b"<html><h1>Strana</h1><img src='/spora.png'></html>")
 
-        return odgovor
+        return response
 
-    def slika(ime: str):
-        def odgovor() -> Response:
-            trenuci.setdefault(ime, {})["slika"] = time.monotonic()
+    def image(name: str):
+        def response() -> Response:
+            moments.setdefault(name, {})["image"] = time.monotonic()
             return Response(png(10, 10), headers={"content-type": "image/png"}, delay=1.0)
 
-        return odgovor
+        return response
 
-    with FakeSite(extra={"/": strana("a"), "/spora.png": slika("a")}) as a, FakeSite(
-        extra={"/": strana("b"), "/spora.png": slika("b")}
+    with FakeSite(extra={"/": page("a"), "/spora.png": image("a")}) as a, FakeSite(
+        extra={"/": page("b"), "/spora.png": image("b")}
     ) as b:
-        sajtovi = [
+        sites = [
             SiteSnapshot(
                 domain=s.base_url,
                 pages=[PageSnapshot(url=s.base_url + "/", final_url=s.base_url + "/", status=200)],
@@ -542,33 +546,34 @@ def dva_ucitavanja(serial_load: bool) -> tuple[dict[str, float], dict[str, float
         cfg = load_config()
         cfg["browser"]["concurrency"] = 2
         cfg["browser"]["serial_load"] = serial_load
-        asyncio.run(capture_all(sajtovi, cfg))
+        asyncio.run(capture_all(sites, cfg))
 
-    prvi, drugi = sorted(trenuci.values(), key=lambda t: t["html"])
-    return prvi, drugi
+    first, second = sorted(moments.values(), key=lambda t: t["html"])
+    return first, second
 
 
-def test_ucitavanja_razlicitih_sajtova_se_ne_preklapaju():
-    """Tri sajta koja se učitavaju istovremeno dele vezu i produžavaju jedan drugom
-    `load` do 4,6× (izmereno u prolazu nad 100 domena). Učitavanje do `load` zato
-    ide jedno po jedno; skrol i čitanje DOM-a i dalje idu paralelno.
+def test_loads_of_different_sites_do_not_overlap():
+    """Three sites loading at the same time share the connection and make each other's `load` up to
+    4.6× longer (measured in the run over 100 domains). So loading until `load` goes one at a time;
+    scrolling and reading the DOM still run in parallel.
     """
-    prvi, drugi = dva_ucitavanja(serial_load=True)
-    # Slika prvog sajta kasni 1 s i drži njegov `load`; drugi sme da krene tek posle.
-    assert drugi["html"] >= prvi["slika"] + 0.9, (
-        f"drugi sajt je počeo {drugi['html'] - prvi['html']:.2f} s posle prvog, dok se prvi još učitavao"
+    first, second = two_loads(serial_load=True)
+    # The first site's image is 1 s late and holds its `load`; the second may start only after that.
+    assert second["html"] >= first["image"] + 0.9, (
+        f"the second site started {second['html'] - first['html']:.2f} s after the first, "
+        f"while the first was still loading"
     )
 
 
-def test_bez_serijskog_ucitavanja_sajtovi_se_ucitavaju_uporedo():
-    """Z-31: pod mrežnim profilom svaki kontekst ima svoju vezu, pa se to meri eksperimentom."""
-    prvi, drugi = dva_ucitavanja(serial_load=False)
-    assert drugi["html"] < prvi["slika"] + 0.5, "drugi sajt je čekao da se prvi učita"
+def test_without_serial_loading_sites_load_in_parallel():
+    """ADR-018: under the network profile every context has its own link, so an experiment measures this."""
+    first, second = two_loads(serial_load=False)
+    assert second["html"] < first["image"] + 0.5, "the second site waited for the first to load"
 
 
-def test_prekid_posle_tvrdog_limita_ne_ostavlja_gresku_u_logu(caplog):
-    """BUG-007: posle prekida Playwright-ova navigacija ostane bez čitaoca, pa asyncio
-    kasnije prijavi „Future exception was never retrieved" — ERROR za nešto što nije kvar.
+def test_abort_after_the_hard_limit_leaves_no_error_in_the_log(caplog):
+    """BUG-007: after the abort Playwright's navigation is left without a reader, so asyncio later
+    reports "Future exception was never retrieved": an ERROR for something that is not a fault.
     """
     import gc
     import logging
@@ -581,25 +586,25 @@ def test_prekid_posle_tvrdog_limita_ne_ostavlja_gresku_u_logu(caplog):
             "/spora.png": Response(png(10, 10), headers={"content-type": "image/png"}, delay=20),
         }
     ) as site:
-        snimak = snimi(site, cfg)
+        captured = capture_one(site, cfg)
         gc.collect()
 
-    assert snimak.status == "failed"
-    zaostale = [r.getMessage() for r in caplog.records if r.name == "asyncio"]
-    assert not zaostale, zaostale
+    assert captured.status == "failed"
+    leftovers = [r.getMessage() for r in caplog.records if r.name == "asyncio"]
+    assert not leftovers, leftovers
 
 
-def test_rukovalac_izuzetaka_se_vraca_posle_nivoa_2():
-    """Nivo 2 utišava greške zatvorenih konteksta samo dok traje. Web worker živi dugo,
-    pa njegova petlja posle nivoa 2 mora imati svoj rukovalac, a ne naš."""
+def test_exception_handler_is_restored_after_level_2():
+    """Level 2 silences the errors of closed contexts only while it runs. A web worker lives long,
+    so after level 2 its loop must have its own handler, not ours."""
     from sitetriage.fetch.browser import capture_all
 
-    def nas(loop, context):
+    def ours(loop, context):
         loop.default_exception_handler(context)
 
-    async def glavni(site):
+    async def main(site):
         loop = asyncio.get_running_loop()
-        loop.set_exception_handler(nas)
+        loop.set_exception_handler(ours)
         fake = SiteSnapshot(
             domain=site.base_url,
             pages=[PageSnapshot(url=site.base_url + "/", final_url=site.base_url + "/", status=200)],
@@ -608,41 +613,41 @@ def test_rukovalac_izuzetaka_se_vraca_posle_nivoa_2():
         return loop.get_exception_handler()
 
     with FakeSite() as site:
-        assert asyncio.run(glavni(site)) is nas
+        assert asyncio.run(main(site)) is ours
 
 
-def test_rukovalac_utisava_samo_zatvoren_kontekst():
-    """Sve osim greške zatvorenog konteksta ide rukovaocu koji je bio pre nivoa 2."""
+def test_handler_silences_only_a_closed_context():
+    """Everything except a closed-context error goes to the handler installed before level 2."""
     from sitetriage.fetch.browser import _quiet_on_closed_context
 
     class TargetClosedError(Exception):
         pass
 
-    primljeno = []
-    rukovalac = _quiet_on_closed_context(lambda _loop, context: primljeno.append(context))
-    rukovalac(None, {"exception": TargetClosedError()})
-    rukovalac(None, {"exception": ValueError("pravi kvar")})
-    assert [type(c["exception"]).__name__ for c in primljeno] == ["ValueError"]
+    received = []
+    handler = _quiet_on_closed_context(lambda _loop, context: received.append(context))
+    handler(None, {"exception": TargetClosedError()})
+    handler(None, {"exception": ValueError("a real fault")})
+    assert [type(c["exception"]).__name__ for c in received] == ["ValueError"]
 
 
-def test_stranica_koja_se_ne_otvara_je_failed_sa_razlogom():
-    """Greška pri otvaranju koja nije istek (odbijena veza) → `failed`, ne pad."""
+def test_page_that_does_not_open_is_failed_with_a_reason():
+    """An error on opening that is not a timeout (refused connection) → `failed`, not a crash."""
     from sitetriage.fetch.browser import capture_all
 
-    mrtav = SiteSnapshot(
+    dead = SiteSnapshot(
         domain="http://127.0.0.1:1",
         pages=[PageSnapshot(url="http://127.0.0.1:1/", final_url="http://127.0.0.1:1/", status=200)],
         entry=Entry(requested_url="http://127.0.0.1:1/", final_url="http://127.0.0.1:1/", status=200),
     )
     cfg = load_config()
-    cfg["net"]["allowed_private"] = ["127.0.0.1:1"]  # da pukne odbijena veza, a ne zaštita adresa
-    snimak = asyncio.run(capture_all([mrtav], cfg))["http://127.0.0.1:1"]
-    assert snimak.status == "failed"
-    assert snimak.errors and snimak.errors[0].stage == "goto"
-    assert "ERR_BLOCKED_BY_CLIENT" not in snimak.errors[0].detail
+    cfg["net"]["allowed_private"] = ["127.0.0.1:1"]  # so the refused connection fails, not the address guard
+    captured = asyncio.run(capture_all([dead], cfg))["http://127.0.0.1:1"]
+    assert captured.status == "failed"
+    assert captured.errors and captured.errors[0].stage == "goto"
+    assert "ERR_BLOCKED_BY_CLIENT" not in captured.errors[0].detail
 
 
-def test_sistemski_chromium_iz_konfiguracije_i_okruzenja(monkeypatch):
+def test_system_chromium_from_config_and_environment(monkeypatch):
     from sitetriage.fetch.browser import _launch_options
 
     cfg = load_config()
@@ -651,4 +656,4 @@ def test_sistemski_chromium_iz_konfiguracije_i_okruzenja(monkeypatch):
     monkeypatch.setenv("SITETRIAGE_CHROMIUM", "/usr/bin/chromium")
     assert _launch_options(cfg)["executable_path"] == "/usr/bin/chromium"
     cfg["browser"]["executable_path"] = "/opt/chrome"
-    assert _launch_options(cfg)["executable_path"] == "/opt/chrome", "fajl ima prednost"
+    assert _launch_options(cfg)["executable_path"] == "/opt/chrome", "the config file wins"
