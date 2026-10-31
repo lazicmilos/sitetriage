@@ -570,6 +570,13 @@ async def _browser_ua(browser: Any, config: dict) -> str:
         await cdp.detach()
 
 
+class BrowserLaunchError(Exception):
+    """Chromium did not start: Playwright is installed, but its browser is missing or broken (BUG-01).
+
+    It concerns the whole run, not one domain, so `capture_all` lets it through to the pipeline.
+    """
+
+
 def _launch_options(config: dict) -> dict[str, Any]:
     """An installed Chromium instead of Playwright's, when the environment already has one.
 
@@ -660,6 +667,7 @@ async def _capture_all(
     link_mbps: float | None,
     light: bool = False,
 ) -> dict[str, BrowserSnapshot]:
+    from playwright.async_api import Error as PlaywrightError
     from playwright.async_api import async_playwright
 
     results: dict[str, BrowserSnapshot] = {}
@@ -670,7 +678,10 @@ async def _capture_all(
     load_lock = asyncio.Lock() if get(config, "browser.serial_load") and not light else None
 
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(**_launch_options(config))
+        try:
+            browser = await playwright.chromium.launch(**_launch_options(config))
+        except PlaywrightError as exc:
+            raise BrowserLaunchError(str(exc).strip().splitlines()[0]) from exc
         try:
             ua = await _browser_ua(browser, config)
 
