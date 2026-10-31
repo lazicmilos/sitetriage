@@ -81,13 +81,18 @@ def _packaged_config_path() -> Path:
 
 
 def default_config_path() -> Path:
-    """A full `sitetriage.toml` in the working directory first, then the one in the package."""
+    """The defaults layer: always the `sitetriage.toml` in the package.
+
+    A `sitetriage.toml` in the working directory is never read implicitly: it is a user file like
+    any other and counts only when passed with `--config`, which merges it over these defaults
+    (BUG-04). In a repository clone or an editable install the package file is the repository's
+    `sitetriage/sitetriage.toml`, so calibrating the defaults there still works.
+    """
     packaged = _packaged_config_path()
-    for candidate in (Path.cwd() / CONFIG_NAME, packaged):
-        if candidate.is_file():
-            return candidate
+    if packaged.is_file():
+        return packaged
     raise ConfigError(
-        f"{CONFIG_NAME} was found neither in {Path.cwd()} nor in the package ({packaged.parent}). "
+        f"{CONFIG_NAME} was not found in the package ({packaged.parent}). "
         f"Reinstall SiteTriage; the default config ships with it, and --config is merged over it."
     )
 
@@ -122,8 +127,7 @@ def load_config(path: str | Path | None = None, *, profile: str | None = None) -
         user_path = Path(path)
         if not user_path.is_file():
             raise ConfigError(f"configuration file does not exist: {user_path}")
-        if user_path.resolve() != defaults.resolve():
-            user = _read(user_path)
+        user = _read(user_path)
     name = profile if profile is not None else user.get("profile", cfg.get("profile", ""))
     if not isinstance(name, str):
         raise ConfigError(f"profile must be the name of a profile as a string, got {name!r}")
