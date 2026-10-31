@@ -43,7 +43,7 @@ istovremeno, gornji limit 60 domena.
 
 ## 4. Izlazni kriterijumi
 
-Kriterijumi su iz [`provera-na-pravim-sajtovima.md`](provera-na-pravim-sajtovima.md).
+Kriterijumi su iz [`provera-na-pravim-sajtovima.md`](../real-site-verification.md).
 
 | Kriterijum | Granica | Rezultat | Ispunjen |
 |---|---|---|---|

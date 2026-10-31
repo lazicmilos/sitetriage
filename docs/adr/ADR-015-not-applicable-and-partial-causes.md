@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-21, Z-22 (with O-7, O-7a, O-7b)
 ```
 
-Recorded on 2026-10-31 from `docs/izvestaj-testiranja-2.md` §6 and §8, `docs/plan-testiranja.md`
-§4, `docs/kalibracija.md` (run D, 2026-09-27; 2026-10-05), `docs/izvestaj-testiranja-3.md` §6.1 and
+Recorded on 2026-10-31 from `docs/sr/izvestaj-testiranja-2.md` §6 and §8, `docs/sr/plan-testiranja.md`
+§4, `docs/sr/kalibracija.md` (run D, 2026-09-27; 2026-10-05), `docs/sr/izvestaj-testiranja-3.md` §6.1 and
 `CHANGELOG.md` (2.0.0).
 
 ## Context

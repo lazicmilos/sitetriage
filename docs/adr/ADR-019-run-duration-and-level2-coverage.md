@@ -8,9 +8,9 @@ Covers:  Z-32 (with BUG-005, BUG-020, O-18; criterion U1 of the v1 specification
          the v2 specification)
 ```
 
-Recorded on 2026-10-31 from `docs/kalibracija.md` (2026-09-24, 2026-09-27, 2026-09-28,
-2026-10-04, 2026-10-05), `docs/izvestaj-testiranja-2.md`, `docs/izvestaj-testiranja-3.md`
-(§3.5, O-18, owner decision 6 in §6.3), `docs/plan-testiranja.md` §4, `CHANGELOG.md` (2.0.0),
+Recorded on 2026-10-31 from `docs/sr/kalibracija.md` (2026-09-24, 2026-09-27, 2026-09-28,
+2026-10-04, 2026-10-05), `docs/sr/izvestaj-testiranja-2.md`, `docs/sr/izvestaj-testiranja-3.md`
+(§3.5, O-18, owner decision 6 in §6.3), `docs/sr/plan-testiranja.md` §4, `CHANGELOG.md` (2.0.0),
 `README.md` and `skener.toml`.
 
 ## Context

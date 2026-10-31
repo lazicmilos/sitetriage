@@ -7,8 +7,8 @@ Author:  Milos Lazic
 Covers:  Z-27 (with O-3, BUG-013, BUG-014, BUG-015, BUG-018, BUG-023 to BUG-026)
 ```
 
-Recorded on 2026-10-31 from `docs/izvestaj-testiranja-100.md` (O-3), `docs/izvestaj-testiranja-2.md`
-§3.3, `docs/izvestaj-testiranja-3.md` §3.3 and §8, `CHANGELOG.md` (2.0.0) and the commit history.
+Recorded on 2026-10-31 from `docs/sr/izvestaj-testiranja-100.md` (O-3), `docs/sr/izvestaj-testiranja-2.md`
+§3.3, `docs/sr/izvestaj-testiranja-3.md` §3.3 and §8, `CHANGELOG.md` (2.0.0) and the commit history.
 Builds on [ADR-009](ADR-009-katalog-poruka.md) (sentences come from a per-language catalog).
 
 ## Context
