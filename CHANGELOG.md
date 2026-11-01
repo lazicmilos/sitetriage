@@ -6,9 +6,13 @@ finding, the JSON) raises the major version.
 
 ## Unreleased
 
+## 3.0.1 — 2026-11-01
+
 Fixes from an independent test of 3.0.0. A config that 3.0.0 accepted can now fail: an unknown key
 or section, or a value of the wrong type or range, is an error that names the key, where 3.0.0
-silently ignored it or crashed later.
+silently ignored it or crashed later. Before upgrading, run your `--config` files through
+`sitetriage recheck` once, and pass a `sitetriage.toml` that sits in your working directory with
+`--config`, because it is no longer read on its own.
 
 ### Fixed
 
