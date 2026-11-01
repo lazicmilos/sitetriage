@@ -2,4 +2,4 @@
 
 # The only source of the version: pyproject.toml reads it from here. Between releases it ends in
 # `.dev0` (CHANGELOG.md).
-__version__ = "3.0.0"
+__version__ = "3.0.1"
