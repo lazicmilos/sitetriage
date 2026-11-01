@@ -1,6 +1,8 @@
 # SiteTriage
 
 [![PyPI](https://img.shields.io/pypi/v/sitetriage)](https://pypi.org/project/sitetriage/)
+[![Python](https://img.shields.io/pypi/pyversions/sitetriage)](https://pypi.org/project/sitetriage/)
+[![tests](https://github.com/lazicmilos/sitetriage/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lazicmilos/sitetriage/actions/workflows/ci.yml)
 
 SiteTriage takes a list of domains, usually one or two hundred, scans each site politely and ranks
 the ones that deserve a full manual audit. Every ranked site comes with a few sentences, in Serbian
