@@ -1,5 +1,7 @@
 # SiteTriage
 
+[![PyPI](https://img.shields.io/pypi/v/sitetriage)](https://pypi.org/project/sitetriage/)
+
 SiteTriage takes a list of domains, usually one or two hundred, scans each site politely and ranks
 the ones that deserve a full manual audit. Every ranked site comes with a few sentences, in Serbian
 or English, that you can paste into a message, use on a call or type into a contact form. It is
