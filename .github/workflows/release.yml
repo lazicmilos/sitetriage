@@ -4,12 +4,19 @@
 # Two ways to start it:
 # - push a tag `v*` (for example from a GitHub release created in the web UI);
 # - run it by hand (Actions → release → Run workflow, or the API) on `main` with the version. The
-#   `tag` job checks that the version is the one in `sitetriage/__init__.py` and in CHANGELOG.md,
-#   creates the tag `v<version>`, and once PyPI and the image are published, the GitHub release.
-#   A tag pushed with the workflow's own token does not start another run, so this run does it all.
+#   `check` job refuses a version that does not match `sitetriage/__init__.py` and CHANGELOG.md, or
+#   whose tag or PyPI release already exists. Once PyPI has accepted the upload, the `tag` job tags
+#   the commit the run started from as `v<version>`, and once the image is pushed too, the GitHub
+#   release is created. A tag pushed with the workflow's own token does not start another run.
+#
+# Order: PyPI is the one step that cannot be undone (a version, once uploaded, can never be uploaded
+# again), so everything else that is published waits for it. When PyPI refuses the upload, no tag,
+# image or release exists, and the same version can be released again from scratch. When a later
+# job fails, re-run the failed jobs of that run: PyPI is not touched again.
 #
 # PyPI publishing uses trusted publishing (OIDC, no API token): it only works after a trusted
 # publisher for this repository, this workflow and the `pypi` environment is configured on PyPI.
+# Deleting the project on PyPI deletes its trusted publishers too.
 name: release
 
 on:
@@ -28,20 +35,16 @@ permissions:
 env:
   # On a tag push this is the tag (v3.0.0); docker/metadata-action reads it as semver either way.
   VERSION: ${{ inputs.version || github.ref_name }}
-  # What build and docker check out: the tag the `tag` job created, or the pushed tag.
-  RELEASE_REF: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref }}
 
 jobs:
-  tag:
+  check:
     if: github.event_name == 'workflow_dispatch'
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check the version and create the tag
+      - name: Check the version, the tag and PyPI
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
@@ -59,21 +62,24 @@ jobs:
           if git ls-remote --exit-code --tags origin "refs/tags/v$INPUT_VERSION" >/dev/null; then
             echo "::error::tag v$INPUT_VERSION already exists"; exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$INPUT_VERSION" -m "SiteTriage $INPUT_VERSION"
-          git push origin "v$INPUT_VERSION"
+          # Only a 404 means the version is free; any other answer stops the release rather than
+          # guessing.
+          status=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 \
+            "https://pypi.org/pypi/sitetriage/$INPUT_VERSION/json")
+          case "$status" in
+            404) ;;
+            200) echo "::error::sitetriage $INPUT_VERSION is already on PyPI"; exit 1 ;;
+            *) echo "::error::could not check PyPI for $INPUT_VERSION (HTTP $status)"; exit 1 ;;
+          esac
 
   build:
-    needs: tag
-    # Runs after `tag` on a manual run; on a tag push `tag` is skipped and this runs anyway.
+    needs: check
+    # Runs after `check` on a manual run; on a tag push `check` is skipped and this runs anyway.
     if: ${{ !failure() && !cancelled() }}
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_REF }}
 
       - uses: actions/setup-python@v7
         with:
@@ -106,7 +112,8 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   docker:
-    needs: tag
+    # After PyPI: an image of a version that is not on PyPI is a release nobody can finish.
+    needs: pypi
     if: ${{ !failure() && !cancelled() }}
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
@@ -115,8 +122,6 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_REF }}
 
       - uses: docker/login-action@v4
         with:
@@ -140,9 +145,31 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  tag:
+    # Only on a manual run, and only after PyPI accepted the upload: on a tag push the tag exists.
+    needs: pypi
+    if: ${{ github.event_name == 'workflow_dispatch' && !failure() && !cancelled() }}
+    # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      # The commit the run started from, which is what `build` built, even if main moved since.
+      - uses: actions/checkout@v4
+
+      - name: Tag the released commit
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$INPUT_VERSION" -m "SiteTriage $INPUT_VERSION"
+          git push origin "v$INPUT_VERSION"
+
   github-release:
     # Only on a manual run: a pushed tag usually comes from a release that already exists.
-    needs: [pypi, docker]
+    needs: [tag, docker]
     if: ${{ github.event_name == 'workflow_dispatch' && !failure() && !cancelled() }}
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
@@ -150,8 +177,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_REF }}
 
       - name: Create the GitHub release from the CHANGELOG section
         env:
