@@ -32,6 +32,7 @@ from sitetriage.models import (
     BrowserSnapshot,
     ConsoleStats,
     DomStats,
+    LoadState,
     NetworkProfile,
     NetworkStats,
     OversizedImage,
@@ -262,9 +263,22 @@ class _LoadSlot:
             self._held = True
 
     def release(self) -> None:
-        if self._held:
+        if self._held and self._lock is not None:
             self._held = False
             self._lock.release()
+
+
+def start_url(site: SiteSnapshot) -> str:
+    """Where level 2 navigates: the final URL of level 1, else the URL level 1 asked for.
+
+    An entry without a response has no final URL (forced level 2 or `record` on a site that does not
+    answer). The requested URL is used then, never `None`, which Playwright refuses with a `TypeError`.
+    """
+    if site.home and site.home.final_url:
+        return site.home.final_url
+    if site.entry:
+        return site.entry.final_url or site.entry.requested_url
+    return f"https://{site.domain}/"
 
 
 async def capture(
@@ -283,9 +297,7 @@ async def capture(
     """
     from playwright.async_api import Error as PlaywrightError
 
-    url = (site.home.final_url if site.home else None) or (
-        site.entry.final_url if site.entry else f"https://{site.domain}/"
-    )
+    url = start_url(site)
     snapshot = BrowserSnapshot(
         domain=site.domain,
         url=url,
@@ -322,7 +334,7 @@ async def capture(
         page.on("console", recorder.on_console)
         page.on("pageerror", recorder.on_page_error)
 
-        reached = "error"
+        reached: LoadState = "error"
         debug = {"domain": site.domain}
         log.debug("goto %s (light %s)", url, light, extra=debug)
         try:
@@ -401,7 +413,7 @@ async def capture(
     return snapshot
 
 
-async def _read_timing(page: Any, reached: str, error_type: type) -> TimingStats:
+async def _read_timing(page: Any, reached: LoadState, error_type: type[Exception]) -> TimingStats:
     try:
         raw = await page.evaluate(_TIMING)
     except error_type:
@@ -416,7 +428,7 @@ async def _read_timing(page: Any, reached: str, error_type: type) -> TimingStats
 
 
 async def _read_dom(
-    page: Any, recorder: _Recorder, config: dict, error_type: type, snapshot: BrowserSnapshot
+    page: Any, recorder: _Recorder, config: dict, error_type: type[Exception], snapshot: BrowserSnapshot
 ) -> DomStats:
     try:
         raw = await page.evaluate(_DOM, get(config, "thresholds.perf.image_ratio"))
@@ -511,7 +523,7 @@ def _quiet_on_closed_context(previous: Callable | None) -> Callable:
     return handler
 
 
-def _address_guard(allowed: addresses.Allowlist, error_type: type, domain: str) -> Any:
+def _address_guard(allowed: addresses.Allowlist, error_type: type[Exception], domain: str) -> Any:
     """Every browser request goes through the same address check as level 1 (ADR-006).
 
     Chromium resolves the name itself, so there is a window between this check and its
@@ -561,7 +573,7 @@ async def _refusal_reason(host: str, port: int, allowed: addresses.Allowlist) ->
             infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except OSError as exc:
         return f"DNS did not resolve the name ({exc})"
-    ips = sorted({info[4][0] for info in infos})
+    ips = sorted({str(info[4][0]) for info in infos})
     blocked = [ip for ip in ips if not addresses.may_connect(ip, host, port, allowed)]
     if not ips or blocked:
         return f"address is not public: {', '.join(blocked) or '—'}"

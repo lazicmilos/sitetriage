@@ -25,7 +25,10 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "httpx>=0.27",
+    # Below 1: fetch/http.py installs the address check (ADR-006) through httpx's private `_pool`
+    # and imports httpcore directly; a major version may change either. Lift only with tests/test_ssrf.py green.
+    "httpx>=0.27,<1",
+    "httpcore>=1.0,<2",
     "selectolax>=0.3.21",
 ]
 
@@ -36,7 +39,7 @@ browser = ["playwright>=1.44"]
 # pytest stays below 9: mutmut 3.2.3 (scripts/mutation.py) reads `item._nodeid`, which pytest 9
 # removed, so mutation testing fails before testing a single mutant. Lift this together with a
 # mutmut upgrade, and compare the score against the previous run when you do.
-dev = ["pytest>=8,<9", "pytest-cov==7.1.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18", "pre-commit>=3.5"]
+dev = ["pytest>=8,<9", "pytest-cov==7.1.0", "playwright==1.56.0", "ruff>=0.6", "jsonschema>=4.18", "pre-commit>=3.5", "mypy>=1.11"]
 
 [project.urls]
 Homepage = "https://github.com/lazicmilos/sitetriage"
@@ -81,6 +84,18 @@ do_not_mutate = [
     "sitetriage/fetch/*", "sitetriage/report/*",
 ]
 also_copy = ["sitetriage/sitetriage.toml", "sitetriage/schema/", "sitetriage/profiles/"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["sitetriage"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+
+# Playwright is an optional extra, imported lazily: where it is not installed, the check must still pass.
+[[tool.mypy.overrides]]
+module = ["playwright.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 110

@@ -6,6 +6,11 @@ finding, the JSON) raises the major version.
 
 ## Unreleased
 
+- `scan --level 2` and `record` on a site that did not answer no longer hand the browser an empty
+  address. Level 2 now opens the address level 1 asked for, and the site is reported as before.
+- The package now requires `httpx` below 1.0 and names `httpcore` as a dependency. It used both
+  already; a future major version of either can no longer break the private-address check silently.
+
 ## 3.0.1 — 2026-11-01
 
 Fixes from an independent test of 3.0.0. A config that 3.0.0 accepted can now fail: an unknown key

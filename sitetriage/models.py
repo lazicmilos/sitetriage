@@ -27,6 +27,9 @@ Industry = Literal[
 # `excluded`: the administrator asked for the site not to be scanned; the report shows only
 # how many there are.
 DomainStatus = Literal["scanned", "partial", "failed", "unreachable", "excluded"]
+PartialCause = Literal["budget", "unknown"]
+LoadState = Literal["load", "domcontentloaded", "timeout", "error"]
+Phase = Literal["level1", "level2", "level2_light", "recheck"]
 
 # JSON report: an added field raises the minor number, a removed or changed one the major (ADR-011).
 SCHEMA_VERSION = "3.0"
@@ -60,11 +63,11 @@ def _coerce(tp: Any, value: Any) -> Any:
         return None
     origin = typing.get_origin(tp)
     if origin is typing.Union or origin is types.UnionType:
-        args = [a for a in typing.get_args(tp) if a is not type(None)]
-        for arg in args:
+        members = [a for a in typing.get_args(tp) if a is not type(None)]
+        for arg in members:
             if dataclasses.is_dataclass(arg) and isinstance(value, dict):
                 return from_dict(arg, value)
-        return _coerce(args[0], value) if len(args) == 1 else value
+        return _coerce(members[0], value) if len(members) == 1 else value
     if origin in (list, tuple):
         args = typing.get_args(tp)
         item_tp = args[0] if args else Any
@@ -289,7 +292,7 @@ class NetworkStats:
 class TimingStats:
     dom_content_loaded_ms: int | None = None
     load_ms: int | None = None
-    reached: Literal["load", "domcontentloaded", "timeout", "error"] = "error"
+    reached: LoadState = "error"
 
 
 @dataclass
@@ -426,7 +429,7 @@ class DomainReport:
     final_url: str | None = None
     status: DomainStatus = "scanned"
     # Why it is `partial`: `budget`, `unknown` or both (ADR-015). Empty for the other statuses.
-    partial_causes: list[Literal["budget", "unknown"]] = field(default_factory=list)
+    partial_causes: list[PartialCause] = field(default_factory=list)
     level2_ran: bool = False
     escalation_reasons: list[Reason] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
@@ -464,7 +467,7 @@ class Event:
     """Progress of a run. The web worker turns it into a progress bar, the CLI logs it."""
 
     kind: Literal["phase_started", "phase_finished", "domain_finished"]
-    phase: Literal["level1", "level2", "level2_light", "recheck"]
+    phase: Phase
     total: int
     done: int = 0
     domain: str | None = None

@@ -143,7 +143,7 @@ def render(
     level2 = sum(1 for r in reports if r.level2_ran)
     generated = reports[0].scanned_at if reports else ""
 
-    cards = [
+    cards: list[tuple[str, int | str]] = [
         (t("card_domains"), len(reports)),
         (t("card_scanned"), len(with_status("scanned"))),
         (t("card_partial"), len(with_status("partial"))),

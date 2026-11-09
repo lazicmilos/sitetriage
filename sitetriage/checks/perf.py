@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
-from sitetriage.checks.registry import Context, check, finding, ok, unknown
+from sitetriage.checks.registry import Context, check, entry_of, finding, home_of, ok, unknown
 from sitetriage.models import OversizedImage, SiteSnapshot
 
 COMPRESSED = {"gzip", "br", "zstd", "deflate"}
@@ -52,7 +52,7 @@ def _seconds_on_mobile(mb: float, ctx: Context) -> float:
     threshold="content-encoding ∉ {gzip, br, zstd, deflate} and HTML > 50 kB",
 )
 def compression_missing(snapshot: SiteSnapshot, ctx: Context):
-    home = snapshot.home
+    home = home_of(snapshot)
     encoding = (home.headers.get("content-encoding") or "").lower().strip()
     min_bytes = ctx.th("thresholds.perf.compression_min_kb") * 1024
     if encoding in COMPRESSED or home.html_bytes <= min_bytes:
@@ -84,7 +84,7 @@ def compression_missing(snapshot: SiteSnapshot, ctx: Context):
     threshold="number of hops ≥ thresholds.perf.redirect_hops (3)",
 )
 def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
-    chain = snapshot.entry.redirect_chain
+    chain = entry_of(snapshot).redirect_chain
     hops = max(len(chain) - 1, 0)
     if hops < ctx.th("thresholds.perf.redirect_hops"):
         return ok(redirect_chain.spec)
@@ -106,7 +106,7 @@ def redirect_chain(snapshot: SiteSnapshot, ctx: Context):
     threshold="html_bytes > thresholds.perf.html_size_kb (500 kB)",
 )
 def html_size(snapshot: SiteSnapshot, ctx: Context):
-    home = snapshot.home
+    home = home_of(snapshot)
     limit_kb = ctx.th("thresholds.perf.html_size_kb")
     kb = round(home.html_bytes / 1024)
     if home.html_bytes <= limit_kb * 1024:

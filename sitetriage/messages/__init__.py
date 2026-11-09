@@ -20,6 +20,7 @@ source, encoding) are read through the language's `CODES`.
 from __future__ import annotations
 
 import string
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
@@ -48,7 +49,7 @@ class _Formatter(string.Formatter):
         self.cat = cat
         self.localize = localize
 
-    def get_value(self, key: Any, args: Any, kwargs: dict[str, Any]) -> Any:
+    def get_value(self, key: Any, args: Sequence[Any], kwargs: Mapping[str, Any]) -> Any:
         value = super().get_value(key, args, kwargs)
         codes = self.cat.CODES.get(key)
         return codes.get(value, value) if codes else value

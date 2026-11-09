@@ -45,9 +45,8 @@ def parse(data: bytes | None, *, max_bytes: int) -> tuple[SitemapKind, list[str]
     except ElementTree.ParseError:
         return "unknown", []
 
-    kind: SitemapKind = {"sitemapindex": "index", "urlset": "urlset"}.get(
-        _tag(root), "unknown"
-    )
+    kinds: dict[str, SitemapKind] = {"sitemapindex": "index", "urlset": "urlset"}
+    kind = kinds.get(_tag(root), "unknown")
     if kind == "unknown":
         return kind, []
 

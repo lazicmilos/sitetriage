@@ -389,3 +389,16 @@ def test_summary_csv_has_every_domain_with_its_status(tmp_path):
     path = csv_out.write_summary(tmp_path / "summary.csv", reports)
     rows = {r["domain"]: r["status"] for r in csv.DictReader(path.open(encoding="utf-8"))}
     assert rows == {"radi.rs": "scanned", "ugasen.rs": "unreachable", "zatvoren.rs": "failed"}
+
+
+def test_level_2_navigates_to_the_requested_url_when_the_entry_got_no_response():
+    """Forced level 2 on a site that does not answer: the entry has no final URL, and `None` must not
+    reach the browser."""
+    from sitetriage.fetch.browser import start_url
+    from sitetriage.models import Entry, SiteSnapshot
+
+    site = SiteSnapshot(domain="x.example", entry=Entry(requested_url="https://x.example/", error_kind="dns"))
+    assert start_url(site) == "https://x.example/"
+    site.entry.final_url = "https://www.x.example/"
+    assert start_url(site) == "https://www.x.example/"
+    assert start_url(SiteSnapshot(domain="x.example")) == "https://x.example/"

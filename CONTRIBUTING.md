@@ -308,8 +308,8 @@ docs: explain level 2 limits in ADR-006
 - Open an issue first for a new check, a new dependency or a change to the report format, so the
   direction is agreed before you write code.
 - One logical change per PR. Fill in the PR template.
-- CI must be green: lint, tests on every supported Python version, the coverage gate, the README
-  table check and the Docker build.
+- CI must be green: lint, the type check (`mypy`), tests on every supported Python version, the
+  coverage gate, the README table check and the Docker build.
 - Add tests that fail without your change. For a bug fix, the test reproduces the bug.
 - User-visible changes get an entry in the "Unreleased" section of `CHANGELOG.md`.
 - If a client-facing sentence changes, change it in both languages and regenerate the golden files
