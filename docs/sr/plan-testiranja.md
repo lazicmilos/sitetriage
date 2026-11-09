@@ -30,7 +30,7 @@ izvedena iz registra) i u `sitetriage.toml`.
   1.56.0 i Python 3.12.
 - **Obim — jeste:** sve provere nivoa 1 i 2, bodovanje, rangiranje, politika eskalacije, fetcher
   (budžet, semafori, greške, SSRF), merenje u browseru, pipeline, CLI (`scan`, `recheck`, `record`,
-  `explain`, `diff`, `outcomes`), konfiguracija, izveštaji (HTML, CSV, JSON), ulazni CSV, poruke za
+  `explain`; `diff` i `outcomes` su planirani za F4 i još ne postoje), konfiguracija, izveštaji (HTML, CSV, JSON), ulazni CSV, poruke za
   klijenta na oba jezika.
 - **Obim — nije:** opterećenje tuđih sajtova (alat je namerno pristojan i nije predmet testa
   opterećenja); bezbednost samog Chromium-a; pravna usklađenost načina na koji operater koristi izveštaj;
@@ -64,7 +64,7 @@ tačna i proverljiva, a svaki broj mora poticati iz dokaza.
 
 **Test podaci:** sintetički snapshoti (`tests/factories.py`), lokalni server (`tests/localserver.py`),
 ručno pisani ispitni skup (`tests/fixtures/`). Liste A i B, rezultati po domenu, ishodi leadova i
-popunjeni obrasci ručne provere ostaju van repozitorijuma (`rad/`), jer sadrže poslovne kontakte.
+popunjeni obrasci ručne provere ostaju van repozitorijuma (`work/`), jer sadrže poslovne kontakte.
 
 ## 4. Kriterijumi
 
@@ -125,7 +125,7 @@ u formatu iz skripte (BUG-xxx).
 | R1 | pravi sajtovi se menjaju između dva prolaza, pa razlika nije samo posledica ispravki | 4 | 3 | poređenje po grupama nalaza, ne po domenu; sumnjivo se proverava van alata |
 | R2 | testovi sa vremenom (pauze, budžet) su nestabilni na sporoj mašini | 2 | 3 | vreme se proverava sa marginom, a mehanizam preko redosleda događaja |
 | R3 | mutaciono testiranje traje predugo | 3 | 2 | samo moduli sa logikom; ostalo pokriva integraciono testiranje |
-| R4 | lista leadova procuri u javni repozitorijum | 2 | 5 | `rad/` je u `.gitignore`; izveštaji sadrže samo zbirne brojeve |
+| R4 | lista leadova procuri u javni repozitorijum | 2 | 5 | `work/` je u `.gitignore`; izveštaji sadrže samo zbirne brojeve |
 | R5 | kalibracija na A se prelije na B | 3 | 4 | pragovi zamrznuti posle kalibracije; defekt nađen na B ide kroz BUG proceduru |
 | R6 | refaktor poruka neprimetno promeni srpske rečenice | 3 | 4 | golden fajl svih rečenica pre refaktora |
 
@@ -138,7 +138,7 @@ lažno negativan rezultat za klijenta), minor, trivial. Prioritet određuje utic
 ## 9. Isporuke
 
 Testovi u `tests/`, ovaj plan, izveštaj o testiranju IT-SKENER-003, merenja pokrivenosti i mutacionog
-testiranja, obrazac ručne provere (`docs/obrazac-rucne-provere.md`).
+testiranja, obrazac ručne provere (`docs/manual-check-form.md`).
 
 ## 10. Odobrenja
 

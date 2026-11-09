@@ -1,8 +1,9 @@
 # Serbian historical documents
 
 SiteTriage was developed in Serbian until version 3.0. The documents in this folder are the record
-of how versions 1 and 2 were tested and calibrated. They are kept as they were written, in Serbian,
-and are not maintained any more. Current decisions live in the
+of how versions 1 and 2 were tested and calibrated. They are kept in Serbian. The test reports and
+the calibration log are kept as they were written and are not maintained any more. Current
+decisions live in the
 [architecture decision records](../adr/README.md), and current procedures in the
 [docs index](../README.md).
 
@@ -24,6 +25,9 @@ observations (`O-7`) and document ids (`IT-SKENER-003`). The sources behind most
 never published. [legacy-references.md](../adr/legacy-references.md) decodes each id and says where
 it is documented now.
 
-The relative links inside these files were updated when they moved here. Everything else is
-unchanged, including paths in the text such as `skener/` and `skener.toml`, which are the names
-from before version 3.0 ([ADR-012](../adr/ADR-012-english-public-interface.md)).
+The relative links inside these files were updated when they moved here. In `kvalitet.md` and
+`plan-testiranja.md` the cited tests, files, modules and config sections were also updated to their
+names in version 3.0, so every reference there points at something that exists. The test reports
+and the calibration log are unchanged, including paths in the text such as `skener/` and
+`skener.toml`, which are the names from before version 3.0
+([ADR-012](../adr/ADR-012-english-public-interface.md)).
