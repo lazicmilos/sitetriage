@@ -6,7 +6,16 @@ import re
 from collections import defaultdict
 from collections.abc import Callable
 
-from sitetriage.checks.registry import CheckSpec, Context, check, finding, not_applicable, ok, unknown
+from sitetriage.checks.registry import (
+    CheckSpec,
+    Context,
+    check,
+    finding,
+    home_of,
+    not_applicable,
+    ok,
+    unknown,
+)
 from sitetriage.fetch.urls import collapse_ws, normalize, path_group, same_site
 from sitetriage.models import CheckResult, PageSnapshot, SiteSnapshot
 
@@ -29,14 +38,14 @@ def _too_few_pages(snapshot: SiteSnapshot, ctx: Context, spec: CheckSpec) -> Che
     if snapshot.scanner_version.startswith("1."):
         return unknown(spec, "v1_snapshot", version=snapshot.scanner_version, field="home_links")
 
-    home = snapshot.home
+    home = home_of(snapshot)
     base = home.final_url or home.url
     sources = [snapshot.home_links]
     if snapshot.sitemap.status == 200 and not snapshot.sitemap.truncated:
         sources.append(snapshot.sitemap.urls)
     b = ctx.browser
     level2 = b is not None and b.status != "failed" and b.dom.internal_links_total is not None
-    if level2:
+    if b is not None and level2:
         sources.append(b.dom.internal_links)
     # The home page is a URL of the site even when no link leads to it.
     urls = {normalize(base)} | {u for source in sources for u in map(normalize, source) if same_site(u, base)}
@@ -90,7 +99,7 @@ def _duplicates(
     threshold="no tag on the home page",
 )
 def canonical_missing(snapshot: SiteSnapshot, ctx: Context):
-    home = snapshot.home
+    home = home_of(snapshot)
     if home.canonical:
         return ok(canonical_missing.spec)
     return finding(
@@ -164,7 +173,7 @@ def canonical_duplicate(snapshot: SiteSnapshot, ctx: Context):
     threshold="empty or missing <title>",
 )
 def title_missing(snapshot: SiteSnapshot, ctx: Context):
-    home = snapshot.home
+    home = home_of(snapshot)
     title = collapse_ws(home.title)
     if title:
         return ok(title_missing.spec)
@@ -218,7 +227,7 @@ def title_duplicate(snapshot: SiteSnapshot, ctx: Context):
     threshold="empty or missing meta description",
 )
 def description_missing(snapshot: SiteSnapshot, ctx: Context):
-    home = snapshot.home
+    home = home_of(snapshot)
     if collapse_ws(home.meta_description):
         return ok(description_missing.spec)
     return finding(

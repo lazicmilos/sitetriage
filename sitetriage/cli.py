@@ -43,7 +43,7 @@ examples:
 class JsonLines(logging.Formatter):
     # The "Z" in the timestamp claims UTC; the default is local time, so outside Docker every
     # line would be shifted by the machine's time zone (BUG-012).
-    converter = time.gmtime
+    converter = time.gmtime  # type: ignore[assignment]  # mypy binds `self`; a builtin does not
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {
@@ -261,13 +261,14 @@ def cmd_explain(args: argparse.Namespace) -> int:
                 print(f"{spec.check_id:32} level {spec.level}  {spec.base_severity:8} {spec.threshold}")
         return 0
 
-    spec = registry.REGISTRY.get(args.check_id)
-    if spec is None:
+    wanted = registry.REGISTRY.get(args.check_id)
+    if wanted is None:
         similar = [s.check_id for s in specs if args.check_id in s.check_id]
         raise SystemExit(
             f"unknown check: {args.check_id}"
             + (f"\ndid you mean: {', '.join(similar)}" if similar else "\nall: sitetriage explain --all")
         )
+    spec = wanted
 
     print(f"{spec.check_id}\n{'=' * len(spec.check_id)}")
     print(f"level:       {spec.level}")

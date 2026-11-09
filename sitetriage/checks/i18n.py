@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
-from sitetriage.checks.registry import Context, check, finding, not_applicable, ok, unknown
+from sitetriage.checks.registry import Context, check, finding, home_of, not_applicable, ok, unknown
 from sitetriage.models import SiteSnapshot
 
 BCP47 = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$")
@@ -76,13 +76,13 @@ def _page_state(snapshot: SiteSnapshot, ctx: Context) -> tuple[str | None, str, 
     b = ctx.browser
     if b is not None and b.status != "failed" and b.dom.text_length is not None:
         return b.dom.lang, b.dom.text_sample, b.dom.text_length, "rendered"
-    home = snapshot.home
+    home = home_of(snapshot)
     return home.lang, home.text_sample, home.text_length, "raw_html"
 
 
 def _raw_html_truncated(snapshot: SiteSnapshot, source: str) -> bool:
     """The raw HTML of the home page was cut at `http.max_body_kb`; after level 2 the browser page applies."""
-    return source == "raw_html" and snapshot.home.truncated
+    return source == "raw_html" and home_of(snapshot).truncated
 
 
 def _lang_usable(lang: str | None) -> bool:
@@ -108,15 +108,16 @@ def lang_missing(snapshot: SiteSnapshot, ctx: Context):
         return unknown(lang_missing.spec, "requires.home_complete")
     if lang is not None:
         return ok(lang_missing.spec)
+    home = home_of(snapshot)
     return finding(
         lang_missing.spec,
         ctx,
         evidence={
-            "page": snapshot.home.final_url or snapshot.home.url,
+            "page": home.final_url or home.url,
             "lang_tag_count": 0,
             "source": source,
         },
-        urls=[snapshot.home.final_url or snapshot.home.url],
+        urls=[home.final_url or home.url],
     )
 
 
@@ -135,16 +136,17 @@ def lang_invalid(snapshot: SiteSnapshot, ctx: Context):
         return unknown(lang_invalid.spec, "requires.home_complete")
     if lang is None or _lang_usable(lang):
         return ok(lang_invalid.spec)
+    home = home_of(snapshot)
     return finding(
         lang_invalid.spec,
         ctx,
         evidence={
-            "page": snapshot.home.final_url or snapshot.home.url,
+            "page": home.final_url or home.url,
             "lang": lang,
             "code_length": len(lang.strip()),
             "source": source,
         },
-        urls=[snapshot.home.final_url or snapshot.home.url],
+        urls=[home.final_url or home.url],
     )
 
 
@@ -171,7 +173,7 @@ def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
     if not languages:
         # Off by default: the only detector is Serbian, and elsewhere it would only guess (ADR-023).
         return not_applicable(lang_mismatch.spec, "no_content_language")
-    home = snapshot.home
+    home = home_of(snapshot)
     lang, text, length, source = _page_state(snapshot, ctx)
     if _raw_html_truncated(snapshot, source):
         return unknown(lang_mismatch.spec, "requires.home_complete")
@@ -183,7 +185,7 @@ def lang_mismatch(snapshot: SiteSnapshot, ctx: Context):
         return unknown(lang_mismatch.spec, reason, length=length, threshold=min_text)
     # A missing or unusable tag is covered by the other two checks; `zxx` must
     # land in `invalid`, not here (the `hotel-planina.example` fixture).
-    if not _lang_usable(lang):
+    if lang is None or not _lang_usable(lang):
         return ok(lang_mismatch.spec)
 
     detected = next((code for code in languages if DETECTORS[code][0](text, ctx)), None)

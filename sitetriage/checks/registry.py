@@ -15,12 +15,29 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol, cast
 
 from sitetriage.config import get
-from sitetriage.models import BrowserSnapshot, CheckResult, Finding, Reason
+from sitetriage.models import (
+    BrowserSnapshot,
+    CheckResult,
+    CheckStatus,
+    Entry,
+    Finding,
+    PageSnapshot,
+    Reason,
+    SiteSnapshot,
+)
 
 CheckFn = Callable[[Any, "Context"], CheckResult]
+
+
+class RegisteredCheck(Protocol):
+    """A check function after `@check`: still callable, and it carries its own `spec`."""
+
+    spec: CheckSpec
+
+    def __call__(self, snapshot: Any, ctx: Context, /) -> CheckResult: ...
 
 
 @dataclass
@@ -60,8 +77,8 @@ def check(
     description: str,
     threshold: str,
     requires: Iterable[str] = (),
-) -> Callable[[CheckFn], CheckFn]:
-    def register(fn: CheckFn) -> CheckFn:
+) -> Callable[[CheckFn], RegisteredCheck]:
+    def register(fn: CheckFn) -> RegisteredCheck:
         if check_id in REGISTRY:
             raise ValueError(f"duplicate check_id: {check_id}")
         spec = CheckSpec(
@@ -77,7 +94,7 @@ def check(
         REGISTRY[check_id] = spec
         # The check body reaches its spec through `fn.spec`, without a registry lookup.
         fn.spec = spec  # type: ignore[attr-defined]
-        return fn
+        return cast(RegisteredCheck, fn)
 
     return register
 
@@ -138,6 +155,20 @@ def finding(
 # --------------------------------------------------------------------------- #
 # Requirements (`requires`): why a check cannot run
 # --------------------------------------------------------------------------- #
+def home_of(snapshot: SiteSnapshot) -> PageSnapshot:
+    """The home page, for a check whose `requires` lists `home`: the engine ran it, so the page exists."""
+    home = snapshot.home
+    assert home is not None
+    return home
+
+
+def entry_of(snapshot: SiteSnapshot) -> Entry:
+    """The entry, for a check whose `requires` lists `entry`, `entry_response` or `home`."""
+    entry = snapshot.entry
+    assert entry is not None
+    return entry
+
+
 def _home_ok(snapshot: Any) -> bool:
     home = getattr(snapshot, "home", None)
     return bool(home and home.status == 200 and home.html_bytes)
@@ -208,7 +239,7 @@ def run(level: int, snapshot: Any, ctx: Context) -> list[CheckResult]:
         reason = unmet(spec, snapshot)
         if reason:
             # Light level 2 deliberately does not measure time (BUG-020): not an unknown, so not `partial`.
-            status = "not_applicable" if reason.code == "requires.level2_full" else "unknown"
+            status: CheckStatus = "not_applicable" if reason.code == "requires.level2_full" else "unknown"
             results.append(CheckResult(check_id=spec.check_id, status=status, reason=reason))
             continue
         try:

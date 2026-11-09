@@ -31,6 +31,9 @@ jobs:
       - name: Lint
         run: ruff check sitetriage/ tests/ scripts/
 
+      - name: Type check
+        run: mypy
+
       - name: Install Chromium
         run: playwright install --with-deps chromium
 

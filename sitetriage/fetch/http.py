@@ -164,7 +164,8 @@ async def _read_body(response: httpx.Response, limit: int) -> tuple[bytes, bool]
             received += len(chunk)
         return False
 
-    async with contextlib.aclosing(response.aiter_raw()) as raw:
+    # httpx annotates this async generator as a plain `AsyncIterator`, which has no `aclose`.
+    async with contextlib.aclosing(response.aiter_raw()) as raw:  # type: ignore[type-var]
         async for piece in raw:
             if add(decoder.decode(piece)):
                 return b"".join(chunks), True
@@ -229,7 +230,8 @@ def _classify(exc: Exception) -> tuple[str, str]:
             return "no_connection", str(link)
         if isinstance(link, socket.gaierror):
             # Constants from `socket`, not numbers: the numbers differ between Linux and Windows.
-            return DNS_ERRNO.get(link.errno, "dns"), str(link)
+            kind = DNS_ERRNO.get(link.errno, "dns") if link.errno is not None else "dns"
+            return kind, str(link)
         if isinstance(link, ssl.SSLCertVerificationError):
             return "tls", str(link)
         if isinstance(link, ssl.SSLError):
@@ -816,6 +818,7 @@ async def _collect_sitemap(
             continue
 
         # A truncated body is part of a sitemap: what follows the limit is unknown, as for a too large one.
+        locations: list[str]
         if outcome.truncated:
             kind, locations = "too_large", []
         else:

@@ -30,6 +30,7 @@ from sitetriage.models import (
     DomainReport,
     DomainStatus,
     Event,
+    Phase,
     Reason,
     ScanResult,
     SiteSnapshot,
@@ -53,7 +54,7 @@ class _Progress:
     lose a domain whose snapshot is already on disk.
     """
 
-    def __init__(self, on_event: OnEvent | None, phase: str, total: int) -> None:
+    def __init__(self, on_event: OnEvent | None, phase: Phase, total: int) -> None:
         self.on_event = on_event
         self.phase = phase
         self.total = total

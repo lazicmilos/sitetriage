@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 
-from sitetriage.checks.registry import Context, check, finding, not_applicable, ok, unknown
+from sitetriage.checks.registry import (
+    Context,
+    check,
+    entry_of,
+    finding,
+    home_of,
+    not_applicable,
+    ok,
+    unknown,
+)
 from sitetriage.fetch.urls import host_of
 from sitetriage.models import HostVariant, SiteSnapshot
 
@@ -123,7 +132,7 @@ def soft404(snapshot: SiteSnapshot, ctx: Context):
     ),
 )
 def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
-    entry = snapshot.entry
+    entry = entry_of(snapshot)
     tls = entry.tls
     if tls.valid:
         # A connection that was never established does not prove the certificate is valid.
@@ -143,13 +152,13 @@ def tls_invalid(snapshot: SiteSnapshot, ctx: Context):
         tls_invalid.spec,
         ctx,
         evidence={"error": tls.error or "unknown", "valid": 0},
-        urls=[snapshot.entry.requested_url],
+        urls=[entry.requested_url],
     )
 
 
 def _home_variant(snapshot: SiteSnapshot) -> HostVariant:
     """The final URL of the home page as a variant, to compare with the other three."""
-    home = snapshot.home
+    home = home_of(snapshot)
     final = home.final_url or home.url
     canonical = home.canonical_normalized
     return HostVariant(url=final, status=home.status, final_url=final, canonical=canonical)
@@ -176,16 +185,18 @@ def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
     spec = https_redirect_missing.spec
     home = _home_variant(snapshot)
     host = host_of(home.final_url)
+    assert snapshot.host_variants is not None  # `requires` lists `host_variants`
     variants = {v.url: v for v in snapshot.host_variants}
-    if not snapshot.entry.tls.valid:
+    if not entry_of(snapshot).tls.valid:
         home.error_kind = "tls"
-    scheme = home.final_url.split("://")[0]
+    scheme = home.url.split("://")[0]  # `_home_variant` puts the final URL in `url` as well
     variants[f"{scheme}://{host}/"] = home
     https, http = variants.get(f"https://{host}/"), variants.get(f"http://{host}/")
     for url, variant in ((f"https://{host}/", https), (f"http://{host}/", http)):
         if variant is None or variant.error_kind in UNCHECKED_KINDS:
             kind = variant.error_kind if variant else "—"
             return unknown(spec, "variant_unchecked", url=url, kind=kind)
+    assert https is not None and http is not None  # the loop returned otherwise
     if https.status != 200 or not (https.final_url or "").startswith("https://"):
         return not_applicable(spec, "no_https", url=https.url)
     if http.status == 200 and (http.final_url or "").startswith("http://"):
@@ -208,6 +219,7 @@ def https_redirect_missing(snapshot: SiteSnapshot, ctx: Context):
 )
 def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
     spec = host_duplicate.spec
+    assert snapshot.host_variants is not None  # `requires` lists `host_variants`
     home = _home_variant(snapshot)
     bare = (host_of(home.final_url) or "").removeprefix("www.")
     # Only www and without www: http and https of the same host are reported by
@@ -257,7 +269,7 @@ def host_duplicate(snapshot: SiteSnapshot, ctx: Context):
     ),
 )
 def unreachable(snapshot: SiteSnapshot, ctx: Context):
-    entry = snapshot.entry
+    entry = entry_of(snapshot)
     if entry.status is not None:
         return ok(unreachable.spec)
     if snapshot.scanner_version.startswith("1."):

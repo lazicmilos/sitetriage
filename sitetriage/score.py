@@ -15,7 +15,9 @@ from sitetriage.models import (
     BrowserSnapshot,
     CheckResult,
     DomainReport,
+    DomainStatus,
     Finding,
+    PartialCause,
     Reason,
     SiteSnapshot,
     Unknown,
@@ -40,7 +42,7 @@ def collect(results: Iterable[CheckResult]) -> tuple[list[Finding], list[Unknown
     unknowns: list[Unknown] = []
     for result in results:
         findings.extend(result.findings)
-        if result.status == "unknown":
+        if result.status == "unknown" and result.reason is not None:
             unknowns.append(Unknown(check_id=result.check_id, reason=result.reason))
     return findings, unknowns
 
@@ -70,14 +72,18 @@ def build_report(
         escalation_reasons=list(escalation_reasons),
         findings=findings,
         unknowns=unknowns,
-        not_applicable=[Unknown(r.check_id, r.reason) for r in results if r.status == "not_applicable"],
+        not_applicable=[
+            Unknown(r.check_id, r.reason)
+            for r in results
+            if r.status == "not_applicable" and r.reason is not None
+        ],
         total_score=round(sum(f.weight for f in findings), 4),
         max_finding_weight=max((f.weight for f in findings), default=0.0),
         scanned_at=site.fetched_at,
     )
 
 
-def _status(site: SiteSnapshot, findings: Sequence[Finding], unknowns: Sequence[Unknown]) -> str:
+def _status(site: SiteSnapshot, findings: Sequence[Finding], unknowns: Sequence[Unknown]) -> DomainStatus:
     if any(f.check_id == "infra.unreachable" for f in findings):
         return "unreachable"
     home = site.home
@@ -88,8 +94,9 @@ def _status(site: SiteSnapshot, findings: Sequence[Finding], unknowns: Sequence[
     return "scanned"
 
 
-def _partial_causes(site: SiteSnapshot, unknowns: Sequence[Unknown]) -> list[str]:
-    return [cause for cause, yes in (("budget", site.budget.exhausted), ("unknown", unknowns)) if yes]
+def _partial_causes(site: SiteSnapshot, unknowns: Sequence[Unknown]) -> list[PartialCause]:
+    causes: list[tuple[PartialCause, object]] = [("budget", site.budget.exhausted), ("unknown", unknowns)]
+    return [cause for cause, yes in causes if yes]
 
 
 def partial_shares(reports: Sequence[DomainReport]) -> tuple[float, dict[str, float]]:

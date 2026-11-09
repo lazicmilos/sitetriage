@@ -7,12 +7,12 @@ multiplier of 1.5 for hotels and 0.7 for b2b (`[industry_multipliers]` in `sitet
 
 from __future__ import annotations
 
-from sitetriage.checks.registry import Context, check, finding, ok
+from sitetriage.checks.registry import Context, check, finding, home_of, ok
 from sitetriage.models import SiteSnapshot
 
 
 def _og_count(snapshot: SiteSnapshot) -> int:
-    og = snapshot.home.og
+    og = home_of(snapshot).og
     return sum(1 for value in (og.title, og.description, og.image, og.url) if value)
 
 
@@ -26,16 +26,17 @@ def _og_count(snapshot: SiteSnapshot) -> int:
     threshold="<meta property=og:title> is missing",
 )
 def og_title_missing(snapshot: SiteSnapshot, ctx: Context):
-    if snapshot.home.og.title:
+    home = home_of(snapshot)
+    if home.og.title:
         return ok(og_title_missing.spec)
     return finding(
         og_title_missing.spec,
         ctx,
         evidence={
-            "page": snapshot.home.final_url or snapshot.home.url,
+            "page": home.final_url or home.url,
             "og_tag_count": _og_count(snapshot),
         },
-        urls=[snapshot.home.final_url or snapshot.home.url],
+        urls=[home.final_url or home.url],
     )
 
 
@@ -49,16 +50,17 @@ def og_title_missing(snapshot: SiteSnapshot, ctx: Context):
     threshold="<meta property=og:description> is missing",
 )
 def og_description_missing(snapshot: SiteSnapshot, ctx: Context):
-    if snapshot.home.og.description:
+    home = home_of(snapshot)
+    if home.og.description:
         return ok(og_description_missing.spec)
     return finding(
         og_description_missing.spec,
         ctx,
         evidence={
-            "page": snapshot.home.final_url or snapshot.home.url,
+            "page": home.final_url or home.url,
             "og_tag_count": _og_count(snapshot),
         },
-        urls=[snapshot.home.final_url or snapshot.home.url],
+        urls=[home.final_url or home.url],
     )
 
 
@@ -72,14 +74,15 @@ def og_description_missing(snapshot: SiteSnapshot, ctx: Context):
     threshold="<meta property=og:image> is missing",
 )
 def og_image_missing(snapshot: SiteSnapshot, ctx: Context):
-    if snapshot.home.og.image:
+    home = home_of(snapshot)
+    if home.og.image:
         return ok(og_image_missing.spec)
     return finding(
         og_image_missing.spec,
         ctx,
         evidence={
-            "page": snapshot.home.final_url or snapshot.home.url,
+            "page": home.final_url or home.url,
             "og_tag_count": _og_count(snapshot),
         },
-        urls=[snapshot.home.final_url or snapshot.home.url],
+        urls=[home.final_url or home.url],
     )

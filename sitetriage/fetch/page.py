@@ -68,7 +68,8 @@ def build(
 
     tree = LexborHTMLParser(html)
     base = final_url or url
-    page.title = collapse_ws(tree.css_first("title").text()) if tree.css_first("title") else None
+    title = tree.css_first("title")
+    page.title = collapse_ws(title.text()) if title else None
     page.h1_count_raw = len(tree.css("h1"))
     page.meta_description, og_values = _read_meta(tree)
     page.og = OpenGraph(**og_values)
@@ -166,8 +167,8 @@ def _read_links(tree: LexborHTMLParser) -> tuple[str | None, list[str]]:
         rel = (attrs.get("rel") or "").lower().split()
         if "canonical" in rel and canonical is None:
             canonical = (attrs.get("href") or "").strip() or None
-        if "alternate" in rel and attrs.get("hreflang"):
-            hreflang.append(attrs["hreflang"].strip())
+        if "alternate" in rel and (lang := attrs.get("hreflang")):
+            hreflang.append(lang.strip())
     return canonical, hreflang
 
 
