@@ -124,8 +124,8 @@ contain exactly these three column names:
   it; it is only for you.
 
 Then choose **File → Save As**, pick the format **CSV UTF-8** (if your Excel does not offer it, plain
-**CSV** works too) and name the file `leads`. Excel adds `.csv` by itself. [`domains.example.csv`](domains.example.csv) is a
-ready-made example.
+**CSV** works too) and name the file `leads`. Excel adds `.csv` by itself.
+[`domains.example.csv`](domains.example.csv) is a ready-made example.
 
 **File 2: who you are (`my.toml`).** Every website keeps a log of who visited it. SiteTriage
 writes your name and contact into every visit, so a site's administrator can see who is checking
