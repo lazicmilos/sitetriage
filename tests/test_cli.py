@@ -92,6 +92,20 @@ def test_domain_list_that_is_a_folder_is_named_as_such(tmp_path):
         cli.main(["scan", str(tmp_path), "--out", str(tmp_path / "out")])
 
 
+def test_unreadable_domain_list_gives_the_reason(tmp_path, monkeypatch):
+    """E.g. the file is open and locked by Excel. Simulated: as root, chmod does not stop a read."""
+    path = tmp_path / "d.csv"
+    path.write_text("domain\na.example\n", encoding="utf-8")
+
+    def locked(_self):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(cli.Path, "read_bytes", locked)
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["scan", str(path), "--out", str(tmp_path / "out")])
+    assert raised.value.code == f"domain list cannot be read: {path} (Permission denied)"
+
+
 @pytest.mark.parametrize("folder", [False, True])
 def test_missing_exclusion_file_fails_before_a_single_request(tmp_path, monkeypatch, folder):
     monkeypatch.chdir(tmp_path)
