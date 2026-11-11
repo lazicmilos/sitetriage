@@ -214,7 +214,7 @@ terminal there and run the same command. Use a new name after `--out` (for examp
 | `configuration error: [operator] name and contact are not set` | The scanner did not find your name and contact. Check that you added `--config my.toml` to the command and that the file has both lines under `[operator]`. |
 | `configuration error: configuration file does not exist: my.toml` | The terminal is not in your folder, or the file is called `my.toml.txt`. Redo the first part of step 5, and in File Explorer turn on **View → File name extensions** to see the real name. |
 | `configuration error: my.toml: invalid TOML` | Something in `my.toml` is mistyped. Most often the quotes are curly (“ ”) instead of straight (`"`). Copy the three lines from step 4 again. |
-| `FileNotFoundError: ... 'leads.csv'` | The terminal is not in your folder, or the list has another name. Redo the first part of step 5 and check the file name. |
+| `domain list does not exist: leads.csv (looked in ...)` | The terminal is not in your folder (the message shows which folder it is in), or the list has another name, such as `leads.csv.txt`. Redo the first part of step 5 and check the file name. |
 | `Playwright is not installed` or `Chromium could not be started` | The second command in step 3 did not finish. Run it again. The scan still works without it, but it cannot measure page weight or load time. |
 | A warning naming a row, such as `row 7` | Something on that row of your list is odd, for example a column name with a typo or the same site twice. The row number is the one you see in Excel. |
 

@@ -128,9 +128,30 @@ def _formats(text: str) -> list[str]:
     return list(dict.fromkeys(names))
 
 
+def read_input_file(path: Path, what: str) -> bytes:
+    """The bytes of a file the user named; a wrong path is a one-line `InputError` that names it.
+
+    The usual cause is a terminal that is not in the folder holding the file, so for a relative
+    path the message says which folder the file was looked for in. `is_dir` comes first because
+    Windows reports a folder as `PermissionError`, not `IsADirectoryError`.
+    """
+    if path.is_dir():
+        raise InputError(f"{what} is a folder, not a file: {path}")
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        message = f"{what} does not exist: {path}"
+        if not path.is_absolute():
+            message += f" (looked in {Path.cwd()}; is the terminal in the right folder?)"
+        raise InputError(message) from None
+    except OSError as exc:
+        raise InputError(f"{what} cannot be read: {path} ({exc.strerror})") from None
+
+
 def read_domains(path: Path, only: Sequence[str] = ()) -> list[DomainInput]:
     """The list from a file (`sitetriage.inputs`); warnings go to the log, `--only` narrows the list."""
-    rows, warnings = read_domain_list(Path(path).read_bytes(), str(path))
+    path = Path(path)
+    rows, warnings = read_domain_list(read_input_file(path, "domain list"), str(path))
     for warning in warnings:
         row = f"row {warning.row}: " if warning.row else ""
         log.warning("%s%s", row, warning.message, extra={"domain": warning.domain})
@@ -148,9 +169,7 @@ def read_excluded(config: dict, args: argparse.Namespace) -> list[str]:
     for path in (get(config, "operator.exclude_file"), getattr(args, "exclude", None)):
         if not path:
             continue
-        if not Path(path).is_file():
-            raise InputError(f"{path}: the file of excluded domains does not exist")
-        domains += read_exclusions(Path(path).read_bytes())
+        domains += read_exclusions(read_input_file(Path(path), "file of excluded domains"))
     return domains
 
 

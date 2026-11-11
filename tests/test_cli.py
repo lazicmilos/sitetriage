@@ -58,11 +58,53 @@ def test_excluded_from_config_and_from_the_command_line(tmp_path):
     assert "Excluded on request" in page and first.base_url not in page
 
 
-def test_missing_exclusion_file_fails_clearly(tmp_path):
-    domains = tmp_path / "d.csv"
-    domains.write_text("domain,industry\ninstitucija.example,institution\n", encoding="utf-8")
-    with pytest.raises(SystemExit, match="the file of excluded domains does not exist"):
-        cli.main(["scan", str(domains), "--out", str(tmp_path / "out"), "--exclude", "nema.txt"])
+def _scan_must_not_run(*_args, **_kwargs):
+    raise AssertionError("pipeline.scan ran although an input file is missing")
+
+
+@pytest.mark.parametrize("command", ["scan", "record"])
+def test_missing_domain_list_is_a_message_not_a_traceback(tmp_path, monkeypatch, command):
+    """It used to end in `FileNotFoundError: [Errno 2]`; now one line like a missing config file."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.pipeline, "scan", _scan_must_not_run)
+    monkeypatch.setattr(cli.pipeline, "record", _scan_must_not_run)
+    config = tmp_path / "my.toml"
+    config.write_text("[http]\ndelay_ms = [0, 0]\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as raised:
+        cli.main([command, "nope.csv", "--config", "my.toml", "--out", "report"])
+    message = raised.value.code
+    assert isinstance(message, str) and "\n" not in message  # a str code: printed, exit status 1
+    assert message.startswith("domain list does not exist: nope.csv")
+    assert str(tmp_path) in message and "terminal" in message  # where it looked, and the likely cause
+    assert not (tmp_path / "report").exists()
+
+
+def test_missing_domain_list_with_an_absolute_path_has_no_folder_hint(tmp_path):
+    missing = tmp_path / "nope.csv"
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["scan", str(missing), "--out", str(tmp_path / "out")])
+    assert raised.value.code == f"domain list does not exist: {missing}"
+
+
+def test_domain_list_that_is_a_folder_is_named_as_such(tmp_path):
+    """On Windows reading a folder is a `PermissionError`; the message must not say "permission"."""
+    with pytest.raises(SystemExit, match=r"^domain list is a folder, not a file: "):
+        cli.main(["scan", str(tmp_path), "--out", str(tmp_path / "out")])
+
+
+@pytest.mark.parametrize("folder", [False, True])
+def test_missing_exclusion_file_fails_before_a_single_request(tmp_path, monkeypatch, folder):
+    monkeypatch.chdir(tmp_path)
+    if folder:
+        (tmp_path / "nema.txt").mkdir()
+    with FakeSite() as site:
+        domains = tmp_path / "d.csv"
+        domains.write_text(f"domain,industry\n{site.base_url},other\n", encoding="utf-8")
+        with pytest.raises(SystemExit) as raised:
+            cli.main(["scan", str(domains), "--out", "out", "--level", "1", "--exclude", "nema.txt"])
+        assert site.requests == []
+    expected = "is a folder, not a file: nema.txt" if folder else "does not exist: nema.txt (looked in"
+    assert raised.value.code.startswith(f"file of excluded domains {expected}")
 
 
 def test_list_error_is_a_message_not_a_traceback(tmp_path):

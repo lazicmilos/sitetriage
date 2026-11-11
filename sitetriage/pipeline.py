@@ -218,11 +218,12 @@ async def _level2(
 
 
 def _playwright_installed(consequence: str) -> bool:
-    """Level 2 is optional (`pip install 'sitetriage[browser]'`); without it level 1 still works."""
+    """Level 2 is optional (`pip install "sitetriage[browser]"`); without it level 1 still works."""
     try:
         import playwright.async_api  # noqa: F401
     except ImportError:
-        log.error("Playwright is not installed; %s (pip install 'sitetriage[browser]')", consequence)
+        # Double quotes: Windows cmd passes single quotes through and pip rejects the name.
+        log.error('Playwright is not installed; %s (pip install "sitetriage[browser]")', consequence)
         return False
     return True
 
