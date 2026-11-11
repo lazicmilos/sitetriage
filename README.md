@@ -4,24 +4,239 @@
 [![Python](https://img.shields.io/pypi/pyversions/sitetriage)](https://pypi.org/project/sitetriage/)
 [![tests](https://github.com/lazicmilos/sitetriage/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lazicmilos/sitetriage/actions/workflows/ci.yml)
 
-SiteTriage takes a list of domains, usually one or two hundred, scans each site politely and ranks
-the ones that deserve a full manual audit. Every ranked site comes with a few sentences, in Serbian
-or English, that you can paste into a message, use on a call or type into a contact form. It is
-built for web studios and consultants who have a long list of prospects and want to know where to
-spend their time. It reads the home page and a small sample of pages and tells you which sites have
-problems their owners would care about. The audit itself is still your job, and the tool does not
-look for vulnerabilities.
+You give SiteTriage a list of websites, usually one or two hundred. It visits each one politely,
+looks for problems a site owner would care about (a slow or heavy home page, missing titles,
+broken link previews on social media, a site that does not open at all) and gives you back a
+report that ranks the sites from "most worth your time" to "least". Every site in the report comes
+with a few ready-made sentences, in English or Serbian, that you can paste into a message, use on a
+call or type into a contact form.
+
+It is built for web studios and consultants with a long list of prospects who want to know where to
+spend their time. It reads the home page and a small sample of other pages. It does not do the full
+audit for you, and it does not look for security holes.
 
 ![Screenshot of an HTML report](docs/report.png)
 
 > The screenshot shows a report built from the hand-written test set; the full HTML is
-> [`docs/sample-report.html`](docs/sample-report.html). Reports and the sentences for site owners
-> are in English by default. `--lang sr` switches them to Serbian, and so does the `rs`
-> [profile](#profiles): see [`docs/sample-report-sr.html`](docs/sample-report-sr.html) and its
-> [screenshot](docs/report-sr.png). Each report is one file that loads nothing from a CDN, so it
-> opens offline.
+> [`docs/sample-report.html`](docs/sample-report.html). There is also a
+> [Serbian version](docs/sample-report-sr.html) with its [screenshot](docs/report-sr.png). The report
+> is a single file that works offline.
 
-## What it deliberately does not do
+**Where to start:** if you just want to run a scan, follow [Run your first scan](#run-your-first-scan)
+below. You do not need to know how to program. Read the short summary of
+[how the scanner behaves on other people's sites](#how-the-scanner-behaves-on-other-peoples-sites)
+before your first real scan. Everything after that summary is reference material for technical
+readers.
+
+## Run your first scan
+
+This takes about 15 minutes the first time, most of it waiting for downloads. You will type a few
+commands into a window called a *terminal*. Copy each command exactly as written, paste it, and
+press Enter.
+
+You need:
+
+- a Windows or macOS computer (Linux works too; see [Other ways to install](#other-ways-to-install)),
+- an internet connection,
+- your list of websites, for example in Excel.
+
+### Step 1: Install Python
+
+SiteTriage is written in Python, so Python has to be on your computer first (version 3.11 or newer).
+
+1. Go to [python.org/downloads](https://www.python.org/downloads/) and click the big yellow
+   **Download Python** button.
+2. Open the file you downloaded.
+   - **Windows:** on the first screen, tick **Add python.exe to PATH** at the bottom. This is
+     important: without it the next steps will not work. Then click **Install Now**.
+   - **macOS:** click **Continue** through the installer and accept the defaults.
+
+### Step 2: Open a terminal
+
+- **Windows:** press the Windows key, type `PowerShell` and press Enter.
+- **macOS:** press Cmd + Space, type `Terminal` and press Enter.
+
+A window with a blinking cursor opens. Check that Python is there by typing:
+
+| Windows | macOS |
+|---|---|
+| `python --version` | `python3 --version` |
+
+You should see something like `Python 3.13.1`. If you see an error instead, or on Windows the
+Microsoft Store opens, close the terminal, run the Python installer again (on Windows, with **Add
+python.exe to PATH** ticked) and open a new terminal.
+
+### Step 3: Install SiteTriage
+
+Paste these two commands, one at a time. The first installs SiteTriage, the second downloads the
+browser it uses to measure how fast pages load. Each can take a few minutes.
+
+**Windows:**
+
+```bash
+python -m pip install "sitetriage[browser]"
+```
+
+```bash
+python -m playwright install chromium
+```
+
+**macOS:**
+
+```bash
+python3 -m pip install "sitetriage[browser]"
+```
+
+```bash
+python3 -m playwright install chromium
+```
+
+Then close the terminal, open a new one (as in step 2) and check that it worked:
+
+```bash
+sitetriage --help
+```
+
+If you see a short list of commands (`scan`, `recheck`, `record`, `explain`), SiteTriage is
+installed. You only do steps 1 to 3 once.
+
+### Step 4: Make a folder with your two files
+
+Create a new folder for your scans, for example `sitetriage` in your Documents folder. Put two files
+in it.
+
+**File 1: the list of websites (`leads.csv`).** In Excel, make a sheet like this. The first row must
+contain exactly these three column names:
+
+| domain | industry | note |
+|---|---|---|
+| hotel-planina.example | hotel | mountain |
+| restoran-centar.example | restaurant | |
+| klinika.example | healthcare | already a client |
+
+- **domain:** the website address. `example.com`, `www.example.com` and `https://example.com/` all
+  work.
+- **industry:** one of `hotel`, `restaurant`, `healthcare`, `ecommerce`, `b2b`, `institution`,
+  `other`. Leave it empty if you are not sure; it then counts as `other`. The industry changes how
+  much each problem matters: a missing link-preview image matters a lot to a hotel and hardly at all
+  to a company that sells to other companies.
+- **note:** anything you want to remember about the site, or leave it empty. The scanner ignores
+  it; it is only for you.
+
+Then choose **File → Save As**, pick the format **CSV UTF-8** (if your Excel does not offer it, plain
+**CSV** works too) and name the file `leads`. Excel adds `.csv` by itself. [`domains.example.csv`](domains.example.csv) is a
+ready-made example.
+
+**File 2: who you are (`my.toml`).** Every website keeps a log of who visited it. SiteTriage
+writes your name and contact into every visit, so a site's administrator can see who is checking
+their site and reach you. It will not start without them.
+
+Open Notepad (Windows) or TextEdit (macOS), paste the three lines below and replace the name and
+email with your own. Keep the straight quotes `"` around both values.
+
+```toml
+[operator]
+name = "Example Web Studio"
+contact = "hello@studio.example"
+```
+
+Save it in the same folder as `my.toml`:
+
+- **Notepad:** in the Save dialog set **Save as type** to **All files (\*.\*)**, otherwise Notepad
+  saves it as `my.toml.txt` and SiteTriage will not find it.
+- **TextEdit:** first choose **Format → Make Plain Text**. If the quotes turn into curly ones (“ ”)
+  as you type, turn off **Edit → Substitutions → Smart Quotes** and type them again. When you save,
+  if TextEdit asks, choose **Use .toml**.
+
+Your folder now contains `leads.csv` and `my.toml`.
+
+### Step 5: Run the scan
+
+Open a terminal in your folder:
+
+- **Windows:** open the folder in File Explorer, click the address bar at the top, type
+  `powershell` and press Enter. A terminal opens already inside that folder.
+- **macOS:** open Terminal, type `cd` followed by a space, drag the folder from Finder into the
+  Terminal window, and press Enter.
+
+Then start the scan:
+
+```bash
+sitetriage scan leads.csv --config my.toml --out report
+```
+
+For sites in Serbia, add `--profile rs`. The report and the sentences are then in Serbian, and the
+scanner also checks whether the page language is set correctly for Serbian text:
+
+```bash
+sitetriage scan leads.csv --config my.toml --profile rs --out report
+```
+
+Lines of technical text will scroll past while it works. That is normal; leave the window open. A
+short list finishes in a few minutes. A list of 200 sites takes longer: the target is about 15
+minutes on a fast computer with a fast connection, and a slower computer just takes more time.
+
+When it is done, the last lines show a short ranking, like this:
+
+```
+1 domains · 9 findings · no profile · output in report/
+    1. example.com                  score    91.0  worst  20.0  seo.canonical.missing
+```
+
+### Step 6: Open the report
+
+A new folder called `report` has appeared next to your files. Double-click **`index.html`** inside
+it. The report opens in your web browser.
+
+- The sites at the top are the ones most worth contacting. Each comes with the problems found and
+  sentences you can use with the site owner.
+If some sites could not be checked, two more sections appear further down:
+
+- **Not working** lists sites that did not open at all, even on a second try a minute later. That is
+  often the best reason to get in touch.
+- **Not scanned** lists sites the scanner could not check properly, with the reason. They may be
+  fine; it just could not see them.
+
+`findings.csv` and `summary.csv` in the same folder open in Excel, if you prefer a spreadsheet. If
+Serbian letters look broken in Excel, run the scan again with `--csv-bom` added to the command.
+
+### Next time
+
+Steps 1 to 4 are done. Each new scan is only steps 5 and 6: put a new list in the folder, open a
+terminal there and run the same command. Use a new name after `--out` (for example
+`--out report-june`) to keep the old report.
+
+### If something goes wrong
+
+| What you see | What it means and what to do |
+|---|---|
+| `'sitetriage' is not recognized` (Windows) or `command not found: sitetriage` (macOS) | Python was installed without being added to PATH, or the terminal was opened before the install. Close every terminal and open a new one. If that does not help, run the Python installer again and, on Windows, tick **Add python.exe to PATH**. |
+| `configuration error: [operator] name and contact are not set` | The scanner did not find your name and contact. Check that you added `--config my.toml` to the command and that the file has both lines under `[operator]`. |
+| `configuration error: configuration file does not exist: my.toml` | The terminal is not in your folder, or the file is called `my.toml.txt`. Redo the first part of step 5, and in File Explorer turn on **View → File name extensions** to see the real name. |
+| `configuration error: my.toml: invalid TOML` | Something in `my.toml` is mistyped. Most often the quotes are curly (“ ”) instead of straight (`"`). Copy the three lines from step 4 again. |
+| `FileNotFoundError: ... 'leads.csv'` | The terminal is not in your folder, or the list has another name. Redo the first part of step 5 and check the file name. |
+| `Playwright is not installed` or `Chromium could not be started` | The second command in step 3 did not finish. Run it again. The scan still works without it, but it cannot measure page weight or load time. |
+| A warning naming a row, such as `row 7` | Something on that row of your list is odd, for example a column name with a typo or the same site twice. The row number is the one you see in Excel. |
+
+## How the scanner behaves on other people's sites
+
+You are visiting other people's websites, so the scanner is deliberately careful.
+
+- It never opens two pages of the same site at once, waits between pages, and makes at most 19
+  requests per site.
+- It skips pages a site asks robots not to visit (`robots.txt`).
+- If a site says it is overloaded, the scanner leaves it alone for the rest of the run.
+- It does not try to log in, fill in forms or look for security holes. It only reads.
+- If an administrator asks you not to scan their site, put their domain on a list of excluded sites
+  (see `exclude_file` below) and it will never be visited again.
+
+**Your responsibility.** The tool tells you which sites have problems; how you contact their owners
+is up to you. Unsolicited email is regulated in many places (in the EU by the GDPR and the ePrivacy
+rules, and by national law), so check what applies to you before you send anything.
+
+The rest of this section gives the technical detail.
+
+### What it deliberately does not do
 
 - It does not scan ports, try to log in, look for vulnerabilities or fill in forms.
 - It does not go deeper than the home page and a sample from `sitemap.xml`. When there is no
@@ -31,7 +246,7 @@ look for vulnerabilities.
 - It does not guess what a business does. The industry is an input, not a conclusion.
 - It does not fix anything. The tool reads; it never writes.
 
-## Ethics and responsible use
+### Ethics and responsible use
 
 ```
 User-Agent: SiteTriage/3.0.0 (+hello@studio.example; Example Web Studio)
@@ -65,21 +280,17 @@ Fonts choose what to send by User-Agent, and the page should be measured the way
   domain gets no request at all, and the report shows only how many domains were excluded, not
   which.
 
-**Responsible use.** The tool tells you which sites have problems. How you contact their owners is
-your responsibility. Cold outreach by email is regulated in
-many places (in the EU by the GDPR and the ePrivacy rules, and by national law), so check what
-applies to you before you send anything. Also note that each run with level 2 downloads a probe file
-from `speed.cloudflare.com` to measure your own connection (see
-[load time](#why-the-thresholds-are-what-they-are)); set `[network_profile] probe_url` to use
-another server.
+Each run with level 2 also downloads a probe file from `speed.cloudflare.com` to measure your own
+connection (see [load time](#why-the-thresholds-are-what-they-are)); set
+`[network_profile] probe_url` to use another server.
 
 ### Private addresses are never opened
 
 The tool opens public addresses only. `localhost`, `10.x`, `192.168.x`, `169.254.169.254` and the
 other private and special addresses are never opened, not when a public name resolves to them and
 not after a redirect. A domain given with an IP address (in any notation, `0177.0.0.1` and `127.1`
-included), a port or a user name gets no request at all. Without this, a web application built on the scanner would let its users look inside the
-server (SSRF).
+included), a port or a user name gets no request at all. Without this, a web application built on
+the scanner would let its users look inside the server (SSRF).
 
 Staging with a port works only when you allow it explicitly:
 
@@ -95,53 +306,60 @@ not read `HTTP(S)_PROXY` from the environment, because a proxy would bypass the 
 on a private address is not opened either, unless `allowed_private` lists it: the link is then not
 measured, and load time is `unknown`.
 
-## Quick start
+## Other ways to install
 
-### Docker (recommended)
+### Linux (pipx)
+
+Many Linux distributions do not allow `pip install` into the system Python. Use
+[pipx](https://pipx.pypa.io/), which keeps SiteTriage in its own environment. `--include-deps` also
+makes the `playwright` command available, which downloads the browser:
+
+```bash
+pipx install --include-deps "sitetriage[browser]"
+```
+
+```bash
+playwright install chromium
+```
+
+Without the `browser` extra, level 1 works and level 2 is skipped with a message. To work on the
+code, install from a clone instead, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Docker
 
 The image contains exactly the Chromium that the Playwright version in `pyproject.toml` expects, so
-browser measurements behave the same on every machine.
+browser measurements behave the same on every machine. This is the setup the test suite and the
+calibration were run on.
 
 ```bash
 git clone https://github.com/lazicmilos/sitetriage.git
 cd sitetriage
 mkdir work
 docker compose build
-docker compose run --rm sitetriage pytest -q        # every test must pass
 ```
 
-`work/` is mounted into the container as `/work`: put your input there, and the reports land there
-too. On Linux, set `SITETRIAGE_UID=$(id -u)` and `SITETRIAGE_GID=$(id -g)` first, so the files in
-`work/` belong to you. Docker Desktop on Windows and macOS handles that by itself.
-
-### pip
-
-You need Python 3.11 or newer.
+`work/` is mounted into the container as `/work`: put `leads.csv` and `my.toml` there, and the
+reports land there too. On Linux, set `SITETRIAGE_UID=$(id -u)` and `SITETRIAGE_GID=$(id -g)` first,
+so the files in `work/` belong to you. Docker Desktop on Windows and macOS handles that by itself.
 
 ```bash
-pip install 'sitetriage[browser]'
-playwright install chromium
+docker compose run --rm sitetriage sitetriage scan /work/leads.csv --config /work/my.toml --out /work/report
 ```
 
-To work on the code, install from a clone instead, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
+The paths are `/work/...` because that is where the folder appears inside the container. Instead of
+`my.toml`, you can set `SITETRIAGE_OPERATOR_NAME` and `SITETRIAGE_OPERATOR_CONTACT`; `compose.yaml`
+passes them into the container. To check the image itself, run the tests:
+`docker compose run --rm sitetriage pytest -q`.
 
-Without the `browser` extra, level 1 works and level 2 is skipped with a message.
+### Machine size
 
-### Tell it who you are
+The recommended machine has 16 GB of RAM and a connection of at least 50 Mb/s. On it, the target
+for a list of 200 domains is 15 minutes or less ([ADR-019](docs/adr/ADR-019-run-duration-and-level2-coverage.md);
+not yet measured on such a machine). The tool also works on a weaker machine, just more slowly: the
+light level 2 starts as many browsers as the machine can take, one per free GB of memory, at most
+two per CPU core and at most 8. You can fix the number with `[browser] light_concurrency`.
 
-Before the first scan, set who is scanning. Every site's administrator sees the User-Agent in their
-server log, and it has to tell them who is visiting and how to reach them. Create `work/my.toml`:
-
-```toml
-[operator]
-name = "Example Web Studio"
-contact = "hello@studio.example"
-```
-
-The environment variables `SITETRIAGE_OPERATOR_NAME` and `SITETRIAGE_OPERATOR_CONTACT` do the same,
-and `compose.yaml` passes them into the container. The name may be written in Cyrillic or with
-letters like "š" and "đ"; the tool transliterates it to plain Latin for the header, because an HTTP
-header accepts only ASCII.
+## Settings
 
 The defaults ship with the tool; your own TOML passed with `--config` overrides only what it sets.
 All defaults, with comments, are in [`sitetriage/sitetriage.toml`](sitetriage/sitetriage.toml).
@@ -151,6 +369,11 @@ severity tiers that grow); otherwise the tool stops before the first request and
 the value. A key or section the defaults do not have is an error too, with the closest known key
 when there is one (`html_size_kbb` → `did you mean thresholds.perf.html_size_kb?`), so a typo
 cannot silently leave a default in place.
+
+The operator name may be written in Cyrillic or with letters like "š" and "đ"; the tool
+transliterates it to plain Latin for the header, because an HTTP header accepts only ASCII. The
+environment variables `SITETRIAGE_OPERATOR_NAME` and `SITETRIAGE_OPERATOR_CONTACT` can replace
+`[operator]` in the file.
 
 ### Profiles
 
@@ -169,34 +392,13 @@ because its only detector recognises Serbian and would mistake Croatian or Czech
 Serbian too (`report.lang = "sr"`); add `--lang en` to keep them in English. Every other check works
 the same with or without a profile.
 
-```bash
-sitetriage scan leads.csv --config my.toml --profile rs --out report/
-```
-
 The profile a run used is in `report.json` (`profile`), in the header of the HTML report and in the
 summary line at the end of the run.
 
-### First scan
-
-```bash
-docker compose run --rm sitetriage sitetriage scan /work/leads.csv --config /work/my.toml --out /work/report
-```
-
-or, without Docker:
-
-```bash
-sitetriage scan leads.csv --config my.toml --out report/
-```
-
-The recommended machine has 16 GB of RAM and a connection of at least 50 Mb/s. On it, the target
-for a list of 200 domains is 15 minutes or less ([ADR-019](docs/adr/ADR-019-run-duration-and-level2-coverage.md);
-not yet measured on such a machine). The tool also works on a weaker machine, just more slowly: the
-light level 2 starts as many browsers as the machine can take, one per free GB of memory, at most
-two per CPU core and at most 8. You can fix the number with `[browser] light_concurrency`.
-
 ## Input and output
 
-The input is a CSV with a header, not a bare list of domains:
+The input is a CSV with a header, not a bare list of domains
+([step 4](#step-4-make-a-folder-with-your-two-files) shows how to make one in Excel):
 
 ```csv
 domain,industry,note
