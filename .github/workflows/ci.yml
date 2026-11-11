@@ -18,7 +18,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     name: offline (Python ${{ matrix.python-version }})
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
@@ -60,7 +60,7 @@ jobs:
     # Pinned: Playwright 1.56 has no browser builds for newer Ubuntu; bump together with Playwright and the Docker base image.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build
         run: docker compose build
