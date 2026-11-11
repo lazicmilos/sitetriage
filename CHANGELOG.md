@@ -6,6 +6,10 @@ finding, the JSON) raises the major version.
 
 ## Unreleased
 
+- A domain list or `--exclude` file that does not exist, or is a folder, is now a one-line error
+  that names the path and, for a relative path, the folder it was looked for in, instead of a
+  Python traceback. Nothing is scanned. The "Playwright is not installed" error now suggests
+  `pip install "sitetriage[browser]"` with double quotes, which also works in Windows cmd.
 - `scan --level 2` and `record` on a site that did not answer no longer hand the browser an empty
   address. Level 2 now opens the address level 1 asked for, and the site is reported as before.
 - The package now requires `httpx` below 1.0 and names `httpcore` as a dependency. It used both
